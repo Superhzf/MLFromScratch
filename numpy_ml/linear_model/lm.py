@@ -8,7 +8,7 @@ def sigmoid(z):
 
 
 def logloss(y_true,y_hat):
-    loss = -1*np.sum(y_true*np.log(y_hat) +(1-y_true)*np.log(1-y_hat))
+    loss = -1*np.mean(y_true*np.log(y_hat)+(1-y_true)*np.log(1-y_hat))
     return loss
 
 
@@ -18,14 +18,15 @@ class LogisticRegression:
         self.b = None
 
     def fit(self, x, y):
-        m, n = x.shape
+        # n features, m samples
+        n, m = x.shape
         self.b = np.random.rand(1,m)
         self.W = np.random.rand(1,n)
         z = np.dot(self.W,np.transpose(x))
         a = sigmoid(z)
         loss = logloss(y,a)
         dz = a - y
-        dw = (1/m)*x*
+        dw =
 
 
 train = pd.DataFrame({"var1":[1,2,3],'var2':[4,5,6],'y':[1,0,1]})
