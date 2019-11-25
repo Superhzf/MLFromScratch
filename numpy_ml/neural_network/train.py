@@ -5,7 +5,7 @@ from .backward_prop import full_backward_propagation
 from .losses import CrossEntropyLoss,get_accuracy_value
 from .updates import update
 
-# TODO: early stop, mini_batch
+# TODO: early stop, mini_batch, normalization
 
 def fit(X, Y, nn_architecture,epochs,learning_rate):
     params_values = init_layers(nn_architecture,seed=2)
@@ -21,5 +21,4 @@ def fit(X, Y, nn_architecture,epochs,learning_rate):
 
         grads_values = full_backward_propagation(y_hat, Y, cache, params_values, nn_architecture)
         params_values = update(params_values, grads_values, nn_architecture, learning_rate)
-
     return params_values, cost_history, accuracy_history
