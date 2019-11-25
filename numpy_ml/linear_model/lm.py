@@ -46,7 +46,6 @@ data = load_breast_cancer()
 X = np.transpose(data['data'])
 Y = np.reshape(data['target'],(1,-1))
 
-<<<<<<< HEAD
     def fit(self, x, y):
         m, n = x.shape
         self.b = np.random.rand(1,m)
@@ -59,8 +58,6 @@ Y = np.reshape(data['target'],(1,-1))
 
 
 train = pd.DataFrame({"var1":[1,2,3],'var2':[4,5,6],'y':[1,0,1]})
-=======
->>>>>>> a2fb90defbf89f74f79c617758caa63a3457cbee
 lr = LogisticRegression()
 lr.fit(X,Y,0.01,100)
 
