@@ -25,7 +25,7 @@ class LogisticRegression:
         a = sigmoid(z)
         loss = logloss(y,a)
         dz = a - y
-        dw = (1/m)*x*
+        dw = (1/m)*x
 
 
 train = pd.DataFrame({"var1":[1,2,3],'var2':[4,5,6],'y':[1,0,1]})
