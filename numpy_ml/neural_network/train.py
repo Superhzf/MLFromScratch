@@ -1,0 +1,25 @@
+import numpy as np
+from .initializers import init_layers
+from .forward_prop import full_forward_propagation
+from .backward_prop import full_backward_propagation
+from .losses import CrossEntropyLoss,get_accuracy_value
+from .updates import update
+
+# TODO: early stop, mini_batch
+
+def fit(X, Y, nn_architecture,epochs,learning_rate):
+    params_values = init_layers(nn_architecture,seed=2)
+    cost_history = []
+    accuracy_history = []
+
+    for i in range(epochs):
+        y_hat, cache = full_forward_propagation(X,params_values,nn_architecture)
+        cost = CrossEntropyLoss(y_hat,Y)
+        cost_history.append(cost)
+        accuracy = get_accuracy_value(y_hat,Y)
+        accuracy_history.append(accuracy_history)
+
+        grads_values = full_backward_propagation(y_hat, Y, cache, params_values, nn_architecture)
+        params_values = update(params_values, grads_values, nn_architecture, learning_rate)
+
+    return params_values, cost_history, accuracy_history
