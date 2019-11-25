@@ -46,15 +46,15 @@ data = load_breast_cancer()
 X = np.transpose(data['data'])
 Y = np.reshape(data['target'],(1,-1))
 
-    def fit(self, x, y):
-        m, n = x.shape
-        self.b = np.random.rand(1,m)
-        self.W = np.random.rand(1,n)
-        z = np.dot(self.W,np.transpose(x))
-        a = sigmoid(z)
-        loss = logloss(y,a)
-        dz = a - y
-        dw = (1/m)*x
+def fit(self, x, y):
+    m, n = x.shape
+    self.b = np.random.rand(1,m)
+    self.W = np.random.rand(1,n)
+    z = np.dot(self.W,np.transpose(x))
+    a = sigmoid(z)
+    loss = logloss(y,a)
+    dz = a - y
+    dw = (1/m)*x
 
 
 train = pd.DataFrame({"var1":[1,2,3],'var2':[4,5,6],'y':[1,0,1]})
