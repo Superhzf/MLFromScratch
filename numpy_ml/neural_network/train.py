@@ -1,3 +1,4 @@
+# ref: https://towardsdatascience.com/lets-code-a-neural-network-in-plain-numpy-ae7e74410795
 import sys
 sys.path.insert(0, '')
 from initializers import init_layers
@@ -12,6 +13,7 @@ def fit(X, Y, nn_architecture,epochs,learning_rate):
     params_values = init_layers(nn_architecture,seed=2)
     cost_history = []
     accuracy_history = []
+    grads_history = []
 
     for i in range(epochs):
         y_hat, cache = fully_forward_propagation(X,params_values,nn_architecture)
@@ -22,4 +24,5 @@ def fit(X, Y, nn_architecture,epochs,learning_rate):
 
         grads_values = fully_backward_propagation(y_hat, Y, cache, params_values, nn_architecture)
         params_values = update(params_values, grads_values, nn_architecture, learning_rate)
-    return params_values, cost_history, accuracy_history
+        grads_history.append(grads_values)
+    return params_values, cost_history, accuracy_history,grads_history

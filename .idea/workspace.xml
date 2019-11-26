@@ -3,10 +3,8 @@
   <component name="ChangeListManager">
     <list default="true" id="9d6502e8-09dc-4ec7-b961-bde3c405175f" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/backward_prop.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/backward_prop.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/forward_prop.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/forward_prop.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/test_code.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/test_code.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/updates.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/updates.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/train.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -39,6 +37,7 @@
     <option name="width" value="1680" />
     <option name="height" value="981" />
   </component>
+  <component name="ProjectId" id="1UAIqY4OUHgGJqbYdkyoYhDNzgY" />
   <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="1" id="Add" />
   </component>
@@ -169,6 +168,19 @@
       <updated>1565564876808</updated>
     </task>
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="COLUMN_ORDER" />
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
