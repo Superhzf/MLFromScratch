@@ -5,10 +5,8 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/backward_prop.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/backward_prop.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/forward_prop.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/forward_prop.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/initializers.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/initializers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/losses.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/losses.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/test_code.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/test_code.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/updates.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/updates.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />

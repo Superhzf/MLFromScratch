@@ -28,9 +28,9 @@ def fully_backward_propagation(y_hat, y, memory, params_values, nn_architecture)
     grads_values = {}
     m = len(y_hat)
 
-    dA_prev = -y/y_hat+(1-y)/(1-y_hat)
+    dA_prev = -y/(y_hat+1e-15)+(1-y)/(1-y_hat+1e-15)
 
-    for layer_idx_prev, layer in reversed(enumerate(nn_architecture)):
+    for layer_idx_prev, layer in reversed(list(enumerate(nn_architecture))):
         layer_idx_curr = layer_idx_prev+1
         activation_func_curr = layer['activation']
 
