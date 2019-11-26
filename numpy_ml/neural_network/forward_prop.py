@@ -1,5 +1,7 @@
 import numpy as np
-from .activations import ReLU,sigmoid
+import sys
+sys.path.insert(0, '')
+from activations import ReLU,sigmoid
 
 
 def single_layer_forward_propagation(A_prev, W_curr, b_curr, activation = 'relu'):
@@ -14,7 +16,7 @@ def single_layer_forward_propagation(A_prev, W_curr, b_curr, activation = 'relu'
     return activation_func(Z_curr), Z_curr
 
 
-def full_forward_propagation(X, param_values, nn_architecture):
+def fully_forward_propagation(X, param_values, nn_architecture):
     memory = {}
     A_curr = X
 

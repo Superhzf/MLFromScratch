@@ -26,4 +26,4 @@ def init_layers(nn_architecture,seed = 99):
         params_values[f'W_{layer_idx}'] = np.random.randn(layer_output_size,layer_input_size) * 0.1 # this could be wrong
         params_values[f'b_{layer_idx}'] = np.random.randn(layer_output_size,1) * 0.10
 
-        return params_values
+    return params_values

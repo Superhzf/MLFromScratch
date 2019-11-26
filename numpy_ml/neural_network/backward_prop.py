@@ -1,5 +1,7 @@
 import numpy as np
-from .activations import sigmoid_backward,ReLU_backward
+import sys
+sys.path.insert(0, '')
+from activations import sigmoid_backward,ReLU_backward
 
 
 def single_layer_backward_propagation(dA_curr, W_curr, b_curr, Z_curr, A_prev, activation = 'relu'):
@@ -20,7 +22,7 @@ def single_layer_backward_propagation(dA_curr, W_curr, b_curr, Z_curr, A_prev, a
     return dA_prev, dW_curr, db_curr
 
 
-def full_backward_propagation(y_hat, y, memory, params_values, nn_architecture):
+def fully_backward_propagation(y_hat, y, memory, params_values, nn_architecture):
     y_hat = np.array(y_hat)
     y = np.array(y)
     grads_values = {}
