@@ -14,6 +14,7 @@ nn_architecture = [
 ]
 """
 
+
 def init_layers(nn_architecture,seed = 99):
     np.random.seed(seed)
     num_of_layers = len(nn_architecture)
@@ -23,7 +24,8 @@ def init_layers(nn_architecture,seed = 99):
         layer_idx = idx + 1
         layer_input_size = layer["input_dim"]
         layer_output_size = layer['output_dim']
-        params_values[f'W_{layer_idx}'] = np.random.randn(layer_output_size,layer_input_size) * 0.1 # this could be wrong
-        params_values[f'b_{layer_idx}'] = np.random.randn(layer_output_size,1) * 0.10
+        params_values[f'W_{layer_idx}'] = np.random.randn(layer_output_size, layer_input_size) * 0.1
+        params_values[f'b_{layer_idx}'] = np.random.randn(layer_output_size, 1)
+        # params_values[f'b_{layer_idx}'] = np.zeros([layer_output_size, 1])
 
     return params_values
