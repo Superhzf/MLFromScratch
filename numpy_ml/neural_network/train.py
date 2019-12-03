@@ -1,4 +1,6 @@
 # ref: https://towardsdatascience.com/lets-code-a-neural-network-in-plain-numpy-ae7e74410795
+# https://explained.ai/matrix-calculus/
+# http://cs231n.stanford.edu/vecDerivs.pdf
 import sys
 sys.path.insert(0, '')
 from initializers import init_layers
