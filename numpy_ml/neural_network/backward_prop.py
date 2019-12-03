@@ -4,7 +4,7 @@ sys.path.insert(0, '')
 from activations import sigmoid_backward,ReLU_backward
 
 
-def single_layer_backward_propagation(dA_curr, W_curr, b_curr, Z_curr, A_prev, activation = 'relu'):
+def single_layer_backward_propagation(dA_curr, W_curr, Z_curr, A_prev, activation = 'relu'):
     m = A_prev.shape[1]
 
     if activation == 'relu':
@@ -16,6 +16,7 @@ def single_layer_backward_propagation(dA_curr, W_curr, b_curr, Z_curr, A_prev, a
 
     dZ_curr = backward_activation_func(dA_curr, Z_curr)
     dW_curr = np.dot(dZ_curr, A_prev.T) / m
+    # dW_curr = dZ_curr @ A_prev.T
     db_curr = np.sum(dZ_curr, axis=1, keepdims=True) / m
     dA_prev = np.dot(W_curr.T, dZ_curr)
 
@@ -37,9 +38,8 @@ def fully_backward_propagation(y_hat, y, memory, params_values, nn_architecture)
         A_prev = memory[f'A_{layer_idx_prev}']
         Z_curr = memory[f'Z_{layer_idx_curr}']
         W_curr = params_values[f'W_{layer_idx_curr}']
-        b_curr = params_values[f'b_{layer_idx_curr}']
 
-        dA_prev, dW_curr, db_curr = single_layer_backward_propagation(dA_curr, W_curr, b_curr, Z_curr,
+        dA_prev, dW_curr, db_curr = single_layer_backward_propagation(dA_curr, W_curr, Z_curr,
                                                                       A_prev, activation_func_curr)
 
         grads_values[f'dW_{layer_idx_curr}'] = dW_curr

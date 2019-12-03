@@ -2,19 +2,22 @@ import numpy as np
 
 
 def sigmoid(Z):
-    return 1/(1+np.exp(-Z))
+    A = 1/(1+np.exp(-Z))
+    return A
 
 
 def ReLU(Z):
-    return np.maximum(0, Z)
+    A = np.maximum(0, Z)
+    return A
 
 
 def sigmoid_backward(dA, Z):
     sig = sigmoid(Z)
-    return dA * sig * (1 - sig)
+    dZ = dA * sig * (1 - sig)
+    return dZ
 
 
 def ReLU_backward(dA,Z):
     dZ = np.array(dA)
-    dZ[Z<0] = 0
+    dZ[Z < 0] = 0
     return dZ
