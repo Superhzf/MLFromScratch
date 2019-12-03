@@ -1,11 +1,12 @@
 import numpy as np
 
-def CrossEntropyLoss(y_hat,y):
+
+def CrossEntropyLoss(y_hat, y):
     y_hat = np.array(y_hat)
     y = np.array(y)
     y = y[None]
     assert len(y_hat) == len(y)
-    assert np.all(np.isin(np.unique(y),[0,1]))
+    assert np.all(np.isin(np.unique(y), [0, 1]))
     m = len(y)
     loss = 0
     mask_zero = y == 0
@@ -15,7 +16,7 @@ def CrossEntropyLoss(y_hat,y):
     return -1*loss/m
 
 
-def get_accuracy_value(y_hat,y,threshold = 0.5):
+def get_accuracy_value(y_hat, y, threshold=0.5):
     y_hat = np.array(y_hat)
     y = np.array(y)
     class_hat = y_hat >= threshold

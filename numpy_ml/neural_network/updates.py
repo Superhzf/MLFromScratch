@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def update(params_values,grads_values, nn_architecture, learning_rate):
     for idx, layer in enumerate(nn_architecture):
         layer_idx = idx + 1
