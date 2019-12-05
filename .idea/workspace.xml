@@ -5,14 +5,10 @@
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/ml.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/ml.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/activations.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/activations.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/backward_prop.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/backward_prop.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/forward_prop.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/forward_prop.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/implementation.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/implementation.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/test_code.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/test_code.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/play ground.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/play ground.ipynb" afterDir="false" />
     </list>
-    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -42,6 +38,11 @@
   <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="1" id="Add" />
   </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
   <component name="PropertiesComponent">
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
@@ -50,18 +51,6 @@
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
     </key>
-  </component>
-  <component name="RunDashboard">
-    <option name="ruleStates">
-      <list>
-        <RuleState>
-          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
-        </RuleState>
-        <RuleState>
-          <option name="name" value="StatusDashboardGroupingRule" />
-        </RuleState>
-      </list>
-    </option>
   </component>
   <component name="RunManager" selected="Python.forward_prop">
     <configuration name="backward_prop" type="PythonConfigurationType" factoryName="Python" temporary="true">
@@ -157,6 +146,18 @@
       </list>
     </recent_temporary>
   </component>
+  <component name="ServiceViewManager">
+    <option name="viewStates">
+      <list>
+        <serviceView>
+          <treeState>
+            <expand />
+            <select />
+          </treeState>
+        </serviceView>
+      </list>
+    </option>
+  </component>
   <component name="SvnConfiguration">
     <configuration />
   </component>
@@ -182,6 +183,16 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="482" y="187" key="SettingsEditor" timestamp="1575408365929">
+      <screen x="67" y="27" width="1853" height="1053" />
+    </state>
+    <state x="482" y="187" key="SettingsEditor/67.27.1853.1053@67.27.1853.1053" timestamp="1575408365929" />
+    <state x="649" y="380" key="com.intellij.ide.util.TipDialog" timestamp="1575573554199">
+      <screen x="67" y="27" width="1853" height="1053" />
+    </state>
+    <state x="649" y="380" key="com.intellij.ide.util.TipDialog/67.27.1853.1053@67.27.1853.1053" timestamp="1575573554199" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
