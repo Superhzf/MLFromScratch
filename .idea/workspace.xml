@@ -4,7 +4,7 @@
     <list default="true" id="9d6502e8-09dc-4ec7-b961-bde3c405175f" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/implementation.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/implementation.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/numpy_ml/neural_network/test_code.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/numpy_ml/neural_network/test_code.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/play ground.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/play ground.ipynb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -186,10 +186,10 @@
       <screen x="67" y="27" width="1853" height="1053" />
     </state>
     <state x="482" y="187" key="SettingsEditor/67.27.1853.1053@67.27.1853.1053" timestamp="1575408365929" />
-    <state x="649" y="380" key="com.intellij.ide.util.TipDialog" timestamp="1575650007036">
+    <state x="649" y="380" key="com.intellij.ide.util.TipDialog" timestamp="1577497531660">
       <screen x="67" y="27" width="1853" height="1053" />
     </state>
-    <state x="649" y="380" key="com.intellij.ide.util.TipDialog/67.27.1853.1053@67.27.1853.1053" timestamp="1575650007036" />
+    <state x="649" y="380" key="com.intellij.ide.util.TipDialog/67.27.1853.1053@67.27.1853.1053" timestamp="1577497531660" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
