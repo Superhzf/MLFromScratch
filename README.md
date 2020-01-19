@@ -1,2 +1,2 @@
 # ml
-numpy-ml
+numpy-ml from scratch
