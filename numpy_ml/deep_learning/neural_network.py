@@ -101,7 +101,7 @@ class NeuralNetwork():
 
 
     def _backward_pass(self,loss_grad):
-        """Propogage the gradient backwards and update the weights in each layer"""
+        """Propagage the gradient backwards and update the weights in each layer"""
         for layer in reversed(self.layers):
             loss_grad = layer.backward_pass(loss_grad)
 
