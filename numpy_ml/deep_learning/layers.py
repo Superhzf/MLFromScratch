@@ -60,15 +60,16 @@ class Dense(Layer):
 
     def forward_pass(self,X,training=True):
         self.layer_input = X
-        return X.dot(self.W)+self.b
+        return X.dot(self.W)+self.b # Z = W*A + b
 
     def backward_pass(self,accum_grad):
+        # accum_grad = dZ
         # Save weights used during forward pass
         W = self.W
 
         if self.trainable:
             # Calculate gradient w.r.t layer weights
-            dw = self.layer_input.T.dot(accum_grad)
+            dw = self.layer_input.T.dot(accum_grad)/self.input_shape
             db = np.sum(accum_grad, axis=0, keepdims=True)
 
             # Update the layer weights
@@ -82,3 +83,81 @@ class Dense(Layer):
 
     def output_shape(self):
         return self.n_units
+
+# The reason to use batchnormaliza is that without batchnormalization, the
+# distribution of input to the next layer is constantly changing due to we
+# are constantly updating the weights, so it would be hard and slow for the next layer
+# to get optimized
+
+# the reason to have beta and gamma is that the optimal mean and std is not
+# necessarily 0 and 1. Besides, using beta and gamma make it easier to find
+# the optimal value
+class BatchNormalization(Layer):
+    """Batch Normalization"""
+    def __init__(self,momentum = 0.99):
+        self.momentum = momentum
+        self.trainable = True
+        self.eps = 0.01
+        self.running_mean = None
+        self.running_var = None
+
+    def initialize(self,optimizer):
+        # Initialize the parameters
+        self.gamma = np.ones(self.input_shape)
+        self.betta = np.zeros(self.input_shape)
+        # parameter optimizers
+        self.gamma_opt = copy.copy(optimizer)
+        self.beta_opt = copy.copy(optimizer)
+
+    def parameters(self):
+        return np.prod(self.gamma.shape) + np.prod(self.beta.shape)
+
+    def forward_pass(self,X,training=True):
+        # Initialize running mean and variance if first run
+        if self.running_mean is None:
+            self.running_mean = np.mean(X,axis=0)
+            self.running_var = np.var(X,axis=0)
+
+        if training and self.trainable:
+            mean = np.mean(X,axis=0)
+            var = np.var(X,axis=0)
+            self.running_mean = self.momentum * self.running_mean + (1-self.momentum)*mean # it is based on batch
+            self.running_var = self.momentum * self.running_var + (1-self.momentum)*var
+        else:
+            mean = self.running_mean
+            var = self.running_var
+
+        # Statistics saved for backward pass
+        self.X_centered = X - mean
+        self.stddev_inv = 1/np.sqrt(var+self.eps)
+
+        X_norm = self.X_centered * self.stddev_inv
+        output = self.gamma * X_norm + self.beta
+
+        return output
+
+    def backward_pass(self,accum_grad):
+        # save parameters used during the forward pass
+        gamma = self.gamma
+
+        # if the layer is trainable, updatet the parameters
+        if self.trainable:
+            X_norm = self.X_centered*self.stddev_inv
+            grad_gamma = np.sum(accum_grad*X_norm,axis=0)
+            grad_betta = np.sum(accum_grad,axis=0)
+            self.gamma = self.gamma_opt.update(self.gamma, grad_gamma)
+            self.beta = self.beta_opt.update(self.beta, grad_beta)
+
+        batch_size = accum_grad.shape[0]
+
+        # The gradient of the loss with respect to the layer inputs (use weights
+        # stats from forward pass)
+        accum_grad = (1 / batch_size) * gamma * self.stddev_inv * (
+            batch_size * accum_grad
+            - np.sum(accum_grad, axis=0)
+            - self.X_centered * self.stddev_inv**2 * np.sum(accum_grad * self.X_centered, axis=0)
+            )
+        return accum_grad
+
+    def out_shape(self):
+        return self.input_shape
