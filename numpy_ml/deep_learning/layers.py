@@ -92,6 +92,10 @@ class Dense(Layer):
 # the reason to have beta and gamma is that the optimal mean and std is not
 # necessarily 0 and 1. Besides, using beta and gamma make it easier to find
 # the optimal value
+
+# The impact is that we can use larger learning rate and small # of epochs
+# Besides, it works as a regulzarization term because the mean and var are
+# calculated over batches
 class BatchNormalization(Layer):
     """Batch Normalization"""
     def __init__(self,momentum = 0.99):
