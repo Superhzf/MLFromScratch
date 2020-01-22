@@ -94,8 +94,8 @@ class Dense(Layer):
 # the optimal value
 
 # The impact is that we can use larger learning rate and small # of epochs
-# Besides, it works as a regulzarization term because the mean and var are
-# calculated over batches
+# Besides, it works as a regulzarization term because each hidden unit multiples
+# a random value which is the sd and subtracts a value which is mean
 class BatchNormalization(Layer):
     """Batch Normalization"""
     def __init__(self,momentum = 0.99):
@@ -132,7 +132,7 @@ class BatchNormalization(Layer):
             var = self.running_var
 
         # Statistics saved for backward pass
-        self.X_centered = X - mean
+        self.X_centered = X - mean # this is batch mean, not running_mean for training
         self.stddev_inv = 1/np.sqrt(var+self.eps)
 
         X_norm = self.X_centered * self.stddev_inv
