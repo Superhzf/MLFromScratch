@@ -187,11 +187,13 @@ class Dropout(Layer):
         self.trainable = True
 
     def forward_pass(self,X,training=True):
-        c = (1-self.p)
+        
         if training:
+            c = (1-self.p)
             self._mask = np.random.uniform(size = X.shape) > self.p
-            c = self._mask
-        return X * c
+            c = self._mask/(1-p)
+            X = X * c
+        return X
 
     def backward_pass(self,accum_grad):
         return accum_grad*self._mask
