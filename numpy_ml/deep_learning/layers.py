@@ -63,7 +63,7 @@ class Dense(Layer):
         return X.dot(self.W)+self.b # Z = W*A + b
 
     def backward_pass(self,accum_grad):
-        # accum_grad = dZ
+        # accum_grad = dZ_curr
         # Save weights used during forward pass
         W = self.W
 
@@ -78,7 +78,7 @@ class Dense(Layer):
 
         # Return accumulated gradient for the next layer
         # Calculation is based on the weights used during the forward pass
-        accum_grad = accum_grad.dot(W.T)
+        accum_grad = accum_grad.dot(W.T) # dA_prev
         return accum_grad
 
     def output_shape(self):
@@ -141,6 +141,7 @@ class BatchNormalization(Layer):
 
         return output
 
+# reference: https://kratzert.github.io/2016/02/12/understanding-the-gradient-flow-through-the-batch-normalization-layer.html
     def backward_pass(self,accum_grad):
         # save parameters used during the forward pass
         gamma = self.gamma
