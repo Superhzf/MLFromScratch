@@ -96,6 +96,7 @@ class Dense(Layer):
 # The impact is that we can use larger learning rate and small # of epochs
 # Besides, it works as a regulzarization term because each hidden unit multiples
 # a random value which is the sd and subtracts a value which is mean
+# Also, the mean and var are learned across the training
 class BatchNormalization(Layer):
     """Batch Normalization"""
     def __init__(self,momentum = 0.99):
