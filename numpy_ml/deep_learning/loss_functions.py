@@ -24,7 +24,7 @@ class SquareLoss(Loss):
 # prediction is 1.
 
 # Why CE loss generally?
-# 
+# Answer: Because minimizing cross entropy loss is equal to maximizing log likelihood
 class BinaryCrossEntropy(Loss):
     def __init__(self):
         pass
