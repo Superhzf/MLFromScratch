@@ -25,6 +25,9 @@ class SquareLoss(Loss):
 
 # Why CE loss generally?
 # Answer: Because minimizing cross entropy loss is equal to maximizing log likelihood
+# Proof: if y_true = 1, suppose P(y|x) = y_pred, if y_true = 0, P(y|x) = 1-y_pred
+# If we combine them, we have P(y|x) = (y_pred^y)*(1-y_pred)^(1-y)
+# logP(y|x) = log(y_pred^y) + log(1-y_pred)^(1-y) = ylogy+(1-y)log(1-y)
 class BinaryCrossEntropy(Loss):
     def __init__(self):
         pass
