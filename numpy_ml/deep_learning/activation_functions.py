@@ -1,7 +1,7 @@
 import numpy as np
 
 # Why sigmoid function instead of anything else?
-# TODO
+# TODO 
 class Sigmoid():
     def __call__(self,x):
         return 1/(1+np.exp(-x))
