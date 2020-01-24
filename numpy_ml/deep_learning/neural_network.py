@@ -63,7 +63,10 @@ class NeuralNetwork():
 
         return loss, acc
 
-
+    # why use batch gradient descent?
+    # Answer: If the whole dataset is used, then the memory might be not large enough
+    # If we use one sample each time, the training may go astray and we cannot
+    # take the advantage of vectorization
     def train_on_batch(self,X,y):
         """Single gradient update over one batch of samples"""
         y_pred = self._forward_pass(X)
