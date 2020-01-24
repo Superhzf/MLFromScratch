@@ -26,11 +26,12 @@ class Sigmoid():
         return p*(1-p)
 
 # Why Softmax instead of standard normalization ?
-# TODO
+# Answer: softmax is a general form of sigmoid, if we use standard normalization
+# it will not give us 0 gradient if it is a correct prediction
 class Softmax():
     def __call__(self,x):
         exp_x = np.exp(x-np.max(x,axis=-1,keepdims=True))
-        return exp_x/np.sum(exp_x,axis=-1,keepdims=True)
+        return exp_x/np.sum(exp_x,axis=-1,keepdims=True) # this implementation is more numerically stable
 
     def gradient(self,x):
         p = self.__call__(x)
