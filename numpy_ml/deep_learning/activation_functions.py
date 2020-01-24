@@ -1,7 +1,22 @@
 import numpy as np
 
 # Why sigmoid function instead of anything else?
-# TODO 
+# reference: https://stats.stackexchange.com/questions/162988/why-sigmoid-function-instead-of-anything-else/318209#318209
+# Answer: The function should fullfil several attributes,
+# 1. The range of the function should be between (0,1)
+# 2. The function should be monotonous. continuous and differentiable
+# 3. f(0) = 0.5
+# 4. It should be symmetrical which means f(-x) = 1-f(x)
+# 5. We need a strong gradient and 0 cost when the prediction is wrong and a
+# small gradient and large |cost| when the prediction is correct
+# For sigmoid function, we will proof how it meets crietia 5.
+# Let's if y_true = 1, z is the output of the last non-avtivation layer, after
+# sigmoid, P = 1/(1+e^(-z)), loss = -log(P) = -log(e^z/(1+e^z)) = -z+log(1+e^z)
+# If z is large which means the prediction is correct, then loss = -z + z = 0
+# and dz = 0 which is perfect
+# In the other hand, if z is small (|z| is large) which means the prediction is wrong,
+# then loss = -z which is desirble,so dz = -1 which means we can move close to
+# the optimal value. Problem solved
 class Sigmoid():
     def __call__(self,x):
         return 1/(1+np.exp(-x))
