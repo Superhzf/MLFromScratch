@@ -1,8 +1,12 @@
 import numpy as np
 
 # Stochastic Gradient Descent with momentum
+# The reason to use momentum is that if we are
+# on the right direction, then the step would be larger and larger
+# if the direction is wrong, momentum will keep us moving too far on the wrong
+# direction
 class StochasticGradientDescent():
-    def __init__(self,learning_rate = 0.01,momentum=0.01):
+    def __init__(self,learning_rate = 0.01,momentum=0.9):
         self.learning_rate = learning_rate
         self.momentum = momentum
         self.w_update = None
@@ -18,7 +22,7 @@ class StochasticGradientDescent():
         return w - self.learning_rate*self.w_update
 
 # why RMSprop?
-# Answer: 
+# Answer:
 class RMSprop():
     def __init__(self,learning_rate = 0.01,rho = 0.9):
         self.learning_rate = learning_rate
