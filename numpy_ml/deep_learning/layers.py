@@ -186,12 +186,14 @@ class Dropout(Layer):
         self.pass_through = True
         self.trainable = True
 
+    # We only do drop out at the training stage and turn it off at the inference
+    # stage because we want accuracy and results should be reproducible
     def forward_pass(self,X,training=True):
-        
+
         if training:
             c = (1-self.p)
             self._mask = np.random.uniform(size = X.shape) > self.p
-            c = self._mask/(1-p)
+            c = self._mask/(1-p) # if p = 0.5, then the weights will be multiplied by 2
             X = X * c
         return X
 
