@@ -22,7 +22,8 @@ class StochasticGradientDescent():
         return w - self.learning_rate*self.w_update
 
 # why RMSprop?
-# Answer:
+# Answer: This kind of solves the problem of adagrad because with the help
+# of moving average, the learning rates do not decrease so rapidly.
 class RMSprop():
     def __init__(self,learning_rate = 0.01,rho = 0.9):
         self.learning_rate = learning_rate
@@ -39,6 +40,15 @@ class RMSprop():
         return w - self.learning_rate*grad_wrt_w/np.sqrt(self.Eg+self.eps)
 
 
+# why adagrad?
+# Answer: There are two reasons to use adagrad, the first one is that as the training
+# goes on, we want to reduce the learning rate for the model to converge. The second
+# reason is that frequent features have a smaller update and infrequent features
+# have a larger update. It is usefull for sparse features.
+# The downside of adagrad is that the learning rate becomes smaller and smaller
+# and finally could stop, this won't work for saddle points
+# TODO: why square the gradient and then take the square root of it instead of
+# just calculte the abslute value of it?
 class Adagrad():
     def __init__(self,learning_rate=0.01):
         self.learning_rate = learning_rate
@@ -52,4 +62,6 @@ class Adagrad():
         # Add the square of the gradient of the loss function at w
         self.G += np.power(grad_wrt_w,2)
         # Adaptive gradient with higher learning_rate for sparse data
+        # If the feature is missing, then self.G becomes relatively smaller
+        # and the step is relatively larger
         return w-self.learning_rate*grad_wrt_w/np.sqrt(self.G+self.eps)
