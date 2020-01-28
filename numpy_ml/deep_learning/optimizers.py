@@ -23,9 +23,9 @@ class StochasticGradientDescent():
 
 # why RMSprop?
 # Answer: This solves the problem of adagrad, the learning rate is not becoming
-# larger and larger. The idea is the small, if the gradient is large, we want
-# it to be small, if the gradient is small, we want it to be large. It is pretty
-# much like normalization.
+# smaller and smaller. The idea is the same, if the gradient is large, we want
+# the learning rate to be small, if the gradient is small, we want the learning rate
+# to be large. It is pretty much like normalization.
 #
 class RMSprop():
     def __init__(self,learning_rate = 0.01,rho = 0.9):
@@ -74,7 +74,7 @@ class Adagrad():
         return w-self.learning_rate*grad_wrt_w/np.sqrt(self.G+self.eps)
 
 # Adam is the combination of SGD with momentum and RMSprop
-# 
+# Basically, it controls update and learning rate at the same time
 class Adam():
     def __init__(self,learning_rate=0.001,b1=0.9,b2=0.999):
         self.learning_rate = learning_rate
