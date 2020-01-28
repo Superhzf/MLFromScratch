@@ -25,7 +25,8 @@ class StochasticGradientDescent():
 # Answer: This solves the problem of adagrad, the learning rate is not becoming
 # smaller and smaller. The idea is the same, if the gradient is large, we want
 # the learning rate to be small, if the gradient is small, we want the learning rate
-# to be large. It is pretty much like normalization.
+# to be large, so we get the same magnitude no matter how big or small that particular
+# gradient is. It is pretty much like normalization.
 #
 class RMSprop():
     def __init__(self,learning_rate = 0.01,rho = 0.9):
