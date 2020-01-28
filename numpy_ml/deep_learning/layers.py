@@ -46,6 +46,7 @@ class Dense(Layer):
         self.b = None
 
     def initialize(self,optimizer):
+        # TODO: Kaiming initialization
         # Initialize the weights
         limit = 1 / math.sqrt(self.input_shape[0])
         self.W = np.random.uniform(-limit,limit,(self.input_shape[0],self.n_units))
