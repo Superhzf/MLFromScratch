@@ -23,6 +23,6 @@ class DecisionNode():
     def __init__(self,feature_i,threshold,value=None,true_branch,false_branch):
         self.feature_i = feature_i
         self.threshold = threshold
-        self.value = value # Effective if it is a 
+        self.value = value
         self.true_branch = true_branch # left subtree
         self.false_branch = false_branch # right subtree
