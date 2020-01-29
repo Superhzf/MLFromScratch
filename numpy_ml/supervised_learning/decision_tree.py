@@ -16,9 +16,9 @@ class Node():
     value: float
         The class prediction if classification tree, or float value if regression
         tree
-    true_branch: DecisionNode
+    true_branch: Node
         Next decision node for samples where features value meet the threshold
-    false_branch: DecisionNode
+    false_branch: Node
         Next decision node for samples where features value does not meet the
         threshold
     """
