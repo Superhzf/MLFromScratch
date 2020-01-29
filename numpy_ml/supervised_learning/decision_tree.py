@@ -66,4 +66,33 @@ class DecisionTree(object):
         """
         Recursive method which builds out the decision tree and splits X and respective y
         on the feature of X which (based on impurity) best separates the data
+
+        Parameters:
+        --------------------------------
+        X: numpy array
+            Independent variables
+        y: numpy array
+            Dependnet variables
         """
+        largest_impurity = 0
+        best_cretiria = None # A dictionary stores feature index and threshold
+        best_sets = None # Subsets of the data
+
+        if len(np.shape(y)) == 1:
+            y = np.expand_dims(y,axis=1)
+
+        # Concatenate x and y
+        Xy = np.concat((X,y),axis=1)
+
+        n_samples, n_features = np.shape(X)
+
+        if n_samples >= self.min_samples_split and current_depth <= self.max_depth:
+            # Calculate the impurity for each feature
+            for feature_i in range(n_features):
+                # All values of feature_i
+                feature_values = np.expand_dims(X[:,feature_i],axis=1)
+                unique_values = np.unique(feature_values)
+
+                # Iterate through all unique values of feature column i and
+                # calculate the impurity
+                
