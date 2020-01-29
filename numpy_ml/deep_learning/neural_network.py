@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 from terminaltables import AsciiTable
-from utils import batch_iterator
+from numpy_ml.utils import batch_iterator
 import numpy as np
 import progressbar
 
