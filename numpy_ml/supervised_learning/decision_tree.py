@@ -124,6 +124,52 @@ class DecisionTree(object):
                         threshold = best_cretiria['threshold'],
                         true_branch = true_branch,
                         false_branch = false_branch)
-        # This is an internal node
+        # This is leaf node
         leaf_value = self._leaf_value_calculation(y)
         return Node(value=leaf_value)
+
+
+    def predict_value(self,x,tree=None):
+        """
+        Do a recursive search down the tree and make a prediction based on the
+        value that we end up at
+        """
+        if tree is None:
+            tree = self.root
+
+        # If we are at the leaf node
+        if tree.value is not None:
+            return tree.value
+
+        # Choose the feature that we will iterate
+        feature_value = x[tree.feature_i]
+
+        # Determine which branch (left/right) we will follow
+        branch = tree.false_branch
+        if isinstance(feature_value,int) or isinstance(feature_value,float):
+            if feature_value>=tree.threshold:
+                branch = tree.true_branch
+        elif feature_value == tree.threshold:
+            branch = tree.true_branch
+
+        # Iterate subtree
+        return self.predict_value(x,branch)
+
+    def print_tree(self, tree=None, indent=" "):
+        """ Recursively print the decision tree """
+        if not tree:
+            tree = self.root
+
+        # If we're at the leaf node
+        if tree.value is not None:
+            print (tree.value)
+        # Go deeper down the tree
+        else:
+            # Print test
+            print ("%s:%s? " % (tree.feature_i, tree.threshold))
+            # Print the true scenario
+            print ("%sT->" % (indent), end="")
+            self.print_tree(tree.true_branch, indent + indent)
+            # Print the false scenario
+            print ("%sF->" % (indent), end="")
+            self.print_tree(tree.false_branch, indent + indent)
