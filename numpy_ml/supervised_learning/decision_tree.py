@@ -173,3 +173,18 @@ class DecisionTree(object):
             # Print the false scenario
             print ("%sF->" % (indent), end="")
             self.print_tree(tree.false_branch, indent + indent)
+
+
+class RegressionTree(DecisionTree):
+    def _calculate_variance_reduction(self,y,y1,y2):
+        # y: target variable before split
+        # y1: target variable at left subtree
+        # y2: target variable at right subtree
+        var_tot = calculate_variance(y)
+        var_1 = calculate_variance(y1)
+        var_2 = calculate_variance(y2)
+        frac_1 = len(y1)/len(y)
+        frac_2 = len(y2)/len(y)
+
+        # Calculate the variable reduction
+        variance_reduction = var_tot - (frac_1*var_1 + frac_2*var_2)
