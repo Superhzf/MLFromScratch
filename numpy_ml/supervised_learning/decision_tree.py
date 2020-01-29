@@ -1,9 +1,8 @@
 import numpy as np
+from numpy_ml.utils import divide_on_feature
 
-# TODO: Looks like that DecisionNode() class works as an internal node
-# and a node at the same time because it has left/right subtree and
-# a value
-class DecisionNode():
+# This can work as either an interbal node or a decision node
+class Node():
     """
     Class that represents a decision node or leaf in the decision tree
 
@@ -95,4 +94,36 @@ class DecisionTree(object):
 
                 # Iterate through all unique values of feature column i and
                 # calculate the impurity
-                
+                for threshold in unique_values:
+                    # Divide X and y according to the feature value, if it is
+                    # larger than threshold, then go left, otherwise, go right
+                    Xy1,Xy2 = divide_on_feature(Xy,feature_i,threshold)
+                    if len(Xy1) > 0 and len(Xy2) > 0:
+                        # Select the target values from the two sets
+                        y1 = Xy1[:,n_features:]
+                        y2 = Xy2[:,n_features:]
+
+                        # Calculate the impurity
+                        impurity = self._impurity_calculation(y,y1,y2)
+
+                        if impurity > largest_impurity:
+                            largest_impurity = impurity
+                            best_cretiria = {'feature_i': feature_i,'threshold':threshold}
+                            best_sets = {
+                                "leftX": Xy1[:,:n_features], # X of left subtree
+                                "lefty": Xy1[:,n_features:], # y of left subtree
+                                "rightX": Xy2[:,:n_features], # X of right subtree
+                                "lefty": Xy2[:,n_features:]
+                            }
+        if largest_impurity > self.min_impurity:
+            # Build subtrees for the right and left branches
+            true_branch = self._build_tree(best_sets['leftX'],best_sets['lefty'],current_depth+1)
+            false_branch = self._build_tree(best_sets['rightX'],best_sets['righty'],current_depth+1)
+            # This is an internal node
+            return Node(feature_i = best_cretiria['feature_i'],
+                        threshold = best_cretiria['threshold'],
+                        true_branch = true_branch,
+                        false_branch = false_branch)
+        # This is an internal node
+        leaf_value = self._leaf_value_calculation(y)
+        return Node(value=leaf_value)
