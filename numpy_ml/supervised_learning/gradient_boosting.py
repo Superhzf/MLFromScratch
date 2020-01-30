@@ -1,1 +1,59 @@
 import numpy as np
+from deep_learning.loss_functions import SquareLoss, CrossEntropy
+from supervised_learning.decision_tree import RegressionTree
+
+# Why does a GBM model have a learning rate?
+# Answer: 
+class GradientBoosting(object):
+    """
+    Super class of GradientBoostingClassifier and GradientBoostingRegressor. Use
+    a collection of regression trees that trains on predicting the gradient of
+    the loss function
+
+    Parameters
+    ---------------------------
+    n_estimators: int
+        The number of classification trees that are used.
+    learning_rate: float
+        The step length that will be taken when following the negative gradient
+        during training
+    min_samples_split: int
+        The minimum number of samples needed to make a split when building a tree
+    min_impurity: float
+        The minimum impurity required to further split the tree
+    max_depth: int
+        The maximum depth of a tree
+    regression: boolean
+        True if it is a regression problem otherwise False
+    """
+    def __init__(self,n_estimators,learning_rate,min_samples_split,min_impurity,
+                 max_depth,regression):
+        self.n_estimators = n_estimators
+        self.learning_rate = learning_rate
+        self.min_samples_split = min_samples_split
+        self.min_impurity = min_impurity
+        self.max_depth = max_depth
+        self.regression = regression
+
+        # Square loss for regression, logloss for classification
+        if self.regression:
+            self.loss = SquareLoss()
+        else:
+            self.loss = CrossEntropy()
+
+        # Initialize regression trees
+        self.trees = []
+        for _ in range(self.n_estimators):
+            tree = RegressionTree(min_samples_split=self.min_samples_split,
+                                  min_impurity = self.min_impurity,
+                                  max_depth = self.max_depth)
+            self.trees.append(tree)
+
+    def fit(self,X,y):
+        # initialze predictions using mean value of y
+        y_pred = np.full(np.shape(y),np.mean(y,axis=0))
+        for i in range(self.n_estimators):
+            gradient = self.loss.gradient(y,y_pred)
+            self.tree[i].fit(X,gradient)
+            update = self.trees[i].predict(X)
+            y_pred -= np.multiply(self.learning_rate,update)
