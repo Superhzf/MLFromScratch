@@ -188,3 +188,15 @@ class RegressionTree(DecisionTree):
 
         # Calculate the variable reduction
         variance_reduction = var_tot - (frac_1*var_1 + frac_2*var_2)
+        # sum operation here is to remove the dimension
+        return sum(variance_reduction)
+
+    def _mean_of_y(self,y):
+        # calculate leaf node value
+        value = np.mean(y,axis=0)
+        return value if len(value)>1 else value[0]
+
+    def fit(self,X,y):
+        self._impurity_calculation = _calculate_variance_reduction
+        self._leaf_value_calculation = self._mean_of_y
+        super(RegressionTree,self).fit(X,y)
