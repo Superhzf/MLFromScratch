@@ -1,5 +1,6 @@
 import numpy as np
 from numpy_ml.utils import divide_on_feature
+from numpy_ml.utils import calculate_variance,calculate_entropy
 
 # This can work as either an interbal node or a decision node
 class Node():
@@ -200,3 +201,30 @@ class RegressionTree(DecisionTree):
         self._impurity_calculation = _calculate_variance_reduction
         self._leaf_value_calculation = self._mean_of_y
         super(RegressionTree,self).fit(X,y)
+
+class ClassificationTree(DecisionTree):
+    def _calculate_information_gain(self,y,y1,y2):
+        p = len(y1)/len(y)
+        entropy_y = calculate_entropy(y)
+        entropy_y1 = calculate_entropy(y1)
+        entropy_y2 = calculate_entropy(y2)
+        p_1 = len(y1)/len(y)
+
+        info_gain = entropy_y-p1*entropy_y1-(1-p1)*entropy_y2
+        return info_gain
+
+    def _majority_vote(self,y):
+        most_common = None
+        max_count = 0
+        for label in np.unique(y):
+            # Count number of occurances of samples with label
+            count = sum(y==label)
+            if count > max_count:
+                max_count = count
+                most_common = label
+        return most_common
+
+    def fit(self,X,y):
+        self._impurity_calculation = _calculate_information_gain
+        self._leaf_value_calculation = _majority_vote
+        super(ClassificationTree,self).fit(X,y)
