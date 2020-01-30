@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 from terminaltables import AsciiTable
-from numpy_ml.utils import batch_iterator
+from utils import batch_iterator
 import numpy as np
 import progressbar
 
@@ -21,7 +21,7 @@ class NeuralNetwork():
         A tuple containing validation data and labels (X,y)
     """
     def __init__(self,optimizer,loss,validation_data = None):
-        self.errors = {"training:"[],"validation":[]}
+        self.errors = {"training":[],"validation":[]}
         self.layers = []
         self.loss_function = loss()
         self.optimizer = optimizer
@@ -82,7 +82,7 @@ class NeuralNetwork():
         """Train the model for a fixed number of epochs"""
         for _ in self.progressbar(range(n_epochs)):
             batch_error = []
-            for X_batch,y_batch in batch_iterator(X,y,batch_size = batch_size)
+            for X_batch,y_batch in batch_iterator(X,y,batch_size = batch_size):
                 loss,_ = self.train_on_batch(X_batch,y_batch)
                 batch_error.append(loss)
 
