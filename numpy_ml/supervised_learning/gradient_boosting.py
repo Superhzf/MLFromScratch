@@ -3,7 +3,10 @@ from deep_learning.loss_functions import SquareLoss, CrossEntropy
 from supervised_learning.decision_tree import RegressionTree
 
 # Why does a GBM model have a learning rate?
-# Answer: 
+# Answer:
+
+# Why does GBM fit gradien?
+# Answer:
 class GradientBoosting(object):
     """
     Super class of GradientBoostingClassifier and GradientBoostingRegressor. Use
@@ -44,7 +47,7 @@ class GradientBoosting(object):
         # Initialize regression trees
         self.trees = []
         for _ in range(self.n_estimators):
-            tree = RegressionTree(min_samples_split=self.min_samples_split,
+            tree = RegressionTree(min_samples_split = self.min_samples_split,
                                   min_impurity = self.min_impurity,
                                   max_depth = self.max_depth)
             self.trees.append(tree)
@@ -53,7 +56,10 @@ class GradientBoosting(object):
         # initialze predictions using mean value of y
         y_pred = np.full(np.shape(y),np.mean(y,axis=0))
         for i in range(self.n_estimators):
+            # for squared loss, the gradient is residual
             gradient = self.loss.gradient(y,y_pred)
+            # Each tree will fit the gradient instead of residual
             self.tree[i].fit(X,gradient)
             update = self.trees[i].predict(X)
+            # why does it have a learning rate?
             y_pred -= np.multiply(self.learning_rate,update)
