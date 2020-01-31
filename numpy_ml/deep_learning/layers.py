@@ -203,3 +203,46 @@ class Dropout(Layer):
 
     def output_shape(self):
         return self.input_shape
+
+activation_functions = {
+    'relu': ReLU,
+    'sigmoid': Sigmoid,
+    # 'selu': SELU,
+    # 'elu': ELU,
+    'softmax': Softmax,
+    'leaky_relu': LeakyReLU,
+    'tanh': TanH,
+    # 'softplus': SoftPlus
+}
+
+class RNN(layer):
+    """
+    A vanilla fully-connected recurrent neural network layer.
+
+    Parameters:
+    --------------------------------------
+    n_units: int
+        The number of hidden states in a layer
+    activation: string
+        The name of the activation function which will be applied to the output
+    of each state.
+    bptt_trunc: int
+        Decides how many time steps the gradient should be propagated backwards
+    through states given the loss gradient for time step t
+    input_shape: tuple
+        The expected input shape of the layer. For dense layers a single digit
+    specifying the number of features of the input. Must be specified if it is
+    the first layer in the network
+
+    Reference:
+    http://www.wildml.com/2015/09/recurrent-neural-networks-tutorial-part-2-implementing-a-language-model-rnn-with-python-numpy-and-theano/
+    """
+    def __init__(self,n_units,activation='tanh',bptt_trunc=5,input_shape=None):
+        self.input_shape=input_shape
+        self.n_units = n_units
+        self.activation = activation_functions[activation]()
+        self.trainable = True
+        self.bptt_trunc = bptt_trunc
+        self.W = None # Weight of the previous state
+        self.V = None # Weight of the output
+        self.U = None # Weight of the input
