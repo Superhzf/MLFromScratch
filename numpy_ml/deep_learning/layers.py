@@ -1,6 +1,6 @@
 import copy
 import numpy as np
-
+import math
 
 class Layer(object):
     def set_input_shape(self,shape):
@@ -243,6 +243,46 @@ class RNN(layer):
         self.activation = activation_functions[activation]()
         self.trainable = True
         self.bptt_trunc = bptt_trunc
-        self.W = None # Weight of the previous state
-        self.V = None # Weight of the output
-        self.U = None # Weight of the input
+        self.W_p = None # Weight of the previous state
+        self.W_o = None # Weight of the output
+        self.W_i = None # Weight of the input
+
+    def initialize(self,optimizer):
+        _,input_dim = self.input_shape
+        # Initialize the weights
+        limit = 1/math.sqrt(input_dim)
+        self.W_i = np.random.uniform(-limit,limit,(self.n_units,input_dim))
+        limit = 1/math.sqrt(self.n_units)
+        self.W_o = np.random.uniform(-limit,limit,(input_dim,self.n_units))
+        self.W_p = np.random.uniform(-limit,limit,(self.n_units,self.n_units))
+        # weight optimizers
+        self.W_i_opt = copy.copy(optimizer)
+        self.W_o_opt = copy.copy(optimizer)
+        self.W_p_opt = copy.copy(optimizer)
+
+    def parameters(self):
+        return np.prod(self.W.shape)+np.prod(self.U.shape)+np.prod(self.V.shape)
+
+    def forward_pass(self,X,training=True):
+
+        self.layer_input = X
+        # By default, X is a group of batchs
+        batch_size,timesteps,input_dim = self.layer_input.shape
+        # cache values for use in backprop
+        self.state_input = np.zeros((batch_size,timesteps,self.self.n_units))
+        self.states = np.zeros(batch_size,timesteps+1,self.n_units)
+        self.outputs = np.zeros(batch_size,timesteps,input_dim)
+
+        # Set last timesteps to zero for calculation of the state_input at time
+        # step zero
+        self.states=[:,-1] = np.zeros((batch_size,self.n_units))
+
+        for t in range(timesteps):
+            # refL https://www.cs.toronto.edu/~tingwuwang/rnn_tutorial.pdf
+            self.state_input[:,t] = X[:,t].dot(self.W_i)+self.states[:,t-1].dot(self.W.T)
+            self.states[:,t] = self.activation(self.state_input[:,t])
+            self.outputs[:,t] = self.states[:,t].dot(self.V.T)
+
+        return self.outputs
+
+    def backward_pass(self,accum_grad):
