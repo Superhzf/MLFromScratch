@@ -25,3 +25,14 @@ def divide_on_feature(X,feature_i,threshold):
         X_2 = X[X[:,feature_i]!=threshold]
 
     return np.array([X_1,X_2])
+
+
+def to_categorical(x,n_col=None):
+    """
+    one-hot encoding of norminal values
+    """
+    if not n_col:
+        n_col = np.amax(x)+1
+    one_hot = np.zeros((x.shape[0], n_col))
+    one_hot[np.arange(x.shape[0]), x] = 1
+    return one_hot

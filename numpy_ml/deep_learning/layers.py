@@ -264,24 +264,25 @@ class RNN(layer):
         self.W_p_opt = copy.copy(optimizer)
 
     def parameters(self):
-        return np.prod(self.W.shape)+np.prod(self.U.shape)+np.prod(self.V.shape)
+        return np.prod(self.W_i.shape)+np.prod(self.W_o.shape)+np.prod(self.W_p.shape)
 
     def forward_pass(self,X,training=True):
 
         self.layer_input = X
         # By default, X is a group of batchs
-        batch_size,timesteps,input_dim = self.layer_input.shape
+        batch_size,timestamps,input_dim = self.layer_input.shape
         # cache values for use in backprop
-        self.state_input = np.zeros((batch_size,timesteps,self.self.n_units))
-        self.states = np.zeros(batch_size,timesteps+1,self.n_units)
-        self.outputs = np.zeros(batch_size,timesteps,input_dim)
+        self.state_input = np.zeros((batch_size,timestamps,self.self.n_units))
+        self.states = np.zeros(batch_size,timestamps+1,self.n_units)
+        self.outputs = np.zeros(batch_size,timestamps,input_dim)
 
-        # Set last timesteps to zero for calculation of the state_input at time
+        # Set last timestamps to zero for calculation of the state_input at time
         # step zero
         self.states=[:,-1] = np.zeros((batch_size,self.n_units))
 
-        for t in range(timesteps):
+        for t in range(timestamps):
             # refL https://www.cs.toronto.edu/~tingwuwang/rnn_tutorial.pdf
+            # All input share self.W_i and self.W_p and self.W_o
             self.state_input[:,t] = X[:,t].dot(self.W_i)+self.states[:,t-1].dot(self.W_p.T)
             self.states[:,t] = self.activation(self.state_input[:,t])
             self.outputs[:,t] = self.states[:,t].dot(self.W_o.T)
@@ -289,7 +290,7 @@ class RNN(layer):
         return self.outputs
 
     def backward_pass(self,accum_grad):
-        _,timesteps,_ = accum_grad.shape
+        _,timestamps,_ = accum_grad.shape
 
         # Variables where we save the accumulated gradient w.r.t each parameter
         grad_W_p = np.zeros_like(self.W_p)
@@ -301,7 +302,7 @@ class RNN(layer):
         accum_grad_next = np.zeros_like(accum_grad)
 
         # Back Propagation through time
-        for t in reversed(range(timesteps)):
+        for t in reversed(range(timestamps)):
             grad_W_o += accum_grad[:,t].T.dot(self.states[:,t])
             # Calculate the gradient w.r.t the state input
             grad_wrt_state = accum_grad[:,t].dot(self.W_o)*self.activation.gradient(self.state_input[:,t])
