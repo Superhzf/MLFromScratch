@@ -279,9 +279,9 @@ class RNN(layer):
 
         for t in range(timesteps):
             # refL https://www.cs.toronto.edu/~tingwuwang/rnn_tutorial.pdf
-            self.state_input[:,t] = X[:,t].dot(self.W_i)+self.states[:,t-1].dot(self.W.T)
+            self.state_input[:,t] = X[:,t].dot(self.W_i)+self.states[:,t-1].dot(self.W_p.T)
             self.states[:,t] = self.activation(self.state_input[:,t])
-            self.outputs[:,t] = self.states[:,t].dot(self.V.T)
+            self.outputs[:,t] = self.states[:,t].dot(self.W_o.T)
 
         return self.outputs
 
