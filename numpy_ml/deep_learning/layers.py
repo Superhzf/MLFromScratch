@@ -310,7 +310,7 @@ class RNN(layer):
             # Update gradient w.r.t W and U by backprop.
             for t_ in reversed(np.arange(max(0,t-self.bptt_trunc),t+1)):
                 grad_W_i += grad_wrt_state.T.dot(self.layer_input[:,t_])
-                grad_W_p += grad_wrt_state.T.dot(self.layer_input[:,t_-1])
+                grad_W_p += grad_wrt_state.T.dot(self.states[:,t_-1])
                 # Calculate gradient w.r.t previous state
                 grad_wrt_state=grad_wrt_state.dot(self.W_p)*self.activation.gradient(self.state_input[:,t_-1])
 
