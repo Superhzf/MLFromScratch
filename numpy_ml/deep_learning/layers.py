@@ -215,6 +215,9 @@ activation_functions = {
     # 'softplus': SoftPlus
 }
 
+# Why tanh is popular in RNN?
+
+#
 class RNN(layer):
     """
     A vanilla fully-connected recurrent neural network layer.
@@ -286,3 +289,37 @@ class RNN(layer):
         return self.outputs
 
     def backward_pass(self,accum_grad):
+        _,timesteps,_ = accum_grad.shape
+
+        # Variables where we save the accumulated gradient w.r.t each parameter
+        grad_W_p = np.zeros_like(self.W_p)
+        grad_W_i = np.zeros_like(self.W_i)
+        grad_W_o = np.zeros_like(self.W_o)
+
+        # The gradient w.r.t the layer input
+        # will be passed on to the previous layer in the network
+        accum_grad_next = np.zeros_like(accum_grad)
+
+        # Back Propagation through time
+        for t in reversed(range(timesteps)):
+            grad_W_o += accum_grad[:,t].T.dot(self.states[:,t])
+            # Calculate the gradient w.r.t the state input
+            grad_wrt_state = accum_grad[:,t].dot(self.W_o)*self.activation.gradient(self.state_input[:,t])
+            # Calculate gradient w.r.t layer input
+            accum_grad_next[:,t] = grad_wrt_state.dot(self.W_i)
+            # Update gradient w.r.t W and U by backprop.
+            for t_ in reversed(np.arange(max(0,t-self.bptt_trunc),t+1)):
+                grad_W_i += grad_wrt_state.T.dot(self.layer_input[:,t_])
+                grad_W_p += grad_wrt_state.T.dot(self.layer_input[:,t_-1])
+                # Calculate gradient w.r.t previous state
+                grad_wrt_state=grad_wrt_state.dot(self.W_p)*self.activation.gradient(self.state_input[:,t_-1])
+
+        # update weights
+        self.W_i = self.W_i_opt.update(self.W_i,grad_W_i)
+        self.W_o = self.W_o_opt.update(self.W_o,grad_W_o)
+        self.W_p = self.W_p_opt.update(self.W_p,grad_W_p)
+
+        return accum_grad_next
+
+    def output_shape(self):
+        return self.input_shape
