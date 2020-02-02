@@ -217,7 +217,25 @@ activation_functions = {
 
 # Why tanh is popular in RNN?
 
-#
+# What is the difference between BP and BPTT?
+# A: BPTT still uses the chain rule, but the difference is that BPTT went through
+# observations reversely and at the same time gradients are added
+# up together becuase RNN shares weights and they are time sensitive.
+
+# Why truncate W_i and W_p?
+# A:
+
+# Why RNN is easy to have gradient vanishing and exploding?
+# A: Because RNN shares weights, for example if the weight for the input is 1 and
+# the initialize state is 1, all inputs are 0, then after 1000 times, the result
+# is still 1, if the weight is 1.01, then after 1000 times, it becomes a huge
+# number, if the weight is 0.99, then after 1000 times, it becomes 0. For regular
+# DNN, things are different, weights are not shared, so as long as we carefully
+# initialize weights, most of time,we should be fine. Gradient clipping could help
+
+# ReLU is not a good choise for RNN because it will lead to gradient explosion.
+
+
 class RNN(layer):
     """
     A vanilla fully-connected recurrent neural network layer.
@@ -283,8 +301,9 @@ class RNN(layer):
         for t in range(timestamps):
             # refL https://www.cs.toronto.edu/~tingwuwang/rnn_tutorial.pdf
             # All input share self.W_i and self.W_p and self.W_o
-            self.state_input[:,t] = X[:,t].dot(self.W_i)+self.states[:,t-1].dot(self.W_p.T)
+            self.state_input[:,t] = X[:,t].dot(self.W_i.T)+self.states[:,t-1].dot(self.W_p.T)
             self.states[:,t] = self.activation(self.state_input[:,t])
+            # Here might need an activation for classification problems
             self.outputs[:,t] = self.states[:,t].dot(self.W_o.T)
 
         return self.outputs
@@ -308,7 +327,7 @@ class RNN(layer):
             grad_wrt_state = accum_grad[:,t].dot(self.W_o)*self.activation.gradient(self.state_input[:,t])
             # Calculate gradient w.r.t layer input
             accum_grad_next[:,t] = grad_wrt_state.dot(self.W_i)
-            # Update gradient w.r.t W and U by backprop.
+            # Update gradient w.r.t W_i and W_p by backprop.
             for t_ in reversed(np.arange(max(0,t-self.bptt_trunc),t+1)):
                 grad_W_i += grad_wrt_state.T.dot(self.layer_input[:,t_])
                 grad_W_p += grad_wrt_state.T.dot(self.states[:,t_-1])
