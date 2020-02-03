@@ -2,6 +2,8 @@ import numpy as np
 from deep_learning.loss_functions import SquareLoss, CrossEntropy
 from supervised_learning.decision_tree import RegressionTree
 
+# reference: https://explained.ai/gradient-boosting/
+
 # Why does a GBM model have a learning rate?
 # Answer:
 
