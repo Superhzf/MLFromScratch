@@ -11,8 +11,13 @@ from supervised_learning.decision_tree import RegressionTree
 # 6. IF learning_rate = 0.1, we can reach 5.2. If learning_rate = 0.01, then
 # we can reach 5.23 which is the best one.
 
-# Why does GBM fit gradien?
-# Answer:
+# Why does GBM fit gradient?
+# Answer: This is a question that I have been looking for answers, but I don't
+# have any luck
+
+# How to understand that predictions from following trees are subtracted from
+# the previous predictions?
+# A: 
 class GradientBoosting(object):
     """
     Super class of GradientBoostingClassifier and GradientBoostingRegressor. Use
@@ -67,5 +72,12 @@ class GradientBoosting(object):
             # Each tree will fit the gradient instead of residual
             self.tree[i].fit(X,gradient)
             update = self.trees[i].predict(X)
-            # why does it have a learning rate?
+            # Here we subtract negative update
             y_pred -= np.multiply(self.learning_rate,update)
+
+    def predict(self,X):
+        y_pred = np.array([])
+        for tree in self.trees:
+            update = tree.predict(X)
+            update = np.multiply(self.learning_rate,update)
+            y_pred = -update if not y_pred.any() else y_pred-update
