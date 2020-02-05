@@ -235,7 +235,13 @@ activation_functions = {
 # DNN, things are different, weights are not shared, so as long as we carefully
 # initialize weights, most of time,we should be fine. Gradient clipping could help
 
-
+# A concrete example about input and output of a RNN question?
+# A: The standard input for RNN is (num_batch, num_timestamps,input_dim).
+# Let's say we want to predict whether people will default based on their
+# historical transaction records. Obviously, transaction records could be a time
+# series, if we have 1000 people's monthly records for year 2019, then num_batch = 1000,
+# num_timestamps = 12, if variables are how much they are supposed to pay and
+# how much they actually paid, the input_dim = 2
 class RNN(layer):
     """
     A vanilla fully-connected recurrent neural network layer.
