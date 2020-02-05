@@ -233,7 +233,6 @@ class XGBoostRegressionTree(DecisionTree):
     """
     Regression tree for XGBoost
     """
-    #
     def _split(self,y):
         """
         The first half of y is y_true, the second half of y is y_pred
