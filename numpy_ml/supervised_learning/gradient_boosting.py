@@ -11,7 +11,7 @@ from supervised_learning.decision_tree import RegressionTree
 # 6. IF learning_rate = 0.1, we can reach 5.2. If learning_rate = 0.01, then
 # we can reach 5.23 which is the best one.
 
-# Why does GBM fit gradient?
+# Why does GBM fit gradient instead of residuals?
 # Answer: The idea of boosing is that the following models will correct mistakes
 # made by the previous weak learners. Let's say if the loss function is MSE, then
 # after t-1 iterations, we have t-1 models, for the t-th model, obj_t = [y-(y_(t-1)+f_t)]^2
