@@ -216,6 +216,8 @@ activation_functions = {
 }
 
 # Why tanh is popular in RNN?
+# A: ReLU is not a good choise for RNN, it will lead to gradient explosion because
+# RNN layers share weights, the output could become larger and larger
 
 # What is the difference between BP and BPTT?
 # A: BPTT still uses the chain rule, but the difference is that BPTT went through
@@ -232,8 +234,6 @@ activation_functions = {
 # number, if the weight is 0.99, then after 1000 times, it becomes 0. For regular
 # DNN, things are different, weights are not shared, so as long as we carefully
 # initialize weights, most of time,we should be fine. Gradient clipping could help
-
-# ReLU is not a good choise for RNN because it will lead to gradient explosion.
 
 
 class RNN(layer):
