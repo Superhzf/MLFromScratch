@@ -216,9 +216,9 @@ activation_functions = {
 }
 
 # Why tanh is popular in RNN?
-# A: ReLU is not a good choise for RNN, it will lead to gradient explosion because
-# RNN layers share weights. This problem could be avoided by carefull weight
-# initialization. Compared with sigmoid, tanh output both positive and negative
+# A: ReLU is not a good choice for RNN, it will lead to gradient explosion because
+# RNN layers share weights. This problem could be avoided by careful weight
+# initialization. Compared with sigmoid, tanh outputs both positive and negative
 # values make state values more flexible. For LSTM, tanh can make memory cell
 # value decrease.
 
