@@ -217,7 +217,10 @@ activation_functions = {
 
 # Why tanh is popular in RNN?
 # A: ReLU is not a good choise for RNN, it will lead to gradient explosion because
-# RNN layers share weights, the output could become larger and larger
+# RNN layers share weights. This problem could be avoided by carefull weight
+# initialization. Compared with sigmoid, tanh output both positive and negative
+# values make state values more flexible. For LSTM, tanh can make memory cell
+# value decrease.
 
 # What is the difference between BP and BPTT?
 # A: BPTT still uses the chain rule, but the difference is that BPTT went through
@@ -236,6 +239,7 @@ activation_functions = {
 # initialize weights, most of time,we should be fine. Gradient clipping could help
 
 # A concrete example about input and output of a RNN question?
+# ref: https://towardsdatascience.com/all-you-need-to-know-about-rnns-e514f0b00c7c
 # A: The standard input for RNN is (num_batch, num_timestamps,input_dim).
 # Let's say we want to predict whether people will default based on their
 # historical transaction records. Obviously, transaction records could be a time
