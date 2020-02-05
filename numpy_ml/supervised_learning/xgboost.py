@@ -1,5 +1,7 @@
 import numpy as np
 from deep_learning.activation_functions import Sigmoid
+from supervised_learning import XGBoostRegressionTree
+from utils import to_categorical
 
 class LogisticLoss():
     def __init__(self):
@@ -53,4 +55,37 @@ class XGBoost(object):
         # Initialize regression trees
         self.trees = []
         for _ in range(n_estimators):
-            tree =
+            tree = XGBoostRegressionTree(
+                    min_samples_split=self.min_samples_split,
+                    min_impurity=min_impurity,
+                    max_depth=self.max_depth,
+                    loss=self.loss)
+
+            self.trees.append(tree)
+
+    def fit(self,X,y):
+        y = to_categorical(y)
+
+        y_pred = np.zeros(np.shape(y))
+        for i in range(self.n_estimators):
+            tree = self.trees[i]
+            y_and_pred = np.concatenate((y,y_pred),axis=1)
+            tree.fit(X,y_and_pred)
+            update_pred = tree.predict(X)
+            y_pred -= np.multiply(self.learning_rate,update_pred)
+
+
+    def predict(self,X):
+        y_pred = None
+        for tree in self.trees:
+            # Estimate gradient and update prediction
+            update_predict = tree.predict(X)
+            if y_pred is None:
+                y_pred = np.zeros_like(update_pred)
+            y_pred -= np.multiply(self.learning_rate, update_pred)
+
+        # Turn into probability distribution (softmax)
+        y_pred = np.exp(y_pred) / np.sum(np.exp(y_pred), axis=1, keepdims=True)
+        # Set label to the value that maximizes probability
+        y_pred = np.argmax(y_pred, axis=1)
+        return y_pred
