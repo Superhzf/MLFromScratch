@@ -12,8 +12,12 @@ from supervised_learning.decision_tree import RegressionTree
 # we can reach 5.23 which is the best one.
 
 # Why does GBM fit gradient?
-# Answer: This is a question that I have been looking for answers, but I don't
-# have any luck
+# Answer: The idea of boosing is that the following models will correct mistakes
+# made by the previous weak learners. Let's say if the loss function is MSE, then
+# after t-1 iterations, we have t-1 models, for the t-th model, obj_t = [y-(y_(t-1)+f_t)]^2
+# obj_t = constant + [2f_t*(y_(t-1)-y)+f_t^2], so now the question becomes what
+# should be f_t so that obj_t is minimized, it is a quadratic formula, f_t= y - y_(t-1)
+# which is the gradient
 
 # How to understand that predictions from following trees are subtracted from
 # the previous predictions?
@@ -87,7 +91,7 @@ class GradientBoosting(object):
             y_pred = np.exp(y_pred)/np.expand_dims(np.sum(np.exp(y_pred),axis=1),axis=1) # this is softmax
             # Set label to the value that maximizes probability
             y_pred = np.argmax(y_pred, axis=1)
-            
+
         return y_pred
 
 class GradientBoostingRegressor(GradientBoosting):
