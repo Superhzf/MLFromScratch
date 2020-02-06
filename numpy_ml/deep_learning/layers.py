@@ -236,7 +236,9 @@ activation_functions = {
 # is still 1, if the weight is 1.01, then after 1000 times, it becomes a huge
 # number, if the weight is 0.99, then after 1000 times, it becomes 0. For regular
 # DNN, things are different, weights are not shared, so as long as we carefully
-# initialize weights, most of time,we should be fine. Gradient clipping could help
+# initialize weights, most of time,we should be fine.
+# Solution: Gradient clipping could help, RNN initialized with identity matrix + ReLU
+# LSTM, advanced optimization
 
 # A concrete example about input and output of a RNN question?
 # ref: https://towardsdatascience.com/all-you-need-to-know-about-rnns-e514f0b00c7c
