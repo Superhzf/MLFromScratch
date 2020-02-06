@@ -58,4 +58,5 @@ class ReLU():
 
 # Why tanh is better than sigmoid?
 # A: Because the absolute value of gradient of Tanh is larger than that of sigmoid
-# which makes the network converge faster
+# which makes the network converge faster. Somebody says we prefer zero averages,
+# I don't know why, batch normalization has an average alpha instead of zero.
