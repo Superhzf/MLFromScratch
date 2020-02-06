@@ -37,6 +37,15 @@ class Softmax():
         p = self.__call__(x)
         return p*(1-p)
 
+# What is a dead ReLU problem? Why does it happen?
+# A: Dead ReLU means that the activations are the same (0 as it happens) and
+# it will never recover because the gradient of 0 is always 0, it means it takes
+# no role in discriminating inputs. Probably this is arrived at by learning a
+# large negative bias term for its weights. Besides, if the learning rate is large
+# then the updated weights could less than 0 and dead.
+
+# ReLU can help gradients vanishing problem in regular deep neural networks caused
+# by sigmoid/tanh
 class ReLU():
     def __call__(self,x):
         return np.maximum(x,0)
@@ -45,3 +54,8 @@ class ReLU():
         z = np.ones(x.shape)
         z[x<0] = 0
         return x
+
+
+# Why tanh is better than sigmoid?
+# A: Because the absolute value of gradient of Tanh is larger than that of sigmoid
+# which makes the network converge faster
