@@ -90,6 +90,8 @@ class Regression(object):
         return y_pred
 
 
+# least square method matrix form
+# https://math.stackexchange.com/questions/369694/matrix-calculus-in-least-square-method
 class LinearRegression(Regression):
     """
     Linear model
