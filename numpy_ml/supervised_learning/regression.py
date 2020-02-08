@@ -92,6 +92,8 @@ class Regression(object):
 
 # least square method matrix form
 # https://math.stackexchange.com/questions/369694/matrix-calculus-in-least-square-method
+# formula:
+# https://math.stackexchange.com/questions/644834/least-squares-in-a-matrix-form
 class LinearRegression(Regression):
     """
     Linear model
@@ -118,4 +120,17 @@ class LinearRegression(Regression):
         if not self.gradient_descent:
             # Insert constant ones for bias weights
             X = np.insert(X,0,1,axis=1)
-            # Calculate weights by least squares ()
+            # Calculate weights by least squares (using Moore-Penrose pseudoinverse just in case)
+            # the matrix is not invertable
+            U,S,V = np.linalg.svd(X.T.dot(X))
+            S = np.diag(S)
+            X_sq_reg_inv = V.dot(np.linalg.pinv(S).dot(U.T))
+            self.w = X_sq_reg_inv.dot(X.T).dot(y)
+        else:
+            super(LinearRegression,self).fit(X,y)
+
+    def predict(self,X):
+        # Insert constant ones
+        X = np.insert(X,0,1,axis=1)
+        y_pred = X.dot(self.w)
+        return y_pred
