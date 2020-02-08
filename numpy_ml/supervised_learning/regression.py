@@ -1,4 +1,5 @@
 import numpy as np
+from numpy_ml.utls import normalize,polynomial_features
 
 class l1_regularization():
     """
@@ -26,7 +27,7 @@ class l2_regularization():
     def grad(self,w):
         return self.alpha * w
 
-class l1_l2_regression():
+class l1_l2_regularization():
     """
     Regularization for Elastic Net Regression
     """
@@ -134,3 +135,69 @@ class LinearRegression(Regression):
         X = np.insert(X,0,1,axis=1)
         y_pred = X.dot(self.w)
         return y_pred
+
+
+class PolynominalLassoRegression(Regression):
+    """
+    Linear regression model with a l1 regularization factor which does variable
+    selection
+
+    Parameters
+    ----------------------------------------
+    degree:int
+        The degree of the polynominal that the independent variable X will be
+        transformed to.
+    reg_factor: float
+        The factor that determines the degree of regularization and feature shrinkage
+    n_iterations: float
+        The number of training iterations
+    learning_rate: float
+    """
+    def __init__(self,degree,reg_factor,n_iterations=3000,learning_rate=0.01):
+        self.degree=degree
+        self.regularization=l1_regularization
+        super(PolynominalLassoRegression,self).__init__(n_iterations,learning_rate)
+
+    def fit(self,X,y):
+        X = normalize(polynomial_features(X,degree=self.degree))
+        super(PolynominalLassoRegression,self).fit(X,y)
+
+    def predict(self,X):
+        X = normalize(polynomial_features(X,degree=self.degree))
+        return super(PolynominalLassoRegression,self).predict(X)
+
+
+class RidgeRegression(Regression):
+    """
+    Parameters
+    -----------------------
+    reg_factor: float
+        The factor that determines the degree of regularization
+    n_iterations: float
+        The number of training iterations
+    learning_rate: float
+        The step length that will be used
+    """
+    def __init__(self,reg_factor,n_iterations,learning_rate):
+        self.regularization = l2_regularization(alpha=reg_factor)
+        super(RidgeRegression,self).__init__(n_iterations,learning_rate)
+
+class ElasticNet(Regression):
+    """
+    Regression with the combination of l1 and l2 regularization.
+
+    Parameters
+    -------------------------------
+    reg_factor: float
+        The degree of regularization
+    l1_ratio: float
+        The degree of l1 regularization at the combination of l1 and l2
+    regularization
+    n_iterations: n
+        The number of training iterations
+    learning_rate:float
+        The step length
+    """
+    def __init__(self,reg_factor=0.05,l1_ratio=0.5,n_iterations=100,learning_rate=0.01):
+        self.regularization = l1_l2_regularization(alpha=reg_factor,l1_ratio=l1_ratio)
+        super(ElasticNet,self).__init__(n_iterations=n_iterations,learning_rate=learning_rate)
