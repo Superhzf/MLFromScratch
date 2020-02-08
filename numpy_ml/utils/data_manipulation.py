@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+from iterations import combinations_with_replacement
 
 def batch_generator(X,y=None,batch_size = 64):
     """Simple batch geneartor"""
@@ -48,3 +49,21 @@ def train_test_split(X, y, test_size=0.5, shuffle=True, seed=None):
     y_train, y_test = y[:split_i], y[split_i:]
 
     return X_train, X_test, y_train, y_test
+
+
+def polynomial_features(X,degree):
+    n_samples,n_features = X.shape(X)
+
+    def index_combinations():
+        combs = [combinations_with_replacement(range(n_features),i) for i in range(0,degree+1)]
+        flat_combs = [item for sublist in combs for item in sublist]
+        return flat_combs
+
+    combinnations = index_combinations()
+    n_output_features = len(combinnations)
+    X_new = np.empty((n_samples,n_output_features))
+
+    for i,index_combs in enumerate(combinations):
+        X_new[:,i] = np.prod(X[:,index_combs],axis=1)
+
+    return X_new
