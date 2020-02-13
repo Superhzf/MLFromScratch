@@ -359,6 +359,7 @@ class RNN(layer):
 
 class LSTMCell(Layer):
     def __init__(self,n_out,act_fn = "Tanh",,gate_fn="Sigmoid",init="glorot_uniform",optimizer=None):
+        
         """
         A single step of a long short-term memory (LSTM) RNN
 
