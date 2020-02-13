@@ -355,3 +355,44 @@ class RNN(layer):
 
     def output_shape(self):
         return self.input_shape
+
+
+class LSTMCell(Layer):
+    def __init__(self,n_out,act_fn = "Tanh",,gate_fn="Sigmoid",init="glorot_uniform",optimizer=None):
+        """
+        A single step of a long short-term memory (LSTM) RNN
+
+        Notes:
+        ----------------------
+        - Z[t]: the input to each of the gates at timestep t
+        - A[t]: the value of the hidden state at timestep t
+        - Cc[t]: the value of the *candidate* cell/memory state at timestep t
+        - C[t]: the value of the *final* cell/memory state at timestep t
+        - Gf[t]: the output of the forget gate at the timestep t
+        - Gu[t]: the output of the update gate at timestep t
+        - Go[t]: the output of the output gate at timestep t
+
+        Equations:
+            Z[t] = hstack(A[t-1],X[t])
+            Gf[t] = gate_fn(Wf@Z[t] + bf)
+            Gu[t] = gate_fn(Wu@Z[t] + bu)
+            Go[t] = gate_fn(Woz@Z[t] + bo)
+            Cc[t] = act_fn(Wc@Z[t]+ bc)
+            C[t] = Gf[t] * C[t-1] + Gu[t]+Cc[t]
+            A[t] = Go[t] * act_fn(C[t])
+        where @ indicates dot/matrix product, and * indicates elementwise multiplication
+
+        Parameters:
+        ----------------------
+        n_out: int
+            The dimension of a single hidden state/output on a given timestep.
+        act_fn: str
+            The activation function. Default is 'Tanh'
+        gate_fn: str
+            The gate function for computing the update, output and forget gates.
+        Default is sigmoid.
+        init: {'glorot_normal','glorot_uniform','he_normal','he_uniform'}
+            The weight initialization stretegy
+        optimizer: str
+            The optimization strategyto use when performing gradient updates
+        """
