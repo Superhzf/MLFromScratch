@@ -364,6 +364,7 @@ class LSTMCell(Layer):
 
         Notes:
         ----------------------
+        - X[t]: the input matrix at timestep x
         - Z[t]: the input to each of the gates at timestep t
         - A[t]: the value of the hidden state at timestep t
         - Cc[t]: the value of the *candidate* cell/memory state at timestep t
@@ -373,13 +374,13 @@ class LSTMCell(Layer):
         - Go[t]: the output of the output gate at timestep t
 
         Equations:
-            Z[t] = hstack(A[t-1],X[t])
-            Gf[t] = gate_fn(Wf@Z[t] + bf)
-            Gu[t] = gate_fn(Wu@Z[t] + bu)
-            Go[t] = gate_fn(Woz@Z[t] + bo)
-            Cc[t] = act_fn(Wc@Z[t]+ bc)
-            C[t] = Gf[t] * C[t-1] + Gu[t]+Cc[t]
-            A[t] = Go[t] * act_fn(C[t])
+            Z[t] = hstack(A[t-1],X[t]) # stack arrays horizontally
+            Gf[t] = gate_fn(Wf@Z[t]+bf)
+            Gu[t] = gate_fn(Wu@Z[t]+bu)
+            Go[t] = gate_fn(Woz@Z[t]+bo)
+            Cc[t] = act_fn(Wc@Z[t]+bc)
+            C[t] = Gf[t]*C[t-1]+Gu[t]*Cc[t]
+            A[t] = Go[t]*act_fn(C[t])
         where @ indicates dot/matrix product, and * indicates elementwise multiplication
 
         Parameters:
