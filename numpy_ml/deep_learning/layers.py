@@ -358,8 +358,13 @@ class RNN(layer):
 
 
 class LSTMCell(Layer):
-    def __init__(self,n_out,act_fn = "Tanh",,gate_fn="Sigmoid",init="glorot_uniform",optimizer=None):
-        
+    def __init__(self,
+                 n_out,
+                 act_fn = "Tanh",
+                 gate_fn="Sigmoid",
+                 init="glorot_uniform",
+                 optimizer=None):
+
         """
         A single step of a long short-term memory (LSTM) RNN
 
@@ -398,3 +403,118 @@ class LSTMCell(Layer):
         optimizer: str
             The optimization strategyto use when performing gradient updates
         """
+        super().__init__(optimizer)
+        self.init = init
+        self.n_in = None
+        self.n_out = n_out
+        self.n_timesteps = None
+        self.act_fn = ActivationInitializer(act_fn)()
+        self.gate_fn = ActivationInitializer(gate_fn)()
+        self.parameters = {
+            "Wf":None,
+            "Wu":None,
+            "Wc":None,
+            "Wo":None,
+            "bf":None,
+            "bu":None,
+            "bc":None,
+            "bo":None
+        }
+        self.is_initialized = False
+
+    def _init_params(self):
+        self.X = []
+        # str(self.gate_fn) will be effective only when self.init is glorot
+        init_weight_gate = WeightInitializer(str(self.gate_fn),mode=self.init)
+        init_weights_act = WeightInitializer(str(self.act_fn),mode=self.init)
+
+        Wf = init_weights_gate((self.n_in+self.n_out,self.n_out))
+        Wu = init_weights_gate((self.n_in+self.n_out,self.n_out))
+        Wc = init_weights_act((self.n_in+self.n_out,self.n_out))
+        Wo = init_weights_gate((self.n_in+self.n_out,self.n_out))
+
+        bf = np.zeros((1,self.n_out))
+        bu = np.zeros((1,self.n_out))
+        bc = np.zeros((1,self.n_out))
+        bo = np.zeros((1,self.n_out))
+
+        self.parameters={
+            "Wf":Wf,
+            "Wu":Wu,
+            "Wc":Wc,
+            "Wo":Wo,
+            "bf":bf,
+            "bu":bu,
+            "bc":bc,
+            "bo":bo
+        }
+
+        self.gradients = {
+            "Wf":np.zeros_like(Wf),
+            "Wu":np.zeros_like(Wu),
+            "Wc":np.zeros_like(Wc),
+            "Wo":np.zeros_like(Wo),
+            "bf":np.zeros_like(bf),
+            "bu":np.zeros_like(bu),
+            "bc":np.zeros_like(bc),
+            "bo":np.zeros_like(bo)
+        }
+
+        self.derived_varables = {
+            "C": [],
+            "A": [],
+            "Gf": [],
+            "Gu": [],
+            "Go": [],
+            "Gc": [],
+            "Cc": [],
+            "n_timesteps": 0,
+            "current_step": 0,
+            "dLdA_accumulator": None,
+            "dLdC_accumulator": None
+        }
+        self.is_initialized = True
+
+    def _get_params(self):
+        Wf = self.parameters['Wf']
+        Wu = self.parameters['Wu']
+        Wc = self.parameters['Wc']
+        Wo = self.parameters['Wo']
+        bf = self.parameters['bf']
+        bu = self.parameters['bu']
+        bc = self.parameters['bc']
+        bo = self.parameters['bo']
+        return Wf,Wu,Wc,Wo,bf,bu,bc,bo
+
+    def forward(self,Xt):
+        """
+        Compute the layer output for a single timestep
+
+        Parameters
+        ----------------------
+        Xt: np.array of shape (n_ex,n_in). Input at timestap t consisting of n_ex
+            observations each of dimensionality n_in
+
+        Returns
+        ------------------------
+        At: np.array of shape (n_ex,n_out). The value of hidden state at timestep
+            t for each of the n_ex observations
+        Ct: np.array of shape (n_ex,n_out). The value of the cell/memory state at
+            timestep t for each of the n_ex observations
+        """
+        if not self.initialized:
+            self.n_in = Xt.shape[1]
+            self._init_params()
+
+        Wf,Wu,Wc,Wo,bf,bu,bc,bo = self._get_params()
+        self.derived_varables['n_timesteps']+=1
+        self.derived_varables['current_step']+=1
+
+        if len(self.derived_varables['A']) == 0:
+            n_ex,n_in = Xt.shape
+            init = np.zeros((n_ex,n_in))
+            self.derived_varables['A'].append(init)
+            self.derived_varables['C'].append(init)
+
+        A_prev = self.derived_varables["A"][-1] # Why - 1?
+        C_prev = self.derived_varables['C'][-1]
