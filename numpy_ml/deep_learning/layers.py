@@ -383,7 +383,7 @@ class LSTMCell(Layer):
             Z[t] = hstack(A[t-1],X[t]) # stack arrays horizontally
             Gf[t] = gate_fn(Wf@Z[t]+bf)
             Gu[t] = gate_fn(Wu@Z[t]+bu)
-            Go[t] = gate_fn(Woz@Z[t]+bo)
+            Go[t] = gate_fn(Wo@Z[t]+bo)
             Cc[t] = act_fn(Wc@Z[t]+bc)
             C[t] = Gf[t]*C[t-1]+Gu[t]*Cc[t]
             A[t] = Go[t]*act_fn(C[t])
