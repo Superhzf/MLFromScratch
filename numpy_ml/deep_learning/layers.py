@@ -541,3 +541,36 @@ class LSTMCell(Layer):
         return At, Ct
 
     def backward(self,dLdAt):
+        """
+        Run a backward pass across all timesteps in the input
+
+        Parameters
+        --------------------------------
+        dLdAt:np.array of shape (n_ex,n_out). The gradient of the loss function
+                w.r.t the layer output (i.e. hidden states) at timestep t
+
+        Returns
+        --------------------------------
+        dLdXt:np.array of shape (n_ex,n_in). The gradient of the loss w.r.t. the
+              layer input at timestep t
+        """
+        Wf, Wu, Wc, Wo, bf, bu, bc, bo, bf = self._get_params()
+        self.derived_varables['current_step']-=1
+        t = self.derived_varables['current_step']
+
+        Got = self.derived_varables['Go'][t]
+        Gft = self.derived_varables['Gf'][t]
+        Gut = self.derived_varables['Gu'][t]
+        Cct = self.derived_varables['Cc'][t]
+        At = self.derived_varables['A'][t+1]
+        Ct = self.derived_varables['C'][t+1]
+        C_prev = self.derived_varables['C'][t]
+        A_prev = self.derived_varables['A'][t]
+
+        Xt = self.X[t]
+        Zt = self.hstack([A_prev,Xt])
+
+        dA_acc = self.derived_variables["dLdA_accumulator"]
+        dC_acc = self.derived_variables["dLdC_accumulator"]
+
+        
