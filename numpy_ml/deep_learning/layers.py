@@ -516,5 +516,28 @@ class LSTMCell(Layer):
             self.derived_varables['A'].append(init)
             self.derived_varables['C'].append(init)
 
-        A_prev = self.derived_varables["A"][-1] # Why - 1?
+        A_prev = self.derived_varables["A"][-1]
         C_prev = self.derived_varables['C'][-1]
+
+        # concatenate A_prev and Xt to create Zt
+        Zt = np.hstack([A_prev,Xt])
+
+        Gft = self.gate_fn(Zt@Wf+bf)
+        Gut = self.gate_fn(Zt@Wu+bu)
+        Got = self.gate_fn(Zt@Wo+bo)
+        Cct = self.act_fn(Zt@Wc+bc)
+        Ct = Gft*C_prev+Gut*Cct
+        At = Got*self.act_fn(Ct)
+
+
+        # bookkeeping
+        self.X.append(Xt)
+        self.derived_varables['A'].append(At)
+        self.derived_varables['C'].append(Ct)
+        self.derived_varables['Gf'].append(Gft)
+        self.derived_varables['Gu'].append(Gut)
+        self.derived_varables['Go'].append(Got)
+        self.derived_varables['Cc'].append(Cct)
+        return At, Ct
+
+    def backward(self,dLdAt):
