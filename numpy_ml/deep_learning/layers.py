@@ -613,3 +613,100 @@ class LSTMCell(Layer):
         self.derived_variables['dLdC_accumulator'] = Gft * dC
 
         return dXt
+
+class LSTM(Layer):
+    def __init__(
+            self,n_out,act_fn='Tanh',gate_fn='Sigmoid',
+            init="glorot_uniform",optimizer=None):
+        """
+        A single long short-term memory (LSTM) RNN layer
+
+        Parameters
+        --------------------
+        n_out: int
+            The dimension of a single hidden state / output on a given timestamp.
+        act_fn: str
+            The activation function for computing A[t]. Defacult is Tanh
+        gate_fn: str
+            The gate function for computing the update, forget, and output gates.
+            The default value is Sigmoid
+        init: {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
+            The weight initialization strategy. The default value is glorot_uniform
+        optimizer: str
+            The optimization strategy to use when performing gradient updates.
+        """
+        super().__init__(optimizer)
+
+        self.init = init
+        self.n_in = None
+        self.n_out = n_out
+        self.n_timesteps = None
+        self.act_fn = ActivationInitializer(act_fn)()
+        self.gate_fn = ActivationInitializer(gate_fn)()
+        self.is_initialized = False
+
+    def _init_params(self):
+        self.cell = LSTMCell(
+            n_in=self.n_in,
+            n_out=self.n_out,
+            act_fn=self.act_fn,
+            gate_fn=self.gate_fn,
+            init=self.init)
+        self.is_initialized = True
+
+    @property
+    def hyperparameter(self):
+        """Return a dictionary containing the layer hyperparameters"""
+        return {
+            'layer': 'LSTM',
+            'init': self.init,
+            'n_in': self.n_in,
+            'n_out': self.n_out,
+            'act_fn': str(self.act_fn),
+            'gate_fn': str(self.gate_fn),
+            'optimizer': self.cell.hyperparameters['optimizer']
+        }
+
+    def forward(self,X):
+        """
+        Run a forward pass across all timesteps in the input.
+
+        Parameters
+        ----------------
+        X: numpy.array of shape (n_ex, n_in, n_t)
+           Input consisting of n_ex examples each of dimensionality n_in
+           and extending for n_t timesteps
+
+        Returns
+        ----------------
+        Y: numpy.array of shape (n_ex, n_out, n_t)
+           The value of the hidden state for each of the n_ex examples
+           across each of the n_t timesteps
+        """
+        if not self.is_initialized:
+            self.n_in = X.shape[1]
+            self._init_params()
+
+        Y = []
+        n_ex, n_in, n_t = X.shape
+        for t in range(n_t):
+            yt, _ = self.cell.forward(x[:,:,t])
+            Y.append(yt)
+        return np.dstack(Y)
+
+    def backward(self,dLdA):
+        """
+        Run a backward pass across all timesteps in the input
+
+        Parameters
+        --------------
+        dLdA: numpy.array of shape (n_ex, n_out, n_t)
+            The gradient of the loss w.r.t. the layer output for each of the
+            n_ex examples across all n_t timesteps
+
+        Returns
+        --------------
+        dLdX: numpy.array of shape (n_ex, n_in, n_t)
+            The value of the hidden state for each of the n_ex examples across
+            each of the n_t examples
+        """
