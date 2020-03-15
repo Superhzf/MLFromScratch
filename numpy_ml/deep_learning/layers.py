@@ -516,8 +516,8 @@ class LSTMCell(Layer):
             self.derived_varables['A'].append(init)
             self.derived_varables['C'].append(init)
 
-        A_prev = self.derived_varables["A"][-1]
-        C_prev = self.derived_varables['C'][-1]
+        A_prev = self.derived_varables["A"][-1] # the last A
+        C_prev = self.derived_varables['C'][-1] # the last C
 
         # concatenate A_prev and Xt to create Zt
         Zt = np.hstack([A_prev,Xt])
@@ -572,5 +572,3 @@ class LSTMCell(Layer):
 
         dA_acc = self.derived_variables["dLdA_accumulator"]
         dC_acc = self.derived_variables["dLdC_accumulator"]
-
-        
