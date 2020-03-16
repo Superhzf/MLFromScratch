@@ -710,3 +710,12 @@ class LSTM(Layer):
             The value of the hidden state for each of the n_ex examples across
             each of the n_t examples
         """
+        assert self.cell.trainable, "Layer is frozen"
+        dldX = []
+        n_ex, n_out, n_t = dLdA.shape
+        for t in reversed(range(n_t)):
+            dLdXt, _ = self.cell.backward(dLdA[:,:,t])
+            dLdX.insert(0,dLdXt)
+        dLdX = np.dstak(dLdX)
+        return dLdX
+    
