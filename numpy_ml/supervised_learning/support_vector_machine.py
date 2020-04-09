@@ -2,7 +2,6 @@ from __future__ import division, print_function
 import numpy as np
 import random
 
-# https://github.com/LasseRegin/SVM-w-SMO
 # The idea of SMO:
 # 1. Optimize two variables (alpha1 and alpha2) at a time, the reason for optimizing
 # two variables is that sum of alpha_i * y_i == 0
@@ -37,7 +36,7 @@ class SVM():
             count += 1
             alpha_prev = np.copy(alpha)
             for j in range(n):
-                # randomly select an integer between 0 and n -1 (inclusive)
+                # randomly select an integer between 0 and n-1 (inclusive)
                 # and it is not equalt to j
                 i = self.get_random_int(0, n-1, j)
                 x_i = X[i, :]
@@ -46,7 +45,7 @@ class SVM():
                 y_j = y[j]
                 k_ij = kernel(x_i, x_i) + kernel(x_j, x_j)  - 2 * kernel(x_i, x_j)
                 if k_ij == 0:
-                    continie
+                    continue
                 alpha_prime_j = alpha[j]
                 alpha_prime_i = alpha[i]
                 L, H = self.compute_L_H(self.C, alpha_prime_j, alpha_prime_i, y_j, y_i)
@@ -65,15 +64,17 @@ class SVM():
                 alpha[j] = max(alpha[j], L)
                 alpha[j] = min(alpha[j], H)
 
-                alpha[i] = alpha_prime_i + y_i*y_j + (alpha_prime_j - alpha[j])
+                alpha[i] = alpha_prime_i + y_i*y_j * (alpha_prime_j - alpha[j])
 
             # Check convergence
             diff = np.linalg.norm(alpha_prev-alpha)
+            print (diff)
             if diff < self.epsilon:
                 break
 
             if count >= self.max_iter:
                 print("Iteration number exceeded the max of {} iterations".format(self.max_iter))
+                return
 
         # Compute the final model parameters
         self.b = self.calc_b(X, y, self.w)
@@ -97,10 +98,10 @@ class SVM():
             cnt += 1
         return i
 
-    def compute_L_H(self, C, alpha_prime_i, alpha_prime_j, y_i, y_j):
+    def compute_L_H(self, C, alpha_prime_j,alpha_prime_i, y_j, y_i):
         # Calculate left bound and right bound of alpha
         if y_i != y_j:
-            return max(0,alpha_prime_j - alpha_prime_i), min(C, C - alpha_prime_i - alpha_prime_j)
+            return max(0,alpha_prime_j - alpha_prime_i), min(C, C - alpha_prime_i + alpha_prime_j)
         else:
             return max(0, alpha_prime_i + alpha_prime_j - C), min(C, alpha_prime_i + alpha_prime_j)
 
