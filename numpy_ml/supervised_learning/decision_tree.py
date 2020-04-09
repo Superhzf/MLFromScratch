@@ -23,7 +23,7 @@ class Node():
         Next decision node for samples where features value does not meet the
         threshold
     """
-    def __init__(self,feature_i,threshold,value=None,true_branch,false_branch):
+    def __init__(self,feature_i,threshold,value,true_branch,false_branch):
         self.feature_i = feature_i
         self.threshold = threshold
         self.value = value
@@ -47,7 +47,7 @@ class DecisionTree(object):
         Loss function that is used for Gradient Boosting models to calculate
         impurity
     """
-    del __init__(self,min_samples_split,min_impurity,max_depth=float('inf'),loss=None):
+    def __init__(self,min_samples_split,min_impurity,max_depth=float('inf'),loss=None):
         self.root = None
         self.min_samples_split = min_samples_split
         self.min_impurity = min_impurity
@@ -57,7 +57,7 @@ class DecisionTree(object):
         self._leaf_value_calculation = None
         self.loss = loss
 
-    del fit(self,X,y,loss=None):
+    def fit(self,X,y,loss=None):
         """Build a decision tree"""
         self.root = self._build_tree(X,y)
         self.loss = None

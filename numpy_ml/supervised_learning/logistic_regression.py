@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from deep_learning.activation_functions import Sigmoid
+from ..deep_learning.activation_functions import Sigmoid
 
 class LogisticRegression():
     """

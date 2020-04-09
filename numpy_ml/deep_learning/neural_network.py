@@ -1,6 +1,6 @@
 from __future__ import print_function, division
 from terminaltables import AsciiTable
-from utils import batch_iterator
+from ..utils import batch_generator
 import numpy as np
 import progressbar
 
@@ -82,7 +82,7 @@ class NeuralNetwork():
         """Train the model for a fixed number of epochs"""
         for _ in self.progressbar(range(n_epochs)):
             batch_error = []
-            for X_batch,y_batch in batch_iterator(X,y,batch_size = batch_size):
+            for X_batch,y_batch in batch_generator(X,y,batch_size = batch_size):
                 loss,_ = self.train_on_batch(X_batch,y_batch)
                 batch_error.append(loss)
 

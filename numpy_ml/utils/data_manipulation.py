@@ -1,6 +1,6 @@
 from __future__ import division
 import numpy as np
-from iterations import combinations_with_replacement
+from itertools import combinations_with_replacement
 
 def batch_generator(X,y=None,batch_size = 64):
     """Simple batch geneartor"""
