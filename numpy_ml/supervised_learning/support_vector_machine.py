@@ -68,7 +68,6 @@ class SVM():
 
             # Check convergence
             diff = np.linalg.norm(alpha_prev-alpha)
-            print (diff)
             if diff < self.epsilon:
                 break
 
@@ -82,10 +81,10 @@ class SVM():
             self.w = self.calc_w(alpha, y, X)
         # Get support vectors
         alpha_idx = np.where(alpha > 0)[0]
-        support_vectors = X[alpha_idx, :]
-        return support_vectors, count
+        self.support_vectors = X[alpha_idx, :]
 
-
+    def decision_function(self, X):
+        return np.dot(self.w.T, X.T)+self.b
 
     def kernel_linear(self, x1, x2):
         return np.dot(x1, x2.T)
