@@ -2,6 +2,7 @@ from __future__ import division, print_function
 import numpy as np
 import random
 
+# ref: http://web.cs.iastate.edu/~honavar/smo-svm.pdf
 # The idea of SMO:
 # 1. Optimize two variables (alpha1 and alpha2) at a time, the reason for optimizing
 # two variables is that sum of alpha_i * y_i == 0
@@ -43,14 +44,11 @@ class SVM():
                 x_j = X[j, :]
                 y_i = y[i]
                 y_j = y[j]
-                k_ij = kernel(x_i, x_i) + kernel(x_j, x_j)  - 2 * kernel(x_i, x_j)
-                if k_ij == 0:
-                    continue
+                # k_ij = kernel(x_i, x_i) + kernel(x_j, x_j)  - 2 * kernel(x_i, x_j)
+                k_ij = 2 * kernel(x_i, x_j) - kernel(x_i, x_i) - kernel(x_j, x_j)
                 alpha_prime_j = alpha[j]
                 alpha_prime_i = alpha[i]
-                L, H = self.compute_L_H(self.C, alpha_prime_j, alpha_prime_i, y_j, y_i)
 
-                # Compute model parameters
                 self.w = self.calc_w(alpha, y, X)
                 self.b = self.calc_b(X, y, self.w)
 
@@ -59,15 +57,35 @@ class SVM():
                 E_i = self.E(x_i, y_i, self.w, self.b)
                 E_j = self.E(x_j, y_j, self.w, self.b)
 
-                # Set new alpha values
-                alpha[j] = alpha_prime_j + float(y_j* (E_i-E_j))/k_ij
-                alpha[j] = max(alpha[j], L)
-                alpha[j] = min(alpha[j], H)
+                L, H = self.compute_L_H(self.C, alpha_prime_j, alpha_prime_i, y_j, y_i)
+
+                if k_ij < 0:
+                    alpha[j] = alpha_prime_j - y_j * (E_i - E_j) / k_ij
+                    if alpha[j] >= H:
+                        alpha[j] = H
+                    elif alpha[j] <= L:
+                        alpha[j] = L
+                else: # k_ij == 0
+                    alpha[j] = L
+                    w_L = self.calc_w(alpha, y, X)
+                    b_L = self.calc_b(X, y, w_L)
+                    Lobj = np.dot(w_L.T, X.T)+b_L
+                    alpha[j] = H
+                    w_H = self.calc_w(alpha, y, X)
+                    b_H = self.calc_b(X, y, w_L)
+                    Hobj = p.dot(w_H.T, X.T)+b_H
+                    if Lobj > Hobj:
+                        alpha[j] = L
+                    elif Lobj < Hobj:
+                        alpha[j] = H
+                    else:
+                        alpha[j] = alpha_prime_j
 
                 alpha[i] = alpha_prime_i + y_i*y_j * (alpha_prime_j - alpha[j])
 
             # Check convergence
             diff = np.linalg.norm(alpha_prev-alpha)
+            print (diff)
             if diff < self.epsilon:
                 break
 
@@ -76,12 +94,12 @@ class SVM():
                 return
 
         # Compute the final model parameters
+        self.w = self.calc_w(alpha, y, X)
         self.b = self.calc_b(X, y, self.w)
-        if self.kernel_type == 'linear':
-            self.w = self.calc_w(alpha, y, X)
+
         # Get support vectors
-        alpha_idx = np.where(alpha > 0)[0]
-        self.support_vectors = X[alpha_idx, :]
+        alpha_idx = np.where(alpha != 0)[0]
+        self.support_vectors_ = X[alpha_idx, :]
 
     def decision_function(self, X):
         return np.dot(self.w.T, X.T)+self.b
