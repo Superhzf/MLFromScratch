@@ -28,8 +28,20 @@ class SVM():
         y: numpy.array
             The ground truth
         """
-        n = X.shape[0]
-        d = X.shape[1]
+        self.X = np.copy(X)
+        self.y = np.copy(y)
+        if len(np.unique(y)) != 2:
+            raise Exception("The number of classes is not understood!")
+        self.transformed = False
+        # Adjust the target variabe to make it become either -1 or 1
+        if np.unique(self.y)[0] != -1 or np.unique(self.y)[1] != 1:
+            self.transformed = True
+            self.y_unique = np.unique(y)
+            self.y[self.y==self.y_unique[0]] = -1
+            self.y[self.y==self.y_unique[1]] = 1
+
+        n = self.X.shape[0]
+        d = self.X.shape[1]
         alpha = np.zeros(n)
         kernel = self.kernels[self.kernel_type]
         count = 0
@@ -40,17 +52,17 @@ class SVM():
                 # randomly select an integer between 0 and n-1 (inclusive)
                 # and it is not equalt to j
                 i = self.get_random_int(0, n-1, j)
-                x_i = X[i, :]
-                x_j = X[j, :]
-                y_i = y[i]
-                y_j = y[j]
+                x_i = self.X[i, :]
+                x_j = self.X[j, :]
+                y_i = self.y[i]
+                y_j = self.y[j]
                 # k_ij = kernel(x_i, x_i) + kernel(x_j, x_j)  - 2 * kernel(x_i, x_j)
                 k_ij = 2 * kernel(x_i, x_j) - kernel(x_i, x_i) - kernel(x_j, x_j)
                 alpha_prime_j = alpha[j]
                 alpha_prime_i = alpha[i]
 
-                self.w = self.calc_w(alpha, y, X)
-                self.b = self.calc_b(X, y, self.w)
+                self.w = self.calc_w(alpha, self.y, self.X)
+                self.b = self.calc_b(X, self.y, self.w)
 
                 # Compute E_i, E_j (the difference between the prediction and
                 # the ground truth)
@@ -58,6 +70,8 @@ class SVM():
                 E_j = self.E(x_j, y_j, self.w, self.b)
 
                 L, H = self.compute_L_H(self.C, alpha_prime_j, alpha_prime_i, y_j, y_i)
+                if L == H:
+                    continue
 
                 if k_ij < 0:
                     alpha[j] = alpha_prime_j - y_j * (E_i - E_j) / k_ij
@@ -67,12 +81,12 @@ class SVM():
                         alpha[j] = L
                 else: # k_ij == 0
                     alpha[j] = L
-                    w_L = self.calc_w(alpha, y, X)
-                    b_L = self.calc_b(X, y, w_L)
+                    w_L = self.calc_w(alpha, self.y, self.X)
+                    b_L = self.calc_b(self.X, self.y, w_L)
                     Lobj = np.dot(w_L.T, X.T)+b_L
                     alpha[j] = H
-                    w_H = self.calc_w(alpha, y, X)
-                    b_H = self.calc_b(X, y, w_L)
+                    w_H = self.calc_w(alpha, self.y, self.X)
+                    b_H = self.calc_b(self.X, self.y, w_L)
                     Hobj = p.dot(w_H.T, X.T)+b_H
                     if Lobj > Hobj:
                         alpha[j] = L
@@ -81,11 +95,16 @@ class SVM():
                     else:
                         alpha[j] = alpha_prime_j
 
+                # Push a2 to 0 or C if very close
+                if alpha[j] < 1e-8:
+                    alpha[j] = 0.0
+                elif alpha[j] > (self.C - 1e-8):
+                    alpha[j] = self.C
+
                 alpha[i] = alpha_prime_i + y_i*y_j * (alpha_prime_j - alpha[j])
 
             # Check convergence
             diff = np.linalg.norm(alpha_prev-alpha)
-            print (diff)
             if diff < self.epsilon:
                 break
 
@@ -94,12 +113,12 @@ class SVM():
                 return
 
         # Compute the final model parameters
-        self.w = self.calc_w(alpha, y, X)
-        self.b = self.calc_b(X, y, self.w)
+        self.w = self.calc_w(alpha, self.y, self.X)
+        self.b = self.calc_b(self.X, self.y, self.w)
 
         # Get support vectors
         alpha_idx = np.where(alpha != 0)[0]
-        self.support_vectors_ = X[alpha_idx, :]
+        self.support_vectors_ = self.X[alpha_idx, :]
 
     def decision_function(self, X):
         return np.dot(self.w.T, X.T)+self.b
@@ -130,9 +149,16 @@ class SVM():
         return np.mean(b_tmp)
 
     # Prediction
-    def predict(self, X, w, b):
+    def _predict(self, X, w, b):
         return np.sign(np.dot(w.T, X.T)+b).astype(int)
+
+    def predict(self, X):
+        res = np.sign(np.dot(self.w.T, X.T)+self.b).astype(int)
+        if self.transformed:
+            res[res == -1] = self.y_unique[0]
+            res[res == 1] = self.y_unique[1]
+        return res
 
     # Prediction error
     def E(self, x_k, y_k, w, b):
-        return self.predict(x_k, w, b) - y_k
+        return self._predict(x_k, w, b) - y_k
