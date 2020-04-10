@@ -1,4 +1,3 @@
-from __future__ import division, print_function
 import numpy as np
 import random
 
@@ -20,6 +19,7 @@ class SVM():
         self.kernel_type = kernel_type
         self.C = C
         self.epsilon = epsilon
+        self.b = 0.0
 
     def fit(self, X, y):
         """
@@ -45,49 +45,67 @@ class SVM():
         alpha = np.zeros(n)
         kernel = self.kernels[self.kernel_type]
         count = 0
-        while True:
+        # Initialize errors
+        self.w = self.calc_w(alpha, self.y, self.X)
+        self.errors = self._predict(self.X, self.w, self.b) - self.y
+        examine_all = True
+        num_changed = 0
+        while num_changed > 0 or examine_all:
+            num_changed = 0
             count += 1
-            alpha_prev = np.copy(alpha)
-            for j in range(n):
-                # randomly select an integer between 0 and n-1 (inclusive)
-                # and it is not equalt to j
-                i = self.get_random_int(0, n-1, j)
+            if examine_all:
+                samples = np.array(range(n))
+            else:
+                samples = np.where((alpha != 0) & (alpha != self.C))[0]
+            for j in samples:
+
+                # i = self.get_random_int(samples, j)
+                if self.errors[j] > 0:
+                    i = np.argmin(self.errors)
+                else:
+                    i = np.argmax(self.errors)
+
+                E_i = self.errors[i]
+                E_j = self.errors[j]
+
                 x_i = self.X[i, :]
                 x_j = self.X[j, :]
                 y_i = self.y[i]
                 y_j = self.y[j]
-                # k_ij = kernel(x_i, x_i) + kernel(x_j, x_j)  - 2 * kernel(x_i, x_j)
-                k_ij = 2 * kernel(x_i, x_j) - kernel(x_i, x_i) - kernel(x_j, x_j)
+                k_ij = kernel(x_i, x_j)
+                k_ii = kernel(x_i, x_i)
+                k_jj = kernel(x_j, x_j)
+
+                r_j = E_j * y_j
+                if (r_j < -self.epsilon and alpha[j] < self.C) or (r_j > self.epsilon and alpha[j] > 0):
+                    pass
+                else:
+                    continue
+
+                eta = 2 * k_ij - k_ii - k_jj
                 alpha_prime_j = alpha[j]
                 alpha_prime_i = alpha[i]
-
-                self.w = self.calc_w(alpha, self.y, self.X)
-                self.b = self.calc_b(X, self.y, self.w)
-
-                # Compute E_i, E_j (the difference between the prediction and
-                # the ground truth)
-                E_i = self.E(x_i, y_i, self.w, self.b)
-                E_j = self.E(x_j, y_j, self.w, self.b)
 
                 L, H = self.compute_L_H(self.C, alpha_prime_j, alpha_prime_i, y_j, y_i)
                 if L == H:
                     continue
 
-                if k_ij < 0:
-                    alpha[j] = alpha_prime_j - y_j * (E_i - E_j) / k_ij
-                    if alpha[j] >= H:
+                if eta < 0:
+                    alpha[j] = alpha_prime_j - y_j * (E_i - E_j) / eta
+                    if alpha[j] > H:
                         alpha[j] = H
-                    elif alpha[j] <= L:
+                    elif alpha[j] < L:
                         alpha[j] = L
-                else: # k_ij == 0
+                else: # eta == 0
+                    print ('!!!!eta == 0!!!!')
                     alpha[j] = L
                     w_L = self.calc_w(alpha, self.y, self.X)
-                    b_L = self.calc_b(self.X, self.y, w_L)
-                    Lobj = np.dot(w_L.T, X.T)+b_L
+                    # b_L = self.calc_b(self.X, self.y, w_L)
+                    Lobj = np.dot(w_L.T, X.T)-self.b
                     alpha[j] = H
                     w_H = self.calc_w(alpha, self.y, self.X)
-                    b_H = self.calc_b(self.X, self.y, w_L)
-                    Hobj = p.dot(w_H.T, X.T)+b_H
+                    # b_H = self.calc_b(self.X, self.y, w_L)
+                    Hobj = p.dot(w_H.T, X.T)-self.b
                     if Lobj > Hobj:
                         alpha[j] = L
                     elif Lobj < Hobj:
@@ -101,12 +119,38 @@ class SVM():
                 elif alpha[j] > (self.C - 1e-8):
                     alpha[j] = self.C
 
+                if np.abs(alpha[j] - alpha_prime_j) < self.epsilon:
+                    alpha[j] = alpha_prime_j
+                    continue
+
                 alpha[i] = alpha_prime_i + y_i*y_j * (alpha_prime_j - alpha[j])
 
-            # Check convergence
-            diff = np.linalg.norm(alpha_prev-alpha)
-            if diff < self.epsilon:
-                break
+                # Update the bias item
+                b1 = E_i + y_i * (alpha[i] - alpha_prime_i) * k_ii + y_j * (alpha[j] - alpha_prime_j) * k_ij + self.b
+                b2 = E_j + y_i * (alpha[i] - alpha_prime_i) * k_ij + y_j * (alpha[j] - alpha_prime_j) * k_jj + self.b
+                if alpha[i] > 0 and alpha[i] < self.C:
+                    new_b = b1
+                elif alpha[j] > 0 and alpha[j] < self.C:
+                    new_b = b2
+                else:
+                    new_b = (b1+b2)/2
+
+                if alpha[i] > 0 and alpha[i] < self.C:
+                    self.errors[i] = 0
+                if alpha[j] > 0 and alpha[j] < self.C:
+                    self.errors[j] = 0
+
+                non_opt = [this_sample for this_sample in range(n) if (this_sample != i and this_sample != j)]
+                self.errors[non_opt] = self.errors[non_opt] +\
+                                        y_i * (alpha[i] - alpha_prime_i) * kernel(x_i, X[non_opt]) +\
+                                        y_j * (alpha[j] - alpha_prime_j) * kernel(x_j, X[non_opt]) + self.b - new_b
+                self.b = new_b
+                num_changed += 1
+
+            if examine_all:
+                examine_all = False
+            elif num_changed == 0:
+                examine_all = True
 
             if count >= self.max_iter:
                 print("Iteration number exceeded the max of {} iterations".format(self.max_iter))
@@ -114,25 +158,24 @@ class SVM():
 
         # Compute the final model parameters
         self.w = self.calc_w(alpha, self.y, self.X)
-        self.b = self.calc_b(self.X, self.y, self.w)
+        # self.b = self.calc_b(self.X, self.y, self.w)
 
         # Get support vectors
         alpha_idx = np.where(alpha != 0)[0]
         self.support_vectors_ = self.X[alpha_idx, :]
 
     def decision_function(self, X):
-        return np.dot(self.w.T, X.T)+self.b
+        return np.dot(self.w.T, X.T) - self.b
 
     def kernel_linear(self, x1, x2):
         return np.dot(x1, x2.T)
 
-    def get_random_int(self, a, b , z):
-        i = z
-        cnt = 0
-        while i == z and cnt < 1000:
-            i = random.randint(a,b)
-            cnt += 1
-        return i
+    def get_random_int(self, sample, z):
+
+        while True:
+            i = random.choice(sample)
+            if i != z:
+                return i
 
     def compute_L_H(self, C, alpha_prime_j,alpha_prime_i, y_j, y_i):
         # Calculate left bound and right bound of alpha
@@ -144,13 +187,10 @@ class SVM():
     def calc_w(self, alpha, y, X):
         return np.dot(X.T, np.multiply(alpha, y))
 
-    def calc_b(self, X, y ,w):
-        b_tmp = y - np.dot(w.T, X.T)
-        return np.mean(b_tmp)
-
     # Prediction
     def _predict(self, X, w, b):
-        return np.sign(np.dot(w.T, X.T)+b).astype(int)
+        # return np.sign(np.dot(w.T, X.T)+b).astype(int)
+        return np.dot(w.T, X.T)-b
 
     def predict(self, X):
         res = np.sign(np.dot(self.w.T, X.T)+self.b).astype(int)
