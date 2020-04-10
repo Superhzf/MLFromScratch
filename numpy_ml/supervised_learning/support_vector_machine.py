@@ -45,7 +45,7 @@ class SVM():
         alpha_prime_j = alpha[j]
         alpha_prime_i = alpha[i]
 
-        L, H = self.compute_L_H(self.C, alpha_prime_j, alpha_prime_i, y_j, y_i)
+        L, H = self._compute_L_H(self.C, alpha_prime_j, alpha_prime_i, y_j, y_i)
         if L == H:
             return 0
 
@@ -58,11 +58,11 @@ class SVM():
         else: # eta == 0
             print ('!!!!eta == 0!!!!')
             alpha[j] = L
-            w_L = self.calc_w(alpha, self.y, self.X)
+            w_L = self._calc_w(alpha, self.y, self.X)
             # b_L = self.calc_b(self.X, self.y, w_L)
             Lobj = np.dot(w_L.T, X.T)-self.b
             alpha[j] = H
-            w_H = self.calc_w(alpha, self.y, self.X)
+            w_H = self._calc_w(alpha, self.y, self.X)
             # b_H = self.calc_b(self.X, self.y, w_L)
             Hobj = p.dot(w_H.T, X.T)-self.b
             if Lobj > Hobj:
@@ -131,7 +131,7 @@ class SVM():
         kernel = self.kernels[self.kernel_type]
         count = 0
         # Initialize errors
-        self.w = self.calc_w(alpha, self.y, self.X)
+        self.w = self._calc_w(alpha, self.y, self.X)
         self.errors = self._predict(self.X, self.w, self.b) - self.y
         examine_all = True
         num_changed = 0
@@ -176,7 +176,7 @@ class SVM():
                 return
 
         # Compute the final model parameters
-        self.w = self.calc_w(alpha, self.y, self.X)
+        self.w = self._calc_w(alpha, self.y, self.X)
         # self.b = self.calc_b(self.X, self.y, self.w)
 
         # Get support vectors
@@ -189,14 +189,14 @@ class SVM():
     def kernel_linear(self, x1, x2):
         return np.dot(x1, x2.T)
 
-    def compute_L_H(self, C, alpha_prime_j,alpha_prime_i, y_j, y_i):
+    def _compute_L_H(self, C, alpha_prime_j,alpha_prime_i, y_j, y_i):
         # Calculate left bound and right bound of alpha
         if y_i != y_j:
             return max(0,alpha_prime_j - alpha_prime_i), min(C, C - alpha_prime_i + alpha_prime_j)
         else:
             return max(0, alpha_prime_i + alpha_prime_j - C), min(C, alpha_prime_i + alpha_prime_j)
 
-    def calc_w(self, alpha, y, X):
+    def _calc_w(self, alpha, y, X):
         return np.dot(X.T, np.multiply(alpha, y))
 
     # Prediction
@@ -210,7 +210,3 @@ class SVM():
             res[res == -1] = self.y_unique[0]
             res[res == 1] = self.y_unique[1]
         return res
-
-    # Prediction error
-    def E(self, x_k, y_k, w, b):
-        return self._predict(x_k, w, b) - y_k
