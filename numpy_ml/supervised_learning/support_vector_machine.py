@@ -21,6 +21,92 @@ class SVM():
         self.epsilon = epsilon
         self.b = 0.0
 
+    def _take_one_step(self, i, j, kernel, alpha):
+        if i == j:
+            return 0
+
+        E_i = self.errors[i]
+        E_j = self.errors[j]
+
+        x_i = self.X[i, :]
+        x_j = self.X[j, :]
+        y_i = self.y[i]
+        y_j = self.y[j]
+        k_ij = kernel(x_i, x_j)
+        k_ii = kernel(x_i, x_i)
+        k_jj = kernel(x_j, x_j)
+
+        r_j = E_j * y_j
+        if (r_j < -self.epsilon and alpha[j] < self.C) or (r_j > self.epsilon and alpha[j] > 0):
+            pass
+        else:
+            return 0
+
+        eta = 2 * k_ij - k_ii - k_jj
+        alpha_prime_j = alpha[j]
+        alpha_prime_i = alpha[i]
+
+        L, H = self.compute_L_H(self.C, alpha_prime_j, alpha_prime_i, y_j, y_i)
+        if L == H:
+            return 0
+
+        if eta < 0:
+            alpha[j] = alpha_prime_j - y_j * (E_i - E_j) / eta
+            if alpha[j] > H:
+                alpha[j] = H
+            elif alpha[j] < L:
+                alpha[j] = L
+        else: # eta == 0
+            print ('!!!!eta == 0!!!!')
+            alpha[j] = L
+            w_L = self.calc_w(alpha, self.y, self.X)
+            # b_L = self.calc_b(self.X, self.y, w_L)
+            Lobj = np.dot(w_L.T, X.T)-self.b
+            alpha[j] = H
+            w_H = self.calc_w(alpha, self.y, self.X)
+            # b_H = self.calc_b(self.X, self.y, w_L)
+            Hobj = p.dot(w_H.T, X.T)-self.b
+            if Lobj > Hobj:
+                alpha[j] = L
+            elif Lobj < Hobj:
+                alpha[j] = H
+            else:
+                alpha[j] = alpha_prime_j
+
+        # Push a2 to 0 or C if very close
+        if alpha[j] < 1e-8:
+            alpha[j] = 0.0
+        elif alpha[j] > (self.C - 1e-8):
+            alpha[j] = self.C
+
+        if np.abs(alpha[j] - alpha_prime_j) < self.epsilon:
+            alpha[j] = alpha_prime_j
+            return 0
+
+        alpha[i] = alpha_prime_i + y_i*y_j * (alpha_prime_j - alpha[j])
+
+        # Update the bias item
+        b1 = E_i + y_i * (alpha[i] - alpha_prime_i) * k_ii + y_j * (alpha[j] - alpha_prime_j) * k_ij + self.b
+        b2 = E_j + y_i * (alpha[i] - alpha_prime_i) * k_ij + y_j * (alpha[j] - alpha_prime_j) * k_jj + self.b
+        if alpha[i] > 0 and alpha[i] < self.C:
+            new_b = b1
+        elif alpha[j] > 0 and alpha[j] < self.C:
+            new_b = b2
+        else:
+            new_b = (b1+b2)/2
+
+        if alpha[i] > 0 and alpha[i] < self.C:
+            self.errors[i] = 0
+        if alpha[j] > 0 and alpha[j] < self.C:
+            self.errors[j] = 0
+
+        non_opt = [this_sample for this_sample in range(self.n) if (this_sample != i and this_sample != j)]
+        self.errors[non_opt] = self.errors[non_opt] +\
+                                y_i * (alpha[i] - alpha_prime_i) * kernel(x_i, self.X[non_opt]) +\
+                                y_j * (alpha[j] - alpha_prime_j) * kernel(x_j, self.X[non_opt]) + self.b - new_b
+        self.b = new_b
+        return 1
+
     def fit(self, X, y):
         """
         X: numpy.array
@@ -40,9 +126,9 @@ class SVM():
             self.y[self.y==self.y_unique[0]] = -1
             self.y[self.y==self.y_unique[1]] = 1
 
-        n = self.X.shape[0]
+        self.n = self.X.shape[0]
         d = self.X.shape[1]
-        alpha = np.zeros(n)
+        alpha = np.zeros(self.n)
         kernel = self.kernels[self.kernel_type]
         count = 0
         # Initialize errors
@@ -54,98 +140,32 @@ class SVM():
             num_changed = 0
             count += 1
             if examine_all:
-                samples = np.array(range(n))
+                samples = np.array(range(self.n))
             else:
                 samples = np.where((alpha != 0) & (alpha != self.C))[0]
             for j in samples:
 
-                # i = self.get_random_int(samples, j)
-                if self.errors[j] > 0:
-                    i = np.argmin(self.errors)
-                else:
-                    i = np.argmax(self.errors)
-
-                E_i = self.errors[i]
-                E_j = self.errors[j]
-
-                x_i = self.X[i, :]
-                x_j = self.X[j, :]
-                y_i = self.y[i]
-                y_j = self.y[j]
-                k_ij = kernel(x_i, x_j)
-                k_ii = kernel(x_i, x_i)
-                k_jj = kernel(x_j, x_j)
-
-                r_j = E_j * y_j
-                if (r_j < -self.epsilon and alpha[j] < self.C) or (r_j > self.epsilon and alpha[j] > 0):
-                    pass
-                else:
-                    continue
-
-                eta = 2 * k_ij - k_ii - k_jj
-                alpha_prime_j = alpha[j]
-                alpha_prime_i = alpha[i]
-
-                L, H = self.compute_L_H(self.C, alpha_prime_j, alpha_prime_i, y_j, y_i)
-                if L == H:
-                    continue
-
-                if eta < 0:
-                    alpha[j] = alpha_prime_j - y_j * (E_i - E_j) / eta
-                    if alpha[j] > H:
-                        alpha[j] = H
-                    elif alpha[j] < L:
-                        alpha[j] = L
-                else: # eta == 0
-                    print ('!!!!eta == 0!!!!')
-                    alpha[j] = L
-                    w_L = self.calc_w(alpha, self.y, self.X)
-                    # b_L = self.calc_b(self.X, self.y, w_L)
-                    Lobj = np.dot(w_L.T, X.T)-self.b
-                    alpha[j] = H
-                    w_H = self.calc_w(alpha, self.y, self.X)
-                    # b_H = self.calc_b(self.X, self.y, w_L)
-                    Hobj = p.dot(w_H.T, X.T)-self.b
-                    if Lobj > Hobj:
-                        alpha[j] = L
-                    elif Lobj < Hobj:
-                        alpha[j] = H
+                if len(alpha[(alpha != 0) & (alpha != self.C)]) > 1:
+                    if self.errors[j] > 0:
+                        i = np.argmin(self.errors)
                     else:
-                        alpha[j] = alpha_prime_j
+                        i = np.argmax(self.errors)
+                    this_change = self._take_one_step(i, j, kernel, alpha)
+                    if this_change > 0:
+                        num_changed += this_change
+                        continue
+                i_candidate_list = np.where((alpha != 0) & (alpha != self.C))[0]
+                for i in i_candidate_list:
+                    this_change = self._take_one_step(i, j, kernel, alpha)
+                    if this_change > 0:
+                        num_changed += this_change
+                        continue
 
-                # Push a2 to 0 or C if very close
-                if alpha[j] < 1e-8:
-                    alpha[j] = 0.0
-                elif alpha[j] > (self.C - 1e-8):
-                    alpha[j] = self.C
-
-                if np.abs(alpha[j] - alpha_prime_j) < self.epsilon:
-                    alpha[j] = alpha_prime_j
-                    continue
-
-                alpha[i] = alpha_prime_i + y_i*y_j * (alpha_prime_j - alpha[j])
-
-                # Update the bias item
-                b1 = E_i + y_i * (alpha[i] - alpha_prime_i) * k_ii + y_j * (alpha[j] - alpha_prime_j) * k_ij + self.b
-                b2 = E_j + y_i * (alpha[i] - alpha_prime_i) * k_ij + y_j * (alpha[j] - alpha_prime_j) * k_jj + self.b
-                if alpha[i] > 0 and alpha[i] < self.C:
-                    new_b = b1
-                elif alpha[j] > 0 and alpha[j] < self.C:
-                    new_b = b2
-                else:
-                    new_b = (b1+b2)/2
-
-                if alpha[i] > 0 and alpha[i] < self.C:
-                    self.errors[i] = 0
-                if alpha[j] > 0 and alpha[j] < self.C:
-                    self.errors[j] = 0
-
-                non_opt = [this_sample for this_sample in range(n) if (this_sample != i and this_sample != j)]
-                self.errors[non_opt] = self.errors[non_opt] +\
-                                        y_i * (alpha[i] - alpha_prime_i) * kernel(x_i, X[non_opt]) +\
-                                        y_j * (alpha[j] - alpha_prime_j) * kernel(x_j, X[non_opt]) + self.b - new_b
-                self.b = new_b
-                num_changed += 1
+                for i in range(self.n):
+                    this_change = self._take_one_step(i, j, kernel, alpha)
+                    if this_change > 0:
+                        num_changed += this_change
+                        continue
 
             if examine_all:
                 examine_all = False
