@@ -1,5 +1,4 @@
 import numpy as np
-import random
 
 # ref: http://web.cs.iastate.edu/~honavar/smo-svm.pdf
 # The idea of SMO:
@@ -189,13 +188,6 @@ class SVM():
 
     def kernel_linear(self, x1, x2):
         return np.dot(x1, x2.T)
-
-    def get_random_int(self, sample, z):
-
-        while True:
-            i = random.choice(sample)
-            if i != z:
-                return i
 
     def compute_L_H(self, C, alpha_prime_j,alpha_prime_i, y_j, y_i):
         # Calculate left bound and right bound of alpha
