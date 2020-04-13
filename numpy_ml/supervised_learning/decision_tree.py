@@ -282,6 +282,7 @@ class XGBoostRegressionTree(DecisionTree):
 # (No max_depth or min_impurity concepts.https://en.wikipedia.org/wiki/ID3_algorithm)
 #    5. It can only handle classification problems.
 #    6. Only unused features are candidate features.
+# (ref: https://en.wikipedia.org/wiki/ID3_algorithm)
 
 # Q: What are other features does ID3 have:
 # A: It is not a binary tree. One node may have more than two children
