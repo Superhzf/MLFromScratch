@@ -282,7 +282,27 @@ class XGBoostRegressionTree(DecisionTree):
 # (No max_depth or min_impurity concepts.https://en.wikipedia.org/wiki/ID3_algorithm)
 #    5. It can only handle classification problems.
 #    6. Only unused features are candidate features.
-# (ref: https://en.wikipedia.org/wiki/ID3_algorithm)
+# (ref for ID3: https://en.wikipedia.org/wiki/ID3_algorithm)
+# (ref for entropy and information gain: https://www.saedsayad.com/decision_tree.htm)
 
 # Q: What are other features does ID3 have:
 # A: It is not a binary tree. One node may have more than two children
+
+# Q:What is the difference between C4.5 and ID3?
+# A: 1. C4.5 can handle continuous variables by creating a threshold and split the
+# observations whose attribute values are above the threshold and those are less
+# than the threshold
+#    2. C4.5 can handle missing attribute values during prediction procedure by
+# creating a decision node higher up the tree using the expected value.
+# (ref: https://cis.temple.edu/~giorgio/cis587/readings/id3-c45.html). If there
+# are missing values in building a tree, then we only use observations with known
+# values
+#    3. C4.5 uses normalized information gain (information gain ratio) to mitigate
+# side effects of regular information gain
+# (ref: https://www.slideshare.net/marinasantini1/lecture-4-decision-trees-2-entropy-information-gain-gain-ratio-55241087)
+#    4. C4.5 will do post-pruning to reduce overfitting by replacing a whole subtree by a leaf node
+
+# Q: Other features that C4.5 has:
+# A: Like ID3, it is not necessarily a binary tree
+
+# 
