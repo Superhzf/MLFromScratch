@@ -301,8 +301,21 @@ class XGBoostRegressionTree(DecisionTree):
 # side effects of regular information gain
 # (ref: https://www.slideshare.net/marinasantini1/lecture-4-decision-trees-2-entropy-information-gain-gain-ratio-55241087)
 #    4. C4.5 will do post-pruning to reduce overfitting by replacing a whole subtree by a leaf node
+# the idea is basically considering the replacement of the subtree at each node
+# within the tree with a leaf, assigning all observations in that newly assigned leaf
+# to the majority class (if a classification problem) or assigning them the mean
+# (if a regression problem). If the replacement of this subtree with a leaf leaves
+# our overall error/cost no worse, then we keep it, and otherwise we don't.
+# We continue iterating over all nodes until the pruning is no longer helpful.
 
 # Q: Other features that C4.5 has:
 # A: Like ID3, it is not necessarily a binary tree
 
-# 
+# Q: What is the difference between C4.5 and CART?
+# A: 1. CART only generates binary trees
+#    2. CART handles missing values by using surrogate variables
+# (ref: https://www.jamleecute.com/decision-tree-surrogate-in-cart/,
+# https://stats.stackexchange.com/questions/171574/meaning-of-surrogate-split).
+# It works for both training and reference stages.
+#    3. The impurity function in CART is Gini index
+#    4. CART prunes trees using CCP (cost-complexity pruning per sklern)
