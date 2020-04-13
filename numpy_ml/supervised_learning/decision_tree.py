@@ -271,3 +271,17 @@ class XGBoostRegressionTree(DecisionTree):
     def fit(self,X,y):
         self._impurity_calculation = self._gain_by_taylor
         self._leaf_value_calculation = _approximate_update
+
+
+# Notes:
+# Q: What is the disadvantage of ID3:
+# A: 1. It does not handle missing values
+#    2. It does not handle numeric input variables
+#    3. It only uses entropy and information gain as the impurity function
+#    4. It does not perform pruning
+# (No max_depth or min_impurity concepts.https://en.wikipedia.org/wiki/ID3_algorithm)
+#    5. It can only handle classification problems.
+#    6. Only unused features are candidate features.
+
+# Q: What are other features does ID3 have:
+# A: It is not a binary tree. One node may have more than two children
