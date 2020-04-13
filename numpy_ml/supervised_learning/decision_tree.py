@@ -316,6 +316,7 @@ class XGBoostRegressionTree(DecisionTree):
 #    2. CART handles missing values by using surrogate variables
 # (ref: https://www.jamleecute.com/decision-tree-surrogate-in-cart/,
 # https://stats.stackexchange.com/questions/171574/meaning-of-surrogate-split).
+# Handling missing values is not supported in sklearn
 # It works for both training and reference stages.
 #    3. The impurity function in CART is Gini index
-#    4. CART prunes trees using CCP (cost-complexity pruning per sklern)
+#    4. CART prunes trees using CCP (cost-complexity pruning) per sklern
