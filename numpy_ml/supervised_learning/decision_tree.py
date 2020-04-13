@@ -23,7 +23,7 @@ class Node():
         Next decision node for samples where features value does not meet the
         threshold
     """
-    def __init__(self,feature_i,threshold,value,true_branch,false_branch):
+    def __init__(self,feature_i=None,threshold=None,value=None,true_branch=None,false_branch=None):
         self.feature_i = feature_i
         self.threshold = threshold
         self.value = value
@@ -82,7 +82,7 @@ class DecisionTree(object):
             y = np.expand_dims(y,axis=1)
 
         # Concatenate x and y
-        Xy = np.concat((X,y),axis=1)
+        Xy = np.concatenate((X,y),axis=1)
 
         n_samples, n_features = np.shape(X)
 
@@ -114,7 +114,7 @@ class DecisionTree(object):
                                 "leftX": Xy1[:,:n_features], # X of left subtree
                                 "lefty": Xy1[:,n_features:], # y of left subtree
                                 "rightX": Xy2[:,:n_features], # X of right subtree
-                                "lefty": Xy2[:,n_features:]
+                                "righty": Xy2[:,n_features:]
                             }
         if largest_impurity > self.min_impurity:
             # Build subtrees for the right and left branches
@@ -210,7 +210,7 @@ class ClassificationTree(DecisionTree):
         entropy_y2 = calculate_entropy(y2)
         p_1 = len(y1)/len(y)
 
-        info_gain = entropy_y-p1*entropy_y1-(1-p1)*entropy_y2
+        info_gain = entropy_y-p_1*entropy_y1-(1-p_1)*entropy_y2
         return info_gain
 
     def _majority_vote(self,y):
@@ -225,8 +225,8 @@ class ClassificationTree(DecisionTree):
         return most_common
 
     def fit(self,X,y):
-        self._impurity_calculation = _calculate_information_gain
-        self._leaf_value_calculation = _majority_vote
+        self._impurity_calculation = self._calculate_information_gain
+        self._leaf_value_calculation = self._majority_vote
         super(ClassificationTree,self).fit(X,y)
 
 class XGBoostRegressionTree(DecisionTree):
