@@ -177,7 +177,6 @@ class SVM():
 
         # Compute the final model parameters
         self.w = self._calc_w(alpha, self.y, self.X)
-        # self.b = self.calc_b(self.X, self.y, self.w)
 
         # Get support vectors
         alpha_idx = np.where(alpha != 0)[0]
