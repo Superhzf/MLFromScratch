@@ -203,7 +203,7 @@ class RegressionTree(DecisionTree):
         return value if len(value)>1 else value[0]
 
     def fit(self,X,y):
-        self._impurity_calculation = _calculate_variance_reduction
+        self._impurity_calculation = self._calculate_variance_reduction
         self._leaf_value_calculation = self._mean_of_y
         super(RegressionTree,self).fit(X,y)
 
