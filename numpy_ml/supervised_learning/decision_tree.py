@@ -156,6 +156,11 @@ class DecisionTree(object):
         # Iterate subtree
         return self.predict_value(x,branch)
 
+    def predict(self, X):
+        """ Make prediction one by one and return the set of labels """
+        y_pred = np.array([self.predict_value(sample) for sample in X])
+        return y_pred
+
     def print_tree(self, tree=None, indent=" "):
         """ Recursively print the decision tree """
         if not tree:
