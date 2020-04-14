@@ -1,6 +1,7 @@
 import numpy as np
 from numpy_ml.utils import divide_on_feature
 from numpy_ml.utils import calculate_variance,calculate_entropy
+import random
 
 # This can work as either an interbal node or a decision node
 class Node():
@@ -23,7 +24,8 @@ class Node():
         Next decision node for samples where features value does not meet the
         threshold
     """
-    def __init__(self,feature_i=None,threshold=None,value=None,true_branch=None,false_branch=None):
+    def __init__(self,feature_i=None,threshold=None,value=None,
+                 true_branch=None,false_branch=None):
         self.feature_i = feature_i
         self.threshold = threshold
         self.value = value
@@ -46,8 +48,11 @@ class DecisionTree(object):
     loss: function
         Loss function that is used for Gradient Boosting models to calculate
         impurity
+    max_features: float (shoud be between (0,1]))
+        The % of features to consider when looking for the best split.
     """
-    def __init__(self,min_samples_split,min_impurity,max_depth=float('inf'),loss=None):
+    def __init__(self,min_samples_split,min_impurity,max_depth=float('inf'),
+                 loss=None,max_features = 1):
         self.root = None
         self.min_samples_split = min_samples_split
         self.min_impurity = min_impurity
@@ -56,6 +61,9 @@ class DecisionTree(object):
         # Function to determine prediction of y at leaf
         self._leaf_value_calculation = None
         self.loss = loss
+        self.max_features = max_features
+
+        assert self.max_features > 0 and self.max_features <= 1
 
     def fit(self,X,y,loss=None):
         """Build a decision tree"""
@@ -86,9 +94,14 @@ class DecisionTree(object):
 
         n_samples, n_features = np.shape(X)
 
+        if self.max_features < 1:
+            feature_list = np.random.choice(range(n_features),int(self.max_features*n_features))
+        else:
+            feature_list = range(n_features)
+
         if n_samples >= self.min_samples_split and current_depth <= self.max_depth:
             # Calculate the impurity for each feature
-            for feature_i in range(n_features):
+            for feature_i in feature_list:
                 # All values of feature_i
                 feature_values = np.expand_dims(X[:,feature_i],axis=1)
                 unique_values = np.unique(feature_values)
