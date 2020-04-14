@@ -45,9 +45,11 @@ class GradientBoosting(object):
         True if it is a regression problem otherwise False
     subsample: float (shoud be in (0,1])
         The fraction of samples to be used for fitting the individual base learners.
+    random_state: int
+        The random seed for subsample
     """
     def __init__(self,n_estimators,learning_rate,min_samples_split,min_impurity,
-                 max_depth,regression,subsample):
+                 max_depth,regression,subsample,max_features,random_state=0):
         self.n_estimators = n_estimators
         self.learning_rate = learning_rate
         self.min_samples_split = min_samples_split
@@ -55,8 +57,11 @@ class GradientBoosting(object):
         self.max_depth = max_depth
         self.regression = regression
         self.subsample = subsample
+        self.max_features = max_features
+        self.random_state = random_state
 
         assert self.subsample > 0 and self.subsample <= 1
+        assert self.max_features > 0 and self.max_features <= 1
 
         # Square loss for regression, logloss for classification
         if self.regression:
@@ -69,11 +74,14 @@ class GradientBoosting(object):
         for _ in range(self.n_estimators):
             tree = RegressionTree(min_samples_split = self.min_samples_split,
                                   min_impurity = self.min_impurity,
-                                  max_depth = self.max_depth)
+                                  max_depth = self.max_depth,
+                                  max_features = self.max_features,
+                                  max_features = self.random_state)
             self.trees.append(tree)
 
     def fit(self,X,y):
         if self.subsample < 1:
+            np.random.seed(self.random_state)
             index = np.random.choice(len(X))
             X = X[index]
             y = y[index]
