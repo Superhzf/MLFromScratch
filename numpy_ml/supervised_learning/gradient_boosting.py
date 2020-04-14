@@ -43,15 +43,20 @@ class GradientBoosting(object):
         The maximum depth of a tree
     regression: boolean
         True if it is a regression problem otherwise False
+    subsample: float (shoud be in (0,1])
+        The fraction of samples to be used for fitting the individual base learners.
     """
     def __init__(self,n_estimators,learning_rate,min_samples_split,min_impurity,
-                 max_depth,regression):
+                 max_depth,regression,subsample):
         self.n_estimators = n_estimators
         self.learning_rate = learning_rate
         self.min_samples_split = min_samples_split
         self.min_impurity = min_impurity
         self.max_depth = max_depth
         self.regression = regression
+        self.subsample = subsample
+
+        assert self.subsample > 0 and self.subsample <= 1
 
         # Square loss for regression, logloss for classification
         if self.regression:
@@ -68,6 +73,10 @@ class GradientBoosting(object):
             self.trees.append(tree)
 
     def fit(self,X,y):
+        if self.subsample < 1:
+            index = np.random.choice(len(X))
+            X = X[index]
+            y = y[index]
         # initialze predictions using mean value of y
         y_pred = np.full(np.shape(y),np.mean(y,axis=0))
         for i in range(self.n_estimators):
@@ -87,12 +96,13 @@ class GradientBoosting(object):
             y_pred = -update if not y_pred.any() else y_pred-update
 
         if not self.regression:
-            # Turn probability distribution
-            y_pred = np.exp(y_pred)/np.expand_dims(np.sum(np.exp(y_pred),axis=1),axis=1) # this is softmax
+            # this is softmax
+            y_pred = np.exp(y_pred)/np.expand_dims(np.sum(np.exp(y_pred),axis=1),axis=1)
             # Set label to the value that maximizes probability
             y_pred = np.argmax(y_pred, axis=1)
 
         return y_pred
+
 
 class GradientBoostingRegressor(GradientBoosting):
     def __init__(self,n_estimators=200,learning_rate=0.5,min_samples_split=2,
