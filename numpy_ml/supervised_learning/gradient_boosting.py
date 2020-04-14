@@ -5,9 +5,9 @@ from supervised_learning.decision_tree import RegressionTree
 # reference: https://explained.ai/gradient-boosting/
 
 # Why does a GBM model have a learning rate?
-# Answer: Learning reduces contribution of following trees to make the prediction
+# Answer: It reduces contribution of following trees to make the prediction
 # more accurate. Suppose the optimal value is 5.23 and at each step, the prediction
-# of a tree is 1, then the best value we can land when learning_rate = 1 is 5 or
+# of a tree is 1, then the best value we can landed when learning_rate = 1 is 5 or
 # 6. IF learning_rate = 0.1, we can reach 5.2. If learning_rate = 0.01, then
 # we can reach 5.23 which is the best one.
 
