@@ -18,7 +18,7 @@ def divide_on_feature(X,feature_i,threshold):
     the given threshold
     """
     split_func = None
-    if isinstance(threshold,int) or isinstance(threshold,float):
+    if isinstance(threshold,int) or isinstance(threshold,float) or isinstance(threshold, np.float32):
         X_1 = X[X[:,feature_i]>=threshold]
         X_2 = X[X[:,feature_i]<threshold]
     else:

@@ -161,15 +161,14 @@ class DecisionTree(object):
 
         # Choose the feature that we will iterate
         feature_value = x[tree.feature_i]
-
         # Determine which branch (left/right) we will follow
         branch = tree.false_branch
-        if isinstance(feature_value,int) or isinstance(feature_value,float):
+        if isinstance(feature_value,int) or isinstance(feature_value,np.float32)\
+            or isinstance(feature_value, float):
             if feature_value>=tree.threshold:
                 branch = tree.true_branch
         elif feature_value == tree.threshold:
             branch = tree.true_branch
-
         # Iterate subtree
         return self.predict_value(x,branch)
 

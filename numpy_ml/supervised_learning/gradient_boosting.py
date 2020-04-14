@@ -1,6 +1,7 @@
 import numpy as np
-from deep_learning.loss_functions import SquareLoss, CrossEntropy
-from supervised_learning.decision_tree import RegressionTree
+from numpy_ml.utils import to_categorical
+from ..deep_learning.loss_functions import SquareLoss, BinaryCrossEntropy
+from .decision_tree import RegressionTree
 
 # reference: https://explained.ai/gradient-boosting/
 
@@ -49,7 +50,7 @@ class GradientBoosting(object):
         The random seed for subsample
     """
     def __init__(self,n_estimators,learning_rate,min_samples_split,min_impurity,
-                 max_depth,regression,subsample,max_features,random_state=0):
+                 max_depth,regression,subsample=1,max_features=1,random_state=0):
         self.n_estimators = n_estimators
         self.learning_rate = learning_rate
         self.min_samples_split = min_samples_split
@@ -67,22 +68,22 @@ class GradientBoosting(object):
         if self.regression:
             self.loss = SquareLoss()
         else:
-            self.loss = CrossEntropy()
+            self.loss = BinaryCrossEntropy()
 
         # Initialize regression trees
-        self.trees = []
+        self.tree_list = []
         for _ in range(self.n_estimators):
             tree = RegressionTree(min_samples_split = self.min_samples_split,
                                   min_impurity = self.min_impurity,
                                   max_depth = self.max_depth,
                                   max_features = self.max_features,
-                                  max_features = self.random_state)
-            self.trees.append(tree)
+                                  random_state = self.random_state)
+            self.tree_list.append(tree)
 
     def fit(self,X,y):
         if self.subsample < 1:
             np.random.seed(self.random_state)
-            index = np.random.choice(len(X))
+            index = np.random.choice(len(X),int(self.subsample*len(X)))
             X = X[index]
             y = y[index]
         # initialze predictions using mean value of y
@@ -91,30 +92,42 @@ class GradientBoosting(object):
             # for squared loss, the gradient is residual
             gradient = self.loss.gradient(y,y_pred)
             # Each tree will fit the gradient instead of residual
-            self.tree[i].fit(X,gradient)
-            update = self.trees[i].predict(X)
+            self.tree_list[i].fit(X,gradient)
+            update = self.tree_list[i].predict(X)
             # Here we subtract negative update
             y_pred -= np.multiply(self.learning_rate,update)
 
     def predict(self,X):
         y_pred = np.array([])
-        for tree in self.trees:
+        for tree in self.tree_list:
             update = tree.predict(X)
             update = np.multiply(self.learning_rate,update)
             y_pred = -update if not y_pred.any() else y_pred-update
 
         if not self.regression:
             # this is softmax
-            y_pred = np.exp(y_pred)/np.expand_dims(np.sum(np.exp(y_pred),axis=1),axis=1)
+            y_pred = np.exp(y_pred) / np.expand_dims(np.sum(np.exp(y_pred), axis=1), axis=1)
             # Set label to the value that maximizes probability
             y_pred = np.argmax(y_pred, axis=1)
 
         return y_pred
 
+    def staged_decision_function(self, X):
+        """Compute decision function of X for each iteration."""
+        y_pred = np.array([])
+        staged_pred = []
+        for tree in self.tree_list:
+            update = tree.predict(X)
+            update = np.multiply(self.learning_rate,update)
+            y_pred = -update if not y_pred.any() else y_pred-update
+            staged_pred.append(y_pred)
+
+        return np.array(staged_pred)
+
 
 class GradientBoostingRegressor(GradientBoosting):
     def __init__(self,n_estimators=200,learning_rate=0.5,min_samples_split=2,
-                 min_var_red = 1e-7,max_depth=4,debug=False):
+                 min_var_red = 1e-7,max_depth=4):
         super(GradientBoostingRegressor, self).__init__(n_estimators=n_estimators,
             learning_rate=learning_rate,
             min_samples_split=min_samples_split,
@@ -125,13 +138,16 @@ class GradientBoostingRegressor(GradientBoosting):
 
 class GradientBoostingClassifier(GradientBoosting):
     def __init__(self, n_estimators=200, learning_rate=.5, min_samples_split=2,
-                 min_info_gain=1e-7, max_depth=2, debug=False):
+                 min_info_gain=1e-7, max_depth=2, subsample=1,max_features=1, random_state=0):
         super(GradientBoostingClassifier, self).__init__(n_estimators=n_estimators,
             learning_rate=learning_rate,
             min_samples_split=min_samples_split,
             min_impurity=min_info_gain,
             max_depth=max_depth,
-            regression=False)
+            regression=False,
+            subsample=subsample,
+            max_features=max_features,
+            random_state=random_state)
 
     def fit(self, X, y):
         y = to_categorical(y)
