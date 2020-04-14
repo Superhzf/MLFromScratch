@@ -50,9 +50,11 @@ class DecisionTree(object):
         impurity
     max_features: float (shoud be between (0,1]))
         The % of features to consider when looking for the best split.
+    random_state: int
+        The random seed for max_features
     """
     def __init__(self,min_samples_split,min_impurity,max_depth=float('inf'),
-                 loss=None,max_features = 1):
+                 loss=None,max_features = 1,random_state = 0):
         self.root = None
         self.min_samples_split = min_samples_split
         self.min_impurity = min_impurity
@@ -62,6 +64,7 @@ class DecisionTree(object):
         self._leaf_value_calculation = None
         self.loss = loss
         self.max_features = max_features
+        self.random_state = random_state
 
         assert self.max_features > 0 and self.max_features <= 1
 
@@ -95,6 +98,7 @@ class DecisionTree(object):
         n_samples, n_features = np.shape(X)
 
         if self.max_features < 1:
+            np.random.seed(self.random_state)
             feature_list = np.random.choice(range(n_features),int(self.max_features*n_features))
         else:
             feature_list = range(n_features)
