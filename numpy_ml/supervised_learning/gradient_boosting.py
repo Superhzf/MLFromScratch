@@ -1,6 +1,6 @@
 import numpy as np
 from numpy_ml.utils import to_categorical
-from ..deep_learning.loss_functions import SquareLoss, BinaryCrossEntropy
+from ..deep_learning.loss_functions import SquareLoss, BinomialDeviance
 from .decision_tree import RegressionTree
 
 # reference: https://explained.ai/gradient-boosting/
@@ -68,7 +68,7 @@ class GradientBoosting(object):
         if self.regression:
             self.loss = SquareLoss()
         else:
-            self.loss = BinaryCrossEntropy()
+            self.loss = BinomialDeviance()
 
         # Initialize regression trees
         self.tree_list = []
@@ -87,30 +87,34 @@ class GradientBoosting(object):
             X = X[index]
             y = y[index]
         # initialze predictions using mean value of y
-        y_pred = np.full(np.shape(y),np.mean(y,axis=0))
+        # y_pred = np.full(np.shape(y),np.mean(y,axis=0))
+        y_pred = np.full(np.shape(y),np.mean(y))
+        y_pred = np.log(y_pred / (1 - y_pred))
         for i in range(self.n_estimators):
-            # for squared loss, the gradient is residual
-            gradient = self.loss.gradient(y,y_pred)
+            gradient = self.loss.negative_gradient(y,y_pred)
             # Each tree will fit the gradient instead of residual
             self.tree_list[i].fit(X,gradient)
+            # Update leaf values using line search
+            self.loss.update_terminal_region(X, y, gradient,self.tree_list[i])
             update = self.tree_list[i].predict(X)
             # Here we subtract negative update
-            y_pred -= np.multiply(self.learning_rate,update)
+            y_pred += np.multiply(self.learning_rate,update)
 
     def predict(self,X):
-        y_pred = np.array([])
-        for tree in self.tree_list:
-            update = tree.predict(X)
-            update = np.multiply(self.learning_rate,update)
-            y_pred = -update if not y_pred.any() else y_pred-update
-
-        if not self.regression:
-            # this is softmax
-            y_pred = np.exp(y_pred) / np.expand_dims(np.sum(np.exp(y_pred), axis=1), axis=1)
-            # Set label to the value that maximizes probability
-            y_pred = np.argmax(y_pred, axis=1)
-
-        return y_pred
+        raise Exception('Not implemented')
+        # y_pred = np.array([])
+        # for tree in self.tree_list:
+        #     update = tree.predict(X)
+        #     update = np.multiply(self.learning_rate,update)
+        #     y_pred = update if not y_pred.any() else y_pred+update
+        #
+        # if not self.regression:
+        #     # this is softmax
+        #     y_pred = np.exp(y_pred) / np.expand_dims(np.sum(np.exp(y_pred), axis=1), axis=1)
+        #     # Set label to the value that maximizes probability
+        #     y_pred = np.argmax(y_pred, axis=1)
+        #
+        # return y_pred
 
     def staged_decision_function(self, X):
         """Compute decision function of X for each iteration."""
@@ -119,7 +123,7 @@ class GradientBoosting(object):
         for tree in self.tree_list:
             update = tree.predict(X)
             update = np.multiply(self.learning_rate,update)
-            y_pred = -update if not y_pred.any() else y_pred-update
+            y_pred = update if not y_pred.any() else y_pred+update
             staged_pred.append(y_pred)
 
         return np.array(staged_pred)
@@ -150,5 +154,5 @@ class GradientBoostingClassifier(GradientBoosting):
             random_state=random_state)
 
     def fit(self, X, y):
-        y = to_categorical(y)
+        # y = to_categorical(y)
         super(GradientBoostingClassifier, self).fit(X, y)

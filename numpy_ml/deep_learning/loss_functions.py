@@ -53,3 +53,27 @@ class BinomialDeviance(Loss):
 
     def negative_gradient(self, y, p):
         return y - expit(p.ravel())
+
+    def update_terminal_region(self, X, y, residual, tree_model):
+        idx_list = np.array([tree_model.apply(sample) for sample in X])
+        stack = [tree_model.root]
+        node_list = []
+        while len(stack) > 0:
+            curr = stack.pop()
+            if curr.value is not None:
+                node_list.append(curr)
+            if curr.true_branch is not None:
+                stack.append(curr.true_branch)
+            if curr.false_branch is not None:
+                stack.append(curr.false_branch)
+
+        for this_node in node_list:
+            this_y = y[idx_list == this_node.leaf_idx]
+            this_residual = residual[idx_list == this_node.leaf_idx]
+            assert len(this_y) == len(this_residual) and len(this_y) > 0
+            numerator = np.sum(this_residual)
+            denominator = np.sum((this_y - this_residual) * (1 - this_y + this_residual))
+            if abs(denominator) < 1e-150:
+                this_node.value = 0.0
+            else:
+                this_node.value = numerator / denominator

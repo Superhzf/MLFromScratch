@@ -25,12 +25,13 @@ class Node():
         threshold
     """
     def __init__(self,feature_i=None,threshold=None,value=None,
-                 true_branch=None,false_branch=None):
+                 true_branch=None,false_branch=None,leaf_idx=None):
         self.feature_i = feature_i
         self.threshold = threshold
         self.value = value
         self.true_branch = true_branch # left subtree
         self.false_branch = false_branch # right subtree
+        self.leaf_idx = leaf_idx
 
 # Super class of RegressionTree and ClassificationTree
 class DecisionTree(object):
@@ -65,6 +66,7 @@ class DecisionTree(object):
         self.loss = loss
         self.max_features = max_features
         self.random_state = random_state
+        self._leaf_idx = -1
 
         assert self.max_features > 0 and self.max_features <= 1
 
@@ -100,6 +102,7 @@ class DecisionTree(object):
         if self.max_features < 1:
             np.random.seed(self.random_state)
             feature_list = np.random.choice(range(n_features),int(self.max_features*n_features))
+            self.random_state = self.random_state + 222
         else:
             feature_list = range(n_features)
 
@@ -144,7 +147,27 @@ class DecisionTree(object):
                         false_branch = false_branch)
         # This is leaf node
         leaf_value = self._leaf_value_calculation(y)
-        return Node(value=leaf_value)
+        self._leaf_idx = self._leaf_idx + 1
+        return Node(value=leaf_value,leaf_idx=self._leaf_idx)
+
+    def apply(self,x, tree=None):
+        """Return leaf idx of the input X"""
+        if tree is None:
+            tree = self.root
+
+        if tree.value is not None:
+            return tree.leaf_idx
+
+        feature_value = x[tree.feature_i]
+        branch = tree.false_branch
+        if isinstance(feature_value,int) or isinstance(feature_value,np.float32)\
+            or isinstance(feature_value, float):
+            if feature_value>=tree.threshold:
+                branch = tree.true_branch
+        elif feature_value == tree.threshold:
+            branch = tree.true_branch
+        # Iterate subtree
+        return self.apply(x,branch)
 
 
     def predict_value(self,x,tree=None):
