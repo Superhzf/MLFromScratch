@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+from scipy.special import expit
 
 class Loss(object):
     def loss(self,y_true,y_pred):
@@ -41,3 +42,14 @@ class BinaryCrossEntropy(Loss):
         # Avoid zero numerator
         p = np.clip(p,1e-15,1-1e-15)
         return - (y/p)+(1-y)/(1-p)
+
+
+class BinomialDeviance(Loss):
+    def __init__(self):
+        pass
+
+    def loss(self, y, p):
+        return -2 * np.mean((y * p) - np.logaddexp(0, p))
+
+    def negative_gradient(self, y, p):
+        return y - expit(p.ravel())
