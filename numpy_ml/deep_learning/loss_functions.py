@@ -71,6 +71,7 @@ class BinomialDeviance(Loss):
             this_y = y[idx_list == this_node.leaf_idx]
             this_residual = residual[idx_list == this_node.leaf_idx]
             assert len(this_y) == len(this_residual) and len(this_y) > 0
+            # The fomula comes from Newton's method and Taloyr extension
             numerator = np.sum(this_residual)
             denominator = np.sum((this_y - this_residual) * (1 - this_y + this_residual))
             if abs(denominator) < 1e-150:
