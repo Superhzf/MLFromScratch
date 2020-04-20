@@ -1,7 +1,7 @@
 import numpy as np
-from deep_learning.activation_functions import Sigmoid
-from supervised_learning import XGBoostRegressionTree
-from utils import to_categorical
+from ..deep_learning.activation_functions import Sigmoid
+from ..supervised_learning import XGBoostRegressionTree
+from ..utils import to_categorical
 
 class LogisticLoss():
     def __init__(self):
@@ -43,11 +43,11 @@ class XGBoost(object):
     max_depth: int
         The maximum depth of a tree
     """
-    def __init__(self,n_estimators=200,learning_rate=0.01,min_sample_split=2,
+    def __init__(self,n_estimators=200,learning_rate=0.01,min_samples_split=2,
                  min_impurity=1e-7,max_depth=2):
         self.n_estimators = n_estimators
         self.learning_rate = learning_rate
-        self.min_sample_split=min_sample_split
+        self.min_samples_split=min_samples_split
         self.min_impurity = min_impurity
         self.max_depth=max_depth
 
@@ -57,7 +57,7 @@ class XGBoost(object):
         for _ in range(n_estimators):
             tree = XGBoostRegressionTree(
                     min_samples_split=self.min_samples_split,
-                    min_impurity=min_impurity,
+                    min_impurity=self.min_impurity,
                     max_depth=self.max_depth,
                     loss=self.loss)
 
@@ -81,8 +81,8 @@ class XGBoost(object):
             # Estimate gradient and update prediction
             update_predict = tree.predict(X)
             if y_pred is None:
-                y_pred = np.zeros_like(update_pred)
-            y_pred -= np.multiply(self.learning_rate, update_pred)
+                y_pred = np.zeros_like(update_predict)
+            y_pred -= np.multiply(self.learning_rate, update_predict)
 
         # Turn into probability distribution (softmax)
         y_pred = np.exp(y_pred) / np.sum(np.exp(y_pred), axis=1, keepdims=True)

@@ -177,11 +177,9 @@ class DecisionTree(object):
         """
         if tree is None:
             tree = self.root
-
         # If we are at the leaf node
         if tree.value is not None:
             return tree.value
-
         # Choose the feature that we will iterate
         feature_value = x[tree.feature_i]
         # Determine which branch (left/right) we will follow
@@ -309,7 +307,7 @@ class XGBoostRegressionTree(DecisionTree):
 
     def _gain(self,y,y_pred):
         # ref: https://xgboost.readthedocs.io/en/latest/tutorials/model.html
-        numerator = np.power(self.loss.gradient(y,y_pred).sum(),2)
+        numerator = np.power((y * self.loss.gradient(y,y_pred)).sum(),2)
         denominator = self.loss.hess(y,y_pred).sum()
         return 0.5*(numerator/denominator)
 
@@ -329,15 +327,15 @@ class XGBoostRegressionTree(DecisionTree):
         y,y_pred = self._split(y)
         # Newton's method
         # ref: https://xgboost.readthedocs.io/en/latest/tutorials/model.html
-        gradient = np.sum(self.loss.gradient(y,y_pred),axis=0)
-        hess = np.sum(self.loss.hess(y,y_pred),axis=0)
+        gradient = np.sum(y*self.loss.gradient(y,y_pred),axis=0)
+        hessian = np.sum(self.loss.hess(y,y_pred),axis=0)
         update_approximation = gradient/hessian
         return update_approximation
 
     def fit(self,X,y):
         self._impurity_calculation = self._gain_by_taylor
-        self._leaf_value_calculation = _approximate_update
-
+        self._leaf_value_calculation = self._approximate_update
+        super(XGBoostRegressionTree, self).fit(X, y)
 
 # Notes:
 # Q: What is the disadvantage of ID3:
