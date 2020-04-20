@@ -273,6 +273,28 @@ class ClassificationTree(DecisionTree):
         self._leaf_value_calculation = self._majority_vote
         super(ClassificationTree,self).fit(X,y)
 
+# Q: What is boosters in XGBoost?
+# A: My understanding is that booster is the type of weak learners. gblinear booster
+# makes xgboost pretty much like a lasso regresson. (ref: https://github.com/dmlc/xgboost/issues/332)
+# The advantage of GBDT booster is that it can handle non-linearity, it is a huge
+# advantage if relations and interactions are unknown. The disadvantage of gbdt
+# booster is that it cannnot extrapolate or intertrapolate. If the training data
+# has covered the full range of unseen data, then gbdt is a good choice.
+# The advantage of gblinear is that it can extrapolate. The disvantage is that
+# it assumes a linear relationship. If additional interations can be supplied,
+# gblinear would be a power choice.
+# ref: https://www.avato-consulting.com/?p=28903&lang=en
+# The third booster is DART: it is the dropout version in tree models. The reason
+# that DART is introduced is that the first tree of GBDT will have the biggest impact
+# to the final prediction and the following trees will only have a small impact.
+# There are
+# two main differences between DART and GBDT boosters. The first one is that
+# when building a new tree at iteration t, we will have t - 1 trees if it is
+# GBDT boosters, the tth tree will be build based on the gradient of the previous
+# t - 1 trees. However, DART will only consider a random subset of the t - 1 trees
+# The second difference is in the inference stage. GBDT just adds up all the
+# trees with a shrinkage factor learning rate. However, DART will scale trees by
+# a factor k/(k+1) where k is the number of randomly dropped trees.
 class XGBoostRegressionTree(DecisionTree):
     """
     Regression tree for XGBoost
