@@ -5,6 +5,19 @@ import numpy as np
 # 1. Optimize two variables (alpha1 and alpha2) at a time, the reason for optimizing
 # two variables is that sum of alpha_i * y_i == 0
 # 2. There is a closed form updates which makes the update really fast
+
+# Q: what is the difference between SVM and logistic regression?
+# A: 1. LR optimizes the likelihood. SVM is much more geometrically motivated.
+# Instead of assuming a probabilistic model, we're trying to find a particular
+# optimal separating hyperplane, where we define "optimality" in the context of
+# the support vectors.
+#   2. Logistic regression is more explainable. There are statistical tools
+# available to understand the relationship between predictors and the target.
+# and statistically test the relationship between the predictors and the target.
+# However, logistic regression has some assumptions: observations are independent
+# to each other; little or no multicollinearity among the independent variables;
+# linear relationship between log odds and independnet variables.
+# 
 class SVM():
     """
     An implementation of SVM algorithm using the Sequential Minimal Optimization

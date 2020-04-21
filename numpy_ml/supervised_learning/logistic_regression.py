@@ -2,6 +2,8 @@ import numpy as np
 import math
 from ..deep_learning.activation_functions import Sigmoid
 
+# Q: Why the objective function is logloss?
+# A: We can get the logloss function by using maximum likelihood estimation
 class LogisticRegression():
     """
     Logistic Regression Classifier
