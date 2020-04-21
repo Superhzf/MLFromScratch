@@ -6,6 +6,13 @@ from ..utils import to_categorical
 # Q: Why is there a sigmoid func before p?
 # A: Because we use a regression tree to do classification jobs and we need
 # a probability result
+
+# Q: what is the difference between lightgbm and xgboost?
+# A: Gradient-based one-side sampling (GOSS) and Exclusive feature bundling (EFB)
+# GOSS excludes a significant proportion of data instances with small gradients,
+# and only use the rest to estimate the gain.
+# EFB bundles mutually exclusive features (i.e. they rarely take  nonzero values
+# simutaneously) to reduce the number of features.
 class LogisticLoss():
     def __init__(self):
         sigmoid = Sigmoid()
