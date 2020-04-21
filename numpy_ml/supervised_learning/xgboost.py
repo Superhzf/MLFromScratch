@@ -3,6 +3,9 @@ from ..deep_learning.activation_functions import Sigmoid
 from ..supervised_learning import XGBoostRegressionTree
 from ..utils import to_categorical
 
+# Q: Why is there a sigmoid func before p?
+# A: Because we use a regression tree to do classification jobs and we need
+# a probability result
 class LogisticLoss():
     def __init__(self):
         sigmoid = Sigmoid()
