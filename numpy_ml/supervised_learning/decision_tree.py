@@ -307,6 +307,7 @@ class XGBoostRegressionTree(DecisionTree):
 
     def _gain(self,y,y_pred):
         # ref: https://xgboost.readthedocs.io/en/latest/tutorials/model.html
+        # only the non-zero part is added up
         numerator = np.power((y * self.loss.gradient(y,y_pred)).sum(),2)
         denominator = self.loss.hess(y,y_pred).sum()
         return 0.5*(numerator/denominator)
