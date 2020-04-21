@@ -308,7 +308,7 @@ class RNN(layer):
 
         # Set last timestamps to zero for calculation of the state_input at time
         # step zero
-        self.states=[:,-1] = np.zeros((batch_size,self.n_units))
+        self.states[:,-1] = np.zeros((batch_size,self.n_units))
 
         for t in range(timestamps):
             # ref https://www.cs.toronto.edu/~tingwuwang/rnn_tutorial.pdf
@@ -718,4 +718,3 @@ class LSTM(Layer):
             dLdX.insert(0,dLdXt)
         dLdX = np.dstak(dLdX)
         return dLdX
-    

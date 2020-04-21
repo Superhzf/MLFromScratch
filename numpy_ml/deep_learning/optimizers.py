@@ -86,7 +86,7 @@ class Adam():
         self.b1 = b1
         self.b2 = b2
 
-    del update(self,w,grad_wrt_w):
+    def update(self,w,grad_wrt_w):
         # if not initialized
         if self.m is None:
             self.m = np.zeros(np.shape(grad_wrt_w))
