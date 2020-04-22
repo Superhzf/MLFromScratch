@@ -1,0 +1,12 @@
+1.Q: Why vectorization is faster than loops?
+A:
+
+2. Q: Difference between multiplication functions in NumPy?
+A: np.multiply(a, b), element-wise multiplication
+np.dot(a, b) == np.matmul(a, b) == a @ b, matrix multiplication
+
+3. Q: What is the difference between NumPy max and NumPy maximum?
+A: np.max only works on a single input array and finds the value of maximum
+element in that entire array. Alternatively, it takes an axis argument and will
+find the maximum value along axis of the input array.
+np.maximum is to take two arrays and compute their element-wise maximum

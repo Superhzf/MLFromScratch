@@ -1,6 +1,7 @@
 import copy
 import numpy as np
 import math
+from .activation_functions import ReLU, Sigmoid, Softmax
 
 class Layer(object):
     def set_input_shape(self,shape):
@@ -210,8 +211,8 @@ activation_functions = {
     # 'selu': SELU,
     # 'elu': ELU,
     'softmax': Softmax,
-    'leaky_relu': LeakyReLU,
-    'tanh': TanH,
+    # 'leaky_relu': LeakyReLU,
+    # 'tanh': TanH,
     # 'softplus': SoftPlus
 }
 
@@ -248,7 +249,7 @@ activation_functions = {
 # series, if we have 1000 people's monthly records for year 2019, then num_batch = 1000,
 # num_timestamps = 12, if variables are how much they are supposed to pay and
 # how much they actually paid, the input_dim = 2
-class RNN(layer):
+class RNN(Layer):
     """
     A vanilla fully-connected recurrent neural network layer.
 
