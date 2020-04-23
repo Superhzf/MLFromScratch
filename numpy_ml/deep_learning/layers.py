@@ -36,7 +36,7 @@ class Dense(Layer):
     n_units: int
         The number of neurons in the layer.
     input_shape: tuple
-        TODO
+        The expected shape of the weight matrix
     """
     def __init__(self,n_units,input_shape=None):
         self.input_shape = input_shape
@@ -51,7 +51,7 @@ class Dense(Layer):
         # Initialize the weights
         limit = 1 / math.sqrt(self.input_shape[0])
         self.W = np.random.uniform(-limit,limit,(self.input_shape[0],self.n_units))
-        self.b = np.zeros(1,self.n_units)
+        self.b = np.zeros((1,self.n_units))
         # Weight optimizer
         self.W_opt = copy.copy(optimizer)
         self.b_opt = copy.copy(optimizer)
@@ -71,7 +71,8 @@ class Dense(Layer):
 
         if self.trainable:
             # Calculate gradient w.r.t layer weights
-            dw = self.layer_input.T.dot(accum_grad)/self.input_shape
+            # TODO
+            dw = self.layer_input.T.dot(accum_grad)
             db = np.sum(accum_grad, axis=0, keepdims=True)
 
             # Update the layer weights
@@ -84,7 +85,7 @@ class Dense(Layer):
         return accum_grad
 
     def output_shape(self):
-        return self.n_units
+        return (self.n_units, )
 
 # The reason to use batchnormaliza is that without batchnormalization, the
 # distribution of input to the next layer is constantly changing due to we
@@ -201,6 +202,33 @@ class Dropout(Layer):
 
     def backward_pass(self,accum_grad):
         return accum_grad*self._mask
+
+    def output_shape(self):
+        return self.input_shape
+
+
+class Activation(Layer):
+    """
+    A layer that applies an activation function.
+
+    Parameters:
+    --------------------
+    name: string
+        The name of the activation function
+    """
+    def __init__(self,name):
+        self.activation_name = name
+        self.activation_func = activation_functions[name]()
+
+    def layer_name(self):
+        return "Activation {}".format(self.activation_func.__class__.__name__)
+
+    def forward_pass(self, X, training=True):
+        self.layer_input = X
+        return self.activation_func(X)
+
+    def backward_pass(self, accum_grad):
+        return accum_grad * self.activation_func.gradient(self.layer_input)
 
     def output_shape(self):
         return self.input_shape

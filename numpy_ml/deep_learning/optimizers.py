@@ -94,10 +94,9 @@ class Adam():
 
         self.m = self.b1*self.m+(1-self.b1)*grad_wrt_w
         self.v = self.b2*self.v+(1-self.b2)*np.power(grad_wrt_w,2)
-
         m_hat = self.m/(1-self.b1)
         v_hat = self.v/(1-self.b2)
 
-        self.update = self.learning_rate*m_hat/(np.sqrt(v_hat)+self.eps)
+        self.w_updt = self.learning_rate*m_hat/(np.sqrt(v_hat)+self.eps)
 
-        return w - self.update
+        return w - self.w_updt

@@ -2,7 +2,7 @@ from __future__ import division
 import numpy as np
 from itertools import combinations_with_replacement
 
-def batch_generator(X,y=None,batch_size = 64):
+def batch_generator(X, y=None, batch_size=64):
     """Simple batch geneartor"""
     n_samples = X.shape[0]
     for i in np.arange(0,n_samples,batch_size):

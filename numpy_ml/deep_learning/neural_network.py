@@ -1,6 +1,7 @@
 from __future__ import print_function, division
 from terminaltables import AsciiTable
 from ..utils import batch_generator
+from ..utils.misc import bar_widgets
 import numpy as np
 import progressbar
 
@@ -28,7 +29,7 @@ class NeuralNetwork():
         self.progressbar = progressbar.ProgressBar(widgets=bar_widgets)
 
         self.val_set = None
-        if validation_data:
+        if validation_data is not None:
             X, y = validation_data
             self.val_set = {'X':X,'y':y}
 
@@ -59,9 +60,8 @@ class NeuralNetwork():
         """Evaluates the model over a single batch of samples"""
         y_pred = self._forward_pass(X,training=False)
         loss = np.mean(self.loss_function.loss(y,y_pred))
-        acc = self.loss_function.acc(y,y_pred)
 
-        return loss, acc
+        return loss
 
     # why use batch gradient descent?
     # Answer: If the whole dataset is used, then the memory might be not large enough
@@ -71,19 +71,18 @@ class NeuralNetwork():
         """Single gradient update over one batch of samples"""
         y_pred = self._forward_pass(X)
         loss = np.mean(self.loss_function.loss(y,y_pred))
-        acc = self.loss_function.acc(y,y_pred)
         # Calculate the gradient of the loss function w.r.t y_pred
         loss_grad = self.loss_function.gradient(y,y_pred)
         # Backpropagate. Update weights
         self._backward_pass(loss_grad = loss_grad)
-
+        return loss
 
     def fit(self,X,y,n_epochs,batch_size):
         """Train the model for a fixed number of epochs"""
         for _ in self.progressbar(range(n_epochs)):
             batch_error = []
             for X_batch,y_batch in batch_generator(X,y,batch_size = batch_size):
-                loss,_ = self.train_on_batch(X_batch,y_batch)
+                loss = self.train_on_batch(X_batch,y_batch)
                 batch_error.append(loss)
 
             self.errors['training'].append(np.mean(batch_error))
@@ -91,8 +90,11 @@ class NeuralNetwork():
             if self.val_set is not None:
                 val_loss,_ = self.test_on_batch(self.val_set['X'],self.val_set['y'])
                 self.errors['validation'].append(val_loss)
-
-        return self.errors['training'],self.errors['validation']
+    
+        if self.val_set is not None:
+            return self.errors['training'],self.errors['validation']
+        else:
+            return self.errors['training']
 
 
     def _forward_pass(self,X,training=True):
@@ -121,7 +123,7 @@ class NeuralNetwork():
             layer_name = layer.layer_name()
             params = layer.parameters()
             out_shape = layer.output_shape()
-            table_data.append([[layer_name, str(params), str(out_shape)]])
+            table_data.append([layer_name, str(params), str(out_shape)])
             tot_params+=params
         # Print network configuration table
         print (AsciiTable(table_data).table)
