@@ -112,7 +112,7 @@ class BatchNormalization(Layer):
     def initialize(self,optimizer):
         # Initialize the parameters
         self.gamma = np.ones(self.input_shape)
-        self.betta = np.zeros(self.input_shape)
+        self.beta = np.zeros(self.input_shape)
         # parameter optimizers
         self.gamma_opt = copy.copy(optimizer)
         self.beta_opt = copy.copy(optimizer)
@@ -144,6 +144,9 @@ class BatchNormalization(Layer):
 
         return output
 
+    def output_shape(self):
+        return self.input_shape
+
 # reference: https://kratzert.github.io/2016/02/12/understanding-the-gradient-flow-through-the-batch-normalization-layer.html
     def backward_pass(self,accum_grad):
         # save parameters used during the forward pass
@@ -153,7 +156,7 @@ class BatchNormalization(Layer):
         if self.trainable:
             X_norm = self.X_centered*self.stddev_inv
             grad_gamma = np.sum(accum_grad*X_norm,axis=0)
-            grad_betta = np.sum(accum_grad,axis=0)
+            grad_beta = np.sum(accum_grad,axis=0)
             self.gamma = self.gamma_opt.update(self.gamma, grad_gamma)
             self.beta = self.beta_opt.update(self.beta, grad_beta)
 
@@ -190,13 +193,12 @@ class Dropout(Layer):
         self.trainable = True
 
     # We only do drop out at the training stage and turn it off at the inference
-    # stage because we want accuracy and results should be reproducible
+    # stage because we want accuracy and results to be reproducible
     def forward_pass(self,X,training=True):
-
         if training:
             c = (1-self.p)
             self._mask = np.random.uniform(size = X.shape) > self.p
-            c = self._mask/(1-p) # if p = 0.5, then the weights will be multiplied by 2
+            c = self._mask/(1-self.p) # if p = 0.5, then the weights will be multiplied by 2
             X = X * c
         return X
 
