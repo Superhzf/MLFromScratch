@@ -10,3 +10,13 @@ A: np.max only works on a single input array and finds the value of maximum
 element in that entire array. Alternatively, it takes an axis argument and will
 find the maximum value along axis of the input array.
 np.maximum is to take two arrays and compute their element-wise maximum
+
+4. Q: What is the relationship between OLS and gradient descent?
+A: OLS is an analytical approach which means the problem has an closed form solution,
+whereas gradient descent is an iterative method.
+
+5. Q: Why is gradient descent often used compared to OLS?
+A: Because 1. some problems do not have a closed form solution. 2. gradient descent
+is computationally cheaper, in order to solve a problem using OLS, we may have to
+calculate the matrix multiplication and invert matrix, they are very expensive.
+3. gradient descent does not need to meet strict assumptions like no multicollinearity.

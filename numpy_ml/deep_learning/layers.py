@@ -71,7 +71,6 @@ class Dense(Layer):
 
         if self.trainable:
             # Calculate gradient w.r.t layer weights
-            # TODO
             dw = self.layer_input.T.dot(accum_grad)
             db = np.sum(accum_grad, axis=0, keepdims=True)
 
