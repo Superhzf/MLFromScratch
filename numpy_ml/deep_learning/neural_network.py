@@ -77,20 +77,22 @@ class NeuralNetwork():
         self._backward_pass(loss_grad = loss_grad)
         return loss
 
-    def fit(self,X,y,n_epochs,batch_size):
+    def fit(self,X,y,n_epochs,batch_size,print_loss_every_epoch=100):
         """Train the model for a fixed number of epochs"""
-        for _ in self.progressbar(range(n_epochs)):
+        for epoch in self.progressbar(range(n_epochs)):
             batch_error = []
             for X_batch,y_batch in batch_generator(X,y,batch_size = batch_size):
                 loss = self.train_on_batch(X_batch,y_batch)
                 batch_error.append(loss)
+            if epoch % print_loss_every_epoch == 0:
+                print ('epoch:',epoch,'loss:',loss)
 
             self.errors['training'].append(np.mean(batch_error))
 
             if self.val_set is not None:
                 val_loss,_ = self.test_on_batch(self.val_set['X'],self.val_set['y'])
                 self.errors['validation'].append(val_loss)
-    
+        print ('final loss', loss)
         if self.val_set is not None:
             return self.errors['training'],self.errors['validation']
         else:
