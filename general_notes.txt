@@ -24,3 +24,8 @@ calculate the matrix multiplication and invert matrix, they are very expensive.
 6. Q: Why is second-order optimization algorithms, such as Newton's method not as
 widely used as stochastic gradient descent in machine learning problems?
 A: TODO
+
+7. I tested NAG optimization with the help of PyTorch (https://pytorch.org/docs/stable/optim.html#torch.optim.SGD)
+Assuming the PyTorch implement is correct, SGD with nesterov=True is very unstable. The loss changes drastically.
+Whereas, the regular SGD with momentum works pretty well. So I decided not to implement
+the NAG algorithm.
