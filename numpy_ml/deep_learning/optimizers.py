@@ -11,15 +11,16 @@ class StochasticGradientDescent():
         self.momentum = momentum
         self.w_update = None
 
+    # ref: https://cs231n.github.io/neural-networks-3/
     def update(self,w,grad_wrt_w):
         # if not initialized
         if self.w_update is None:
             self.w_update = np.zeros(np.shape(w))
 
         # Use momentum if set
-        self.w_update = self.momentum * self.w_update + (1-self.momentum) * grad_wrt_w
+        self.w_update = self.momentum * self.w_update - self.learning_rate * grad_wrt_w
         # Move against the gradient to minimize loss
-        return w - self.learning_rate*self.w_update
+        return w + self.w_update
 
 # why RMSprop?
 # Answer: This solves the problem of adagrad, the learning rate is not becoming
