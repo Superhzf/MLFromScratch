@@ -1,4 +1,5 @@
 import numpy as np
+# ref: https://ruder.io/optimizing-gradient-descent/index.html#fn5
 
 # Stochastic Gradient Descent with momentum
 # The reason to use momentum is that if we are
@@ -115,6 +116,8 @@ class Adam():
 
         self.m = self.b1*self.m+(1-self.b1)*grad_wrt_w
         self.v = self.b2*self.v+(1-self.b2)*np.power(grad_wrt_w,2)
+        # the authors of Adam observe that m and v are biased towards zero
+        # so below two equations counteract these bias
         m_hat = self.m/(1-self.b1)
         v_hat = self.v/(1-self.b2)
 
