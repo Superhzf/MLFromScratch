@@ -34,4 +34,27 @@ It is said that SGD with NAG is well suited for RNN, I will test this when I com
 RNN
 
 8. Q: What is the difference between local maxima/minima and saddle point?
-A: 
+ref :https://www.khanacademy.org/math/multivariable-calculus/applications-of-multivariable-derivatives/optimizing-multivariable-functions/a/maximums-minimums-and-saddle-points
+ref: https://www.khanacademy.org/math/multivariable-calculus/applications-of-multivariable-derivatives/optimizing-multivariable-functions/a/second-partial-derivative-test
+A: When the function is continuous and differentiable, points where make the first
+order derivative equal to zero are stable points, critical points, and stationary points.
+When the second order is not zero they are local maxima/minima.
+Inflection points are those make the second order derivative equal to zero.
+Saddle points are specific for multivariable functions, when the first order derivative
+is zero and the second order derivative is not zero, at the same time, different
+axes disagree over whether this input should be a maximum or minimum. For example,
+f = x^2+y^2, (0, 0) makes the first derivative zero and the second derivative not zero.
+However, when I move in the x direction, (0,0) is the local minimum, but if I move in
+the y direction, (0, 0) is the local maximum, so x and y axes disagree with each
+other.
+
+Formally, x is a minimum point of f it there is some small (ball shaped) region
+in the input space around the point x, such that the highest possible value you can
+get for f evaluated on points in that region is achieved at the point x.
+
+To determine whether a point is a local minimum/maximum or saddle point, for example if
+we have two variables, first find points which make the first order derivative zero,
+then calculate H = Fxx*Fyy - Fxy^2, if H < 0, then it's a saddle point, if H > 0,
+if fxx < 0, it's a local maximum point else it's a local minimum point. For example,
+F = x^2 + y ^ 2 + pxy and point (0, 0), when p = 4, if |p| > 2, (0, 0) is a saddle
+point, else (0, 0) is a global minimum.
