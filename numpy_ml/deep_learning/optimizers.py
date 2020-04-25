@@ -52,12 +52,6 @@ class RMSprop():
 # have a larger update. It is usefull for sparse features.
 # The downside of adagrad is that the learning rate becomes smaller and smaller
 # and finally could stop, this won't work for saddle points
-
-# TODO: why square the gradient and then take the square root of it instead of
-# just calculte the abslute value of it?
-
-# TODO: why accumulately add the squre of gradient instead of just use gradient
-# for each iteration
 class Adagrad():
     def __init__(self,learning_rate=0.01):
         self.learning_rate = learning_rate

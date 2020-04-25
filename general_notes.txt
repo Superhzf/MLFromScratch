@@ -29,3 +29,9 @@ A: TODO
 Assuming the PyTorch implement is correct, SGD with nesterov=True is very unstable. The loss changes drastically.
 Whereas, the regular SGD with momentum works pretty well. So I decided not to implement
 the NAG algorithm.
+One good reference: https://fyubang.com/2019/08/10/optimizer_sgd/.
+It is said that SGD with NAG is well suited for RNN, I will test this when I come to
+RNN
+
+8. Q: What is the difference between local maxima/minima and saddle point?
+A: 
