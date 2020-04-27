@@ -58,3 +58,35 @@ then calculate H = Fxx*Fyy - Fxy^2, if H < 0, then it's a saddle point, if H > 0
 if fxx < 0, it's a local maximum point else it's a local minimum point. For example,
 F = x^2 + y ^ 2 + pxy and point (0, 0), when p = 4, if |p| > 2, (0, 0) is a saddle
 point, else (0, 0) is a global minimum.
+
+9. Q: Maximize F = (x^2)*y, s.t. x^2 + y^2 = b
+A: One solution is replace x^2 with 1 - y^2 and let the first order derivative equal to 0.
+But it does not work if functions are complicated. ref: http://www.economicsdiscussion.net/essays/economics/constrained-optimisation-substitution-method-lagrange-multiplier-technique-and-lagrangian-multiplier/865
+The second solution is using Lagrange multiplier. This is a classic constrained
+optimization problem.The idea is if we draw the contour lines of f = (x^2)*y, those
+contour lines will interact with x^2+y^1=1, after checking out different contour
+lines, it is obvious that the tangent contour lines give us the largest f value.
+It means the gradient at that point is perpendicular to both curves (f and x^2+y^2=1).
+The gradient of f and the gradient of x^2+y^2 are proportional.
+Therefore, we have:
+If we let G = x^2+y^2, F = (x^2)*y, then
+deltaF(Xm, Ym) = lambda*deltaG(Xm, Ym), lambda is a Lagrange multiplier.
+This equation represents when the contour line of one function is tangent to the
+contour line of the other.
+
+delta(Xm, Ym) = lambda*delta(Xm, Ym), x^2+y^2=1 <=> 2xy = lambda*2x, x^2 = lambda * 2y, x^2+y^2=1
+<=> x = sqrt(2/3), y = sqrt(1/3)
+
+Repackage it, we get The Lagrangian function: L(x, y, lambda) = F - lambda * (G - b),
+if we calculate all the partial derivatives of L and let them equal to 0,
+then we get the same thing as above. Now, L becomes an unconstrained problem! We
+could just set the gradient to 0.
+
+10: Q: What is the physical interpretation of the Lagrange multiplier?
+A: Suppose we want to maximize F = (x^2)*y s.t. x^2+y^2 = b, them lambda means that
+increasing b by 1 unit, then F will be increased by lambda units.
+ref. about Lagrange multiplier: https://www.khanacademy.org/math/multivariable-calculus/applications-of-multivariable-derivatives
+
+11. Q: What if we have multiple (more than 1) constraints?
+A: The Lagrange multiplier method can be generalized into unlimited number of
+constraints. For example, please refer to multiLarange.pdf
