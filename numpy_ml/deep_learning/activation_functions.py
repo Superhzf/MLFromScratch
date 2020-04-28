@@ -26,8 +26,15 @@ class Sigmoid():
         return p*(1-p)
 
 # Why Softmax instead of standard normalization ?
-# Answer: softmax is a general form of sigmoid, if we use standard normalization
-# it will not give us 0 gradient if it is a correct prediction
+# Answer: softmax play nicely with logloss. The gradient is easier to calculate and
+# numerically stable.
+# ref: https://stats.stackexchange.com/questions/289369/log-probabilities-in-reference-to-softmax-classifier
+
+# Q: Why the regular definition of softmax is numerically unstable?
+# A: When the output of the layer right before the last one is extremely large
+# extremely small (absolute value), exp(output) would be inf or 1/(len(output))
+# which is useless. For example, when the output is [1/10000, 1/20000, 1/30000]
+# or [10000, 20000, 30000]
 class Softmax():
     def __call__(self,x):
         exp_x = np.exp(x-np.max(x,axis=-1,keepdims=True))
