@@ -330,23 +330,23 @@ class RNN(Layer):
 
         self.layer_input = X
         # By default, X is a group of batchs
-        batch_size,timestamps,input_dim = self.layer_input.shape
+        batch_size,timestamps,feature_size = self.layer_input.shape
         # cache values for use in backprop
-        self.state_input = np.zeros((batch_size,timestamps,self.self.n_units))
+        self.state_input = np.zeros((batch_size,timestamps,self.n_units))
         self.states = np.zeros(batch_size,timestamps+1,self.n_units)
-        self.outputs = np.zeros(batch_size,timestamps,input_dim)
+        self.outputs = np.zeros(batch_size,timestamps,feature_size)
 
         # Set last timestamps to zero for calculation of the state_input at time
         # step zero
-        self.states[:,-1] = np.zeros((batch_size,self.n_units))
+        self.states[:, -1, :] = np.zeros((batch_size,self.n_units))
 
         for t in range(timestamps):
             # ref https://www.cs.toronto.edu/~tingwuwang/rnn_tutorial.pdf
             # All input share self.W_i and self.W_p and self.W_o
-            self.state_input[:,t] = X[:,t].dot(self.W_i.T)+self.states[:,t-1].dot(self.W_p.T)
-            self.states[:,t] = self.activation(self.state_input[:,t])
+            self.state_input[:, t, :] = X[:,t].dot(self.W_i.T)+self.states[:,t-1].dot(self.W_p.T)
+            self.states[:,t, :] = self.activation(self.state_input[:,t])
             # Here might need an activation for classification problems
-            self.outputs[:,t] = self.states[:,t].dot(self.W_o.T)
+            self.outputs[:,t, :] = self.states[:,t, :].dot(self.W_o.T)
 
         return self.outputs
 
