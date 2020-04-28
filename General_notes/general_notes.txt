@@ -94,6 +94,6 @@ constraints. For example, please refer to multiLarange.pdf
 12. Q: What is the advantage of LogSoftMax over the regular SoftMax?
 A: LogSoftMax + mean (in PyTorch it is nn.NLLoss) == SoftMax + cross entropy loss.
 So, LogSoftMax is equal to SoftMax + cross entropy loss numerically. Whereas, doing
-these two operations separately is slow and not numerically stable. I don't
-understand why Logsoftmax is more stable. It is said that if we calculate
+these two operations separately is slow and not numerically stable per PyTorch docs.
+But I don't understand why Logsoftmax is more stable. It is said that if we calculate
 as a whole, the middle stages would not be saved.
