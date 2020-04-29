@@ -98,7 +98,7 @@ these two operations separately is slow and not numerically stable per PyTorch d
 But I don't understand why Logsoftmax is more stable. It is said that if we calculate
 as a whole, the middle stages would not be saved.
 
-13. Q: What does one-to-one, one-to-many, many-to-many, many-to-one mean in RNN?
+13. Q: What does one-to-one, one-to-many, many-to-many, many-to-one mean in RNN/LSTM?
 A: One to one is the basic machine learning problems, for example, image classification.
 One to many has one input and a sequence output, for example image captioning takes
 an image and outputs a sentence of words. Many to many is like machine translation,
