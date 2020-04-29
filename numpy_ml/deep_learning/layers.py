@@ -1,7 +1,7 @@
 import copy
 import numpy as np
 import math
-from .activation_functions import ReLU, Sigmoid, Softmax
+from .activation_functions import ReLU, Sigmoid, Softmax, TanH
 
 class Layer(object):
     def set_input_shape(self,shape):
@@ -241,7 +241,7 @@ activation_functions = {
     # 'elu': ELU,
     'softmax': Softmax,
     # 'leaky_relu': LeakyReLU,
-    # 'tanh': TanH,
+    'tanh': TanH,
     # 'softplus': SoftPlus
 }
 

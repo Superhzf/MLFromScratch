@@ -67,3 +67,10 @@ class ReLU():
 # A: Because the absolute value of gradient of Tanh is larger than that of sigmoid
 # which makes the network converge faster. Somebody says we prefer zero averages,
 # I don't know why, batch normalization has an average alpha instead of zero.
+
+class TanH():
+    def __call__(self, x):
+        return 2 / (1 + np.exp(-2 * x)) - 1
+
+    def gradient(self, x):
+        return 1 - np.power(self.__call__(x), 2)
