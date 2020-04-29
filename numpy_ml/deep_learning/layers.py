@@ -330,11 +330,11 @@ class RNN(Layer):
 
         self.layer_input = X
         # By default, X is a group of batchs
-        batch_size,timestamps,feature_size = self.layer_input.shape
+        batch_size, timestamps, feature_size = self.layer_input.shape
         # cache values for use in backprop
-        self.state_input = np.zeros((batch_size,timestamps,self.n_units))
-        self.states = np.zeros(batch_size,timestamps+1,self.n_units)
-        self.outputs = np.zeros(batch_size,timestamps,feature_size)
+        self.state_input = np.zeros((batch_size, timestamps, self.n_units))
+        self.states = np.zeros((batch_size, timestamps+1, self.n_units))
+        self.outputs = np.zeros((batch_size, timestamps, feature_size))
 
         # Set last timestamps to zero for calculation of the state_input at time
         # step zero
