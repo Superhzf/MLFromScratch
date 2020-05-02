@@ -257,8 +257,8 @@ activation_functions = {
 # observations reversely and at the same time gradients are added
 # up together becuase RNN shares weights and they are time sensitive.
 
-# Why truncate W_i and W_p?
-# A:
+# Why truncate W_i and W_p/ what is the benefits of truncated BPTT?
+# A: truncated BPTT significantly speeds up the training process of RNN
 
 # Why RNN is easy to have gradient vanishing and exploding?
 # A: Because RNN shares weights, for example if the weight for the input is 1 and
@@ -270,14 +270,6 @@ activation_functions = {
 # Solution: Gradient clipping could help, RNN initialized with identity matrix + ReLU
 # LSTM, advanced optimization
 
-# A concrete example about input and output of a RNN question?
-# ref: https://towardsdatascience.com/all-you-need-to-know-about-rnns-e514f0b00c7c
-# A: The standard input for RNN is (num_batch, num_timestamps,input_dim).
-# Let's say we want to predict whether people will default based on their
-# historical transaction records. Obviously, transaction records could be a time
-# series, if we have 1000 people's monthly records for year 2019, then num_batch = 1000,
-# num_timestamps = 12, if variables are how much they are supposed to pay and
-# how much they actually paid, the input_dim = 2
 class many2manyRNN(Layer):
     """
     A vanilla fully-connected recurrent neural network layer.
