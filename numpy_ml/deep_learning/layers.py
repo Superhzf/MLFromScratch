@@ -375,7 +375,6 @@ class many2manyRNN(Layer):
                 grad_W_p += grad_wrt_state.T.dot(self.states[:,t_-1])
                 # Calculate gradient w.r.t previous state
                 grad_wrt_state=grad_wrt_state.dot(self.W_p)*self.activation.gradient(self.state_input[:,t_-1])
-
         # update weights
         self.W_i = self.W_i_opt.update(self.W_i,grad_W_i)
         self.W_o = self.W_o_opt.update(self.W_o,grad_W_o)
@@ -388,7 +387,7 @@ class many2manyRNN(Layer):
 
 
 class many2oneRNN(Layer):
-    def __init__(self,n_units,output_dim,activation='tanh',input_shape=None):
+    def __init__(self,n_units,activation='tanh', output_dim=None,input_shape=None):
         self.input_shape=input_shape
         self.n_units = n_units
         self.activation = activation_functions[activation]()
@@ -419,18 +418,24 @@ class many2oneRNN(Layer):
         self.layer_input = X
         # By default, X is a group of batchs
         batch_size, timestamps, feature_size = self.layer_input.shape
+        self.timestamps = timestamps
         # cache values for use in backprop
-        self.state_input = np.zeros((batch_size, self.n_units))
-        self.states = np.zeros((batch_size, self.n_units))
+        self.state_input = np.zeros((batch_size, timestamps, self.n_units))
+        self.states = np.zeros((batch_size, timestamps+1, self.n_units))
         self.outputs = np.zeros((batch_size, self.output_dim))
+
+        # Set last timestamps to zero for calculation of the state_input at time
+        # step zero
+        self.states[:, -1, :] = np.zeros((batch_size,self.n_units))
 
         for t in range(timestamps):
             # ref https://www.cs.toronto.edu/~tingwuwang/rnn_tutorial.pdf
             # All input share self.W_i and self.W_p and self.W_o
-            self.state_input = X[:,t, :].dot(self.W_i.T)+self.states.dot(self.W_p.T)
-            self.states = self.activation(self.state_input)
+            self.state_input[:, t, :] = X[:,t, :].dot(self.W_i.T)+self.states[:,t-1, :].dot(self.W_p.T)
+            self.states[:,t, :] = self.activation(self.state_input[:,t, :])
             # Here might need an activation for classification problems
-        self.outputs = self.states.dot(self.W_o.T)
+
+        self.outputs = self.states[:,t, :].dot(self.W_o.T)
 
         return self.outputs
 
@@ -440,20 +445,17 @@ class many2oneRNN(Layer):
         grad_W_i = np.zeros_like(self.W_i)
         grad_W_o = np.zeros_like(self.W_o)
 
-        # The gradient w.r.t the layer input
-        # will be passed on to the previous layer in the network
-        accum_grad_next = np.zeros_like(accum_grad)
-
         # Back Propagation through time
-        grad_W_o = accum_grad.T.dot(self.states)
-        # Calculate the gradient w.r.t the state input
-        grad_wrt_state = accum_grad.dot(self.W_o)*self.activation.gradient(self.state_input)
-        # Calculate gradient w.r.t layer input
-        accum_grad_next = grad_wrt_state.dot(self.W_i)
-        # Update gradient w.r.t W_i and W_p by backprop.
-        grad_W_i = grad_wrt_state.T.dot(self.layer_input[:,-1, :])
-        grad_W_p = grad_wrt_state.T.dot(self.states)
+        grad_W_o = accum_grad.T.dot(self.states[:,self.timestamps-1])
+        grad_wrt_state = accum_grad.dot(self.W_o)*self.activation.gradient(self.state_input[:,self.timestamps-1])
+        for t in reversed(range(self.timestamps)):
+            # Update gradient w.r.t W_i and W_p by backprop.
+            grad_W_i += grad_wrt_state.T.dot(self.layer_input[:,t])
+            grad_W_p += grad_wrt_state.T.dot(self.states[:,t-1])
+            # Calculate gradient w.r.t previous state
+            grad_wrt_state=grad_wrt_state.dot(self.W_p)*self.activation.gradient(self.state_input[:,t-1])
 
+        accum_grad_next = grad_wrt_state.dot(self.W_i)
         # update weights
         self.W_i = self.W_i_opt.update(self.W_i,grad_W_i)
         self.W_o = self.W_o_opt.update(self.W_o,grad_W_o)
