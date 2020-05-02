@@ -278,7 +278,7 @@ activation_functions = {
 # series, if we have 1000 people's monthly records for year 2019, then num_batch = 1000,
 # num_timestamps = 12, if variables are how much they are supposed to pay and
 # how much they actually paid, the input_dim = 2
-class RNN(Layer):
+class many2manyRNN(Layer):
     """
     A vanilla fully-connected recurrent neural network layer.
 
@@ -343,8 +343,8 @@ class RNN(Layer):
         for t in range(timestamps):
             # ref https://www.cs.toronto.edu/~tingwuwang/rnn_tutorial.pdf
             # All input share self.W_i and self.W_p and self.W_o
-            self.state_input[:, t, :] = X[:,t].dot(self.W_i.T)+self.states[:,t-1].dot(self.W_p.T)
-            self.states[:,t, :] = self.activation(self.state_input[:,t])
+            self.state_input[:, t, :] = X[:,t, :].dot(self.W_i.T)+self.states[:,t-1, :].dot(self.W_p.T)
+            self.states[:,t, :] = self.activation(self.state_input[:,t, :])
             # Here might need an activation for classification problems
             self.outputs[:,t, :] = self.states[:,t, :].dot(self.W_o.T)
 
@@ -386,6 +386,83 @@ class RNN(Layer):
     def output_shape(self):
         return self.input_shape
 
+
+class many2oneRNN(Layer):
+    def __init__(self,n_units,output_dim,activation='tanh',input_shape=None):
+        self.input_shape=input_shape
+        self.n_units = n_units
+        self.activation = activation_functions[activation]()
+        self.trainable = True
+        self.output_dim = output_dim
+        self.W_p = None # Weight of the previous state
+        self.W_o = None # Weight of the output
+        self.W_i = None # Weight of the input
+
+    def initialize(self,optimizer):
+        _,feature_dim = self.input_shape
+        # Initialize the weights
+        limit = 1/math.sqrt(feature_dim)
+        self.W_i = np.random.uniform(-limit,limit,(self.n_units,feature_dim))
+        limit = 1/math.sqrt(self.n_units)
+        self.W_o = np.random.uniform(-limit,limit,(self.output_dim,self.n_units))
+        self.W_p = np.random.uniform(-limit,limit,(self.n_units,self.n_units))
+        # weight optimizers
+        self.W_i_opt = copy.copy(optimizer)
+        self.W_o_opt = copy.copy(optimizer)
+        self.W_p_opt = copy.copy(optimizer)
+
+    def parameters(self):
+        return np.prod(self.W_i.shape)+np.prod(self.W_o.shape)+np.prod(self.W_p.shape)
+
+    def forward_pass(self,X,training=True):
+
+        self.layer_input = X
+        # By default, X is a group of batchs
+        batch_size, timestamps, feature_size = self.layer_input.shape
+        # cache values for use in backprop
+        self.state_input = np.zeros((batch_size, self.n_units))
+        self.states = np.zeros((batch_size, self.n_units))
+        self.outputs = np.zeros((batch_size, self.output_dim))
+
+        for t in range(timestamps):
+            # ref https://www.cs.toronto.edu/~tingwuwang/rnn_tutorial.pdf
+            # All input share self.W_i and self.W_p and self.W_o
+            self.state_input = X[:,t, :].dot(self.W_i.T)+self.states.dot(self.W_p.T)
+            self.states = self.activation(self.state_input)
+            # Here might need an activation for classification problems
+        self.outputs = self.states.dot(self.W_o.T)
+
+        return self.outputs
+
+    def backward_pass(self,accum_grad):
+        # Variables where we save the accumulated gradient w.r.t each parameter
+        grad_W_p = np.zeros_like(self.W_p)
+        grad_W_i = np.zeros_like(self.W_i)
+        grad_W_o = np.zeros_like(self.W_o)
+
+        # The gradient w.r.t the layer input
+        # will be passed on to the previous layer in the network
+        accum_grad_next = np.zeros_like(accum_grad)
+
+        # Back Propagation through time
+        grad_W_o = accum_grad.T.dot(self.states)
+        # Calculate the gradient w.r.t the state input
+        grad_wrt_state = accum_grad.dot(self.W_o)*self.activation.gradient(self.state_input)
+        # Calculate gradient w.r.t layer input
+        accum_grad_next = grad_wrt_state.dot(self.W_i)
+        # Update gradient w.r.t W_i and W_p by backprop.
+        grad_W_i = grad_wrt_state.T.dot(self.layer_input[:,-1, :])
+        grad_W_p = grad_wrt_state.T.dot(self.states)
+
+        # update weights
+        self.W_i = self.W_i_opt.update(self.W_i,grad_W_i)
+        self.W_o = self.W_o_opt.update(self.W_o,grad_W_o)
+        self.W_p = self.W_p_opt.update(self.W_p,grad_W_p)
+
+        return accum_grad_next
+
+    def output_shape(self):
+        return self.input_shape
 
 class LSTMCell(Layer):
     def __init__(self,
