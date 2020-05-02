@@ -257,8 +257,9 @@ activation_functions = {
 # observations reversely and at the same time gradients are added
 # up together becuase RNN shares weights and they are time sensitive.
 
-# Why truncate W_i and W_p/ what is the benefits of truncated BPTT?
-# A: truncated BPTT significantly speeds up the training process of RNN
+# Why truncated W_i and W_p/ what is the benefits of truncated BPTT?
+# A: truncated BPTT significantly speeds up the training process of RNN. The problem
+# truncated BPTT is local optima, because we do not see the whole set
 
 # Why RNN is easy to have gradient vanishing and exploding?
 # A: Because RNN shares weights, for example if the weight for the input is 1 and
