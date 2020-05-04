@@ -105,3 +105,19 @@ an image and outputs a sentence of words. Many to many is like machine translati
 for example the input is Chinese and we want English. Many to one is also a standard
 machine learning problem, for example the input is a sentence and we want to classify
 it as positive or negative.
+
+14. Q: How does embedding works?
+A: Essentially, word embedding is a lookup table. For example,
+
+import numpy as np
+# Suppose we have 5 categories for the variable weekday
+vocab_size = 5
+# Suppose we want to transform from 5 one-hot encoding variables to 3 variables
+n_out = 3
+W = np.random.rand(vocab_size, n_out)
+
+# Suppose we have 100 observations, and the variable is weekday
+X = np.random.randint(low=0, high=5, size=(100,1))
+
+# Do transformation:
+W[X]
