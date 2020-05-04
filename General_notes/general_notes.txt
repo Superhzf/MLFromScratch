@@ -128,3 +128,7 @@ X = [np.array([0,1,2,3]),
      np.array([3,4,1]),
      np.array([1,2,3,4,1,2,3])]
 output = np.array([W[x].sum(axis=0) for x in X])[:, None, :]
+
+15. Q: Why do embedding layers should be put in the very first positions?
+A: Because we cannot calculate the gradient w.r.t the input since the input is
+just the indices.
