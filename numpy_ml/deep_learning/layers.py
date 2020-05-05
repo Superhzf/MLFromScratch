@@ -459,6 +459,53 @@ class many2oneRNN(Layer):
     def output_shape(self):
         return self.input_shape
 
+
+class Embedding(Layer):
+    def __init__(self, n_out, vocab_size, pool=None):
+        """
+        Parameters:
+        ---------------------
+        n_out: int
+            The output dimension
+        vocab_size: int
+            The total number of categories in the categorical variable (The total
+            number of words in the vocabulary). All integer indices are expected
+            to range between 0 and vocab_size - 1
+        """
+        self.n_out = n_out
+        self.vocab_size = vocab_size
+        self.W = None
+
+    def initialize(self, optimizer):
+        limit = 1/math.sqrt(self.vocab_size)
+        self.W = np.random.uniform(-limit,limit,(self.vocab_size, self.n_out))
+
+    def forward(self, X):
+        """
+        Compute the layer output on a single minibatch. Y = W[X]
+
+        Parameters:
+        ------------------------------
+        X: numpy array of shape (n_ex, n_in) represents n_ex examples and n_in
+        features. X is supposed to be an integer array.
+
+        Returns:
+        ------------------------------
+        Y: numpy array of shape (n_ex, n_in, n_out) represents n_ex observations,
+        n_in features and n_out dimensions.
+        """
+        self.X = X
+        Y = self.W[X]
+        return Y
+
+    def backward(self, accum_grad):
+        """
+        If used, it must be the first layer of the architecture, so it doesn't
+        have to return gradients w.r.t. the input
+        """
+        for dy, x in zip(dLdy, self.X):
+            dw = 
+
 class LSTMCell(Layer):
     def __init__(self,
                  n_out,
