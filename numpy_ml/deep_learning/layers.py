@@ -170,8 +170,8 @@ class BatchNormalization(Layer):
             )
         return accum_grad
 
-    def out_shape(self):
-        return self.input_shape
+    # def out_shape(self):
+    #     return self.input_shape
 
 class Dropout(Layer):
     """
@@ -376,6 +376,7 @@ class many2manyRNN(Layer):
         return accum_grad_next
 
     def output_shape(self):
+        # TODO: this seems to be not correct
         return self.input_shape
 
 
@@ -457,11 +458,12 @@ class many2oneRNN(Layer):
         return accum_grad_next
 
     def output_shape(self):
+        # TODO: This seems to be not correct
         return self.input_shape
 
 
 class Embedding(Layer):
-    def __init__(self, n_out, vocab_size, pool=None):
+    def __init__(self, n_out, vocab_size):
         """
         Parameters:
         ---------------------
@@ -479,8 +481,13 @@ class Embedding(Layer):
     def initialize(self, optimizer):
         limit = 1/math.sqrt(self.vocab_size)
         self.W = np.random.uniform(-limit,limit,(self.vocab_size, self.n_out))
+        self.grad_W = np.zeros_like(self.W)
+        self.W_opt = copy.copy(optimizer)
 
-    def forward(self, X):
+    def parameters(self):
+        return np.prod(self.W.shape)
+
+    def forward_pass(self, X):
         """
         Compute the layer output on a single minibatch. Y = W[X]
 
@@ -491,20 +498,33 @@ class Embedding(Layer):
 
         Returns:
         ------------------------------
-        Y: numpy array of shape (n_ex, n_in, n_out) represents n_ex observations,
+        Y: numpy array of shape (n_ex, n_in*n_out) represents n_ex observations,
         n_in features and n_out dimensions.
         """
         self.X = X
+        _, self.n_in = self.X.shape
         Y = self.W[X]
+        n_ex, n_in, n_out = Y.shape
+        Y = Y.reshape((n_ex, n_in * n_out))
         return Y
 
-    def backward(self, accum_grad):
+    def backward_pass(self, accum_grad):
         """
         If used, it must be the first layer of the architecture, so it doesn't
         have to return gradients w.r.t. the input
         """
-        for dy, x in zip(dLdy, self.X):
-            dw = 
+        for dy, x in zip(accum_grad, self.X):
+            dW = np.zeros_like(self.grad_W)
+            dy = dy.reshape(-1, self.n_out)
+            for ix, v_id in enumerate(x.flatten()):
+                dW[v_id] += dy[ix]
+            self.grad_W += dW
+
+        self.W = self.W_opt.update(self.W, self.grad_W)
+
+    def output_shape(self):
+        return (, self.n_in * self.n_out)
+
 
 class LSTMCell(Layer):
     def __init__(self,
