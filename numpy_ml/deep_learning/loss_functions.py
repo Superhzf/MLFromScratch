@@ -34,6 +34,7 @@ class BinaryCrossEntropy(Loss):
         pass
 
     def loss(self,y,p):
+        assert y.shape[1] == 2, 'BinaryCrossEntropy can only be used for binary classification problems'
         # Avoid zero numerator
         p = np.clip(p,1e-15,1-1e-15)
         return - (y*np.log(p)+(1-y)*np.log(1-p))
@@ -42,6 +43,19 @@ class BinaryCrossEntropy(Loss):
         # Avoid zero numerator
         p = np.clip(p,1e-15,1-1e-15)
         return - (y/p)+(1-y)/(1-p)
+
+class CrossEntropy(Loss):
+    def __init__(self):
+        pass
+
+    def loss(self, y, p):
+        eps = np.finfo(float).eps
+        cross_entropy = -np.sum(y * np.log(p + eps),axis=1)
+        return cross_entropy
+
+    def gradient(self, y, p):
+        eps = np.finfo(float).eps
+        return -np.sum(y/(p+eps),axis=1)
 
 
 class BinomialDeviance(Loss):

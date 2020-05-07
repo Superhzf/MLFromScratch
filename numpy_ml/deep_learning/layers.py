@@ -463,7 +463,7 @@ class many2oneRNN(Layer):
 
 
 class Embedding(Layer):
-    def __init__(self, n_out, vocab_size):
+    def __init__(self, n_out, vocab_size, n_in):
         """
         Parameters:
         ---------------------
@@ -473,9 +473,12 @@ class Embedding(Layer):
             The total number of categories in the categorical variable (The total
             number of words in the vocabulary). All integer indices are expected
             to range between 0 and vocab_size - 1
+        n_in: int
+            The number of categorical variables
         """
         self.n_out = n_out
         self.vocab_size = vocab_size
+        self.n_in = n_in
         self.W = None
 
     def initialize(self, optimizer):
@@ -487,7 +490,7 @@ class Embedding(Layer):
     def parameters(self):
         return np.prod(self.W.shape)
 
-    def forward_pass(self, X):
+    def forward_pass(self, X, training=True):
         """
         Compute the layer output on a single minibatch. Y = W[X]
 
@@ -502,7 +505,6 @@ class Embedding(Layer):
         n_in features and n_out dimensions.
         """
         self.X = X
-        _, self.n_in = self.X.shape
         Y = self.W[X]
         n_ex, n_in, n_out = Y.shape
         Y = Y.reshape((n_ex, n_in * n_out))
@@ -523,7 +525,7 @@ class Embedding(Layer):
         self.W = self.W_opt.update(self.W, self.grad_W)
 
     def output_shape(self):
-        return (, self.n_in * self.n_out)
+        return (self.n_in * self.n_out, )
 
 
 class LSTMCell(Layer):
