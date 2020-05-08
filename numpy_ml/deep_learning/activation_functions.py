@@ -42,7 +42,11 @@ class Softmax():
 
     def gradient(self,x):
         p = self.__call__(x)
-        return p*(1-p)
+        # we do not do any gradieny calculaion here because we assume that
+        # softmax will always be used with cross entropy loss together
+        # at the same calculating the gradient of cross entropy loss w.r.t the
+        # input of softmax layer is much easier.
+        return np.ones_like(p)
 
 # What is a dead ReLU problem? Why does it happen?
 # A: Dead ReLU means that the activations are the same (0 as it happens) and

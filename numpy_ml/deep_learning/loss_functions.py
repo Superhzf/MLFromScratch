@@ -54,8 +54,11 @@ class CrossEntropy(Loss):
         return cross_entropy
 
     def gradient(self, y, p):
-        eps = np.finfo(float).eps
-        return -np.sum(y/(p+eps),axis=1)
+        # eps = np.finfo(float).eps
+        # return -np.sum(y/(p+eps),axis=1)
+        # The gradient here is the gradient of the cross entropy loss w.r.t.
+        # the input of softmax because the calculation is much easier
+        return p - y
 
 
 class BinomialDeviance(Loss):
