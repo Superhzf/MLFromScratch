@@ -81,7 +81,6 @@ class NeuralNetwork():
         """Train the model for a fixed number of epochs"""
         for epoch in self.progressbar(range(n_epochs)):
             batch_error = []
-            print (epoch, self.layers[1].W.max(), self.layers[1].W.min(), self.layers[1].W.mean())
             for X_batch,y_batch in batch_generator(X,y,batch_size = batch_size):
                 loss = self.train_on_batch(X_batch,y_batch)
                 batch_error.append(loss)

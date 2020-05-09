@@ -59,12 +59,16 @@ class Softmax():
 # by sigmoid/tanh
 class ReLU():
     def __call__(self,x):
-        return np.maximum(x,0)
+        # return np.maximum(x,0)
+        return np.clip(x, 0, np.inf)
 
     def gradient(self,x):
-        z = np.ones(x.shape)
-        z[x<0] = 0
-        return x
+        # The way of implementation is more numerically stable but I don't
+        # know why
+        return (x > 0).astype(int)
+        # z = np.ones(x.shape)
+        # z[x<0] = 0
+        # return x
 
 
 # Why tanh is better than sigmoid?

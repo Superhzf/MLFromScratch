@@ -74,8 +74,8 @@ class Dense(Layer):
         self.db = np.sum(accum_grad, axis=0, keepdims=True)
         if self.trainable:
             # Update the layer weights
-            self.W = self.W_opt.update(self.W, dw)
-            self.b = self.b_opt.update(self.b, db)
+            self.W = self.W_opt.update(self.W, self.dw)
+            self.b = self.b_opt.update(self.b, self.db)
 
         # Return accumulated gradient for the next layer
         # Calculation is based on the weights used during the forward pass
