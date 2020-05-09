@@ -69,11 +69,10 @@ class Dense(Layer):
         # Save weights used during forward pass
         W = self.W
 
+        # Calculate gradient w.r.t layer weights
+        self.dw = self.layer_input.T.dot(accum_grad)
+        self.db = np.sum(accum_grad, axis=0, keepdims=True)
         if self.trainable:
-            # Calculate gradient w.r.t layer weights
-            dw = self.layer_input.T.dot(accum_grad)
-            db = np.sum(accum_grad, axis=0, keepdims=True)
-
             # Update the layer weights
             self.W = self.W_opt.update(self.W, dw)
             self.b = self.b_opt.update(self.b, db)
@@ -482,7 +481,7 @@ class Embedding(Layer):
         self.W = None
 
     def initialize(self, optimizer):
-        limit = 1/math.sqrt(self.vocab_size)
+        limit = 1
         self.W = np.random.uniform(-limit,limit,(self.vocab_size, self.n_out))
         self.grad_W = np.zeros_like(self.W)
         self.W_opt = copy.copy(optimizer)
