@@ -288,9 +288,7 @@ class many2manyRNN(Layer):
         Decides how many time steps the gradient should be propagated backwards
     through states given the loss gradient for time step t
     input_shape: tuple
-        The expected input shape of the layer. For dense layers a single digit
-    specifying the number of features of the input. Must be specified if it is
-    the first layer in the network
+        n_units * n_in. Must be specified if it is the first layer in the network
 
     Reference:
     http://www.wildml.com/2015/09/recurrent-neural-networks-tutorial-part-2-implementing-a-language-model-rnn-with-python-numpy-and-theano/
@@ -311,6 +309,10 @@ class many2manyRNN(Layer):
         limit = 1/math.sqrt(input_dim)
         self.W_i = np.random.uniform(-limit,limit,(self.n_units,input_dim))
         limit = 1/math.sqrt(self.n_units)
+        # TODO: This is not correct, the first dimension of self.W_o should be
+        # n_units. Even worse, self.W_o could be removed, it is just another
+        # dense layer which is not a must. It passed the test because input_dim
+        # == n_units in the test case
         self.W_o = np.random.uniform(-limit,limit,(input_dim,self.n_units))
         self.W_p = np.random.uniform(-limit,limit,(self.n_units,self.n_units))
         # weight optimizers
@@ -329,6 +331,8 @@ class many2manyRNN(Layer):
         # cache values for use in backprop
         self.state_input = np.zeros((batch_size, timestamps, self.n_units))
         self.states = np.zeros((batch_size, timestamps+1, self.n_units))
+        # TODO: This is not correct, the last dimension of self.outputs should
+        # be self.n_units
         self.outputs = np.zeros((batch_size, timestamps, feature_size))
 
         # Set last timestamps to zero for calculation of the state_input at time
@@ -378,11 +382,13 @@ class many2manyRNN(Layer):
         return accum_grad_next
 
     def output_shape(self):
-        # TODO: this seems to be not correct
+        # TODO: this seems to be not correct, it should be self.n_units
         return self.input_shape
 
 
 class many2oneRNN(Layer):
+    # TODO: refactor by removing output_dim arguments becuase output_dim == input_shape[0]
+    #  == n_units
     def __init__(self,n_units,activation='tanh', output_dim=None,input_shape=None):
         self.input_shape=input_shape
         self.n_units = n_units
@@ -563,17 +569,15 @@ class LSTMCell(Layer):
 
         Parameters:
         ----------------------
-        n_out: int
+        n_units: int
             The dimension of a single hidden state/output on a given timestep.
+        input_shape: (int, int)
+            n_features, n_units
         act_fn: str
             The activation function. Default is 'Tanh'
         gate_fn: str
             The gate function for computing the update, output and forget gates.
-        Default is sigmoid.
-        init: {'glorot_normal','glorot_uniform','he_normal','he_uniform'}
-            The weight initialization stretegy
-        optimizer: str
-            The optimization strategyto use when performing gradient updates
+            Default is sigmoid.
         """
         self.n_units = n_units
         self.input_shape = input_shape
@@ -766,30 +770,24 @@ class LSTMCell(Layer):
         return dXt
 
 class LSTM(Layer):
-    def __init__(self,n_units, input_shape, act_fn='tanh',gate_fn='sigmoid', optimizer=None):
+    def __init__(self,n_units, input_shape, act_fn='tanh',gate_fn='sigmoid'):
         """
         A single long short-term memory (LSTM) RNN layer
 
         Parameters
         --------------------
-        n_out: int
+        n_units: int
             The dimension of a single hidden state / output on a given timestamp.
+        input_shape: tuple
+            n_in * n_units
         act_fn: str
             The activation function for computing A[t]. Defacult is Tanh
         gate_fn: str
             The gate function for computing the update, forget, and output gates.
             The default value is Sigmoid
-        init: {'glorot_normal', 'glorot_uniform', 'he_normal', 'he_uniform'}
-            The weight initialization strategy. The default value is glorot_uniform
-        optimizer: str
-            The optimization strategy to use when performing gradient updates.
         """
-        super().__init__(optimizer)
-
-        self.init = init
-        self.n_in = n_in
-        self.n_out = n_out
-        self.n_timesteps = None
+        self.n_units = n_units
+        self.input_shape = input_shape
         if act_fn not in good_act_fn_names:
             raise Exception('The activation function name is not understood')
         if gate_fn not in good_act_fn_names:
@@ -799,38 +797,35 @@ class LSTM(Layer):
 
     def initialize(self, optimizer):
         self.cell = LSTMCell(
-            n_in=self.n_in,
-            n_out=self.n_out,
+            n_units=self.n_units,
+            input_shape=self.input_shape,
             act_fn=self.act_fn,
             gate_fn=self.gate_fn)
         self.cell.initialize(optimizer)
 
-    def forward_pass(self,X):
+    def forward_pass(self,X, training=True):
         """
         Run a forward pass across all timesteps in the input.
 
         Parameters
         ----------------
-        X: numpy.array of shape (n_ex, n_in, n_t)
-           Input consisting of n_ex examples each of dimensionality n_in
+        X: numpy.array of shape (n_ex, n_t, n_in)
+           Input consisting of n_ex examples each of n_in dimensions
            and extending for n_t timesteps
 
         Returns
         ----------------
-        Y: numpy.array of shape (n_ex, n_out, n_t)
+        Y: numpy.array of shape (n_ex, n_t, n_out)
            The value of the hidden state for each of the n_ex examples
            across each of the n_t timesteps
         """
-        if not self.is_initialized:
-            self.n_in = X.shape[1]
-            self._init_params()
 
-        Y = []
-        n_ex, n_in, n_t = X.shape
+        batch_szie, n_timesteps, n_in = X.shape
+        Y = np.zeros_like((batch_size, n_timesteps, self.n_units))
         for t in range(n_t):
-            yt, _ = self.cell.forward(x[:,:,t])
-            Y.append(yt)
-        return np.dstack(Y)
+            yt, _ = self.cell.forward(x[:,t,:])
+            Y[:, t, :] = yt
+        return Y
 
     def backward_pass(self,dLdA):
         """
@@ -852,7 +847,10 @@ class LSTM(Layer):
         dldX = []
         n_ex, n_out, n_t = dLdA.shape
         for t in reversed(range(n_t)):
-            dLdXt, _ = self.cell.backward(dLdA[:,:,t])
+            dLdXt, _ = self.cell.backward_pass(dLdA[:,:,t])
             dLdX.insert(0,dLdXt)
         dLdX = np.dstak(dLdX)
         return dLdX
+
+    def output_shape(self):
+        return (self.n_units, )
