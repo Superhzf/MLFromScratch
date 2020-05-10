@@ -217,6 +217,8 @@ class Activation(Layer):
         The name of the activation function
     """
     def __init__(self,name):
+        if name not in good_act_fn_names:
+            raise Exception('The activation name is not understood')
         self.activation_name = name
         self.activation_func = activation_functions[name]()
 
@@ -243,6 +245,7 @@ activation_functions = {
     'tanh': TanH,
     # 'softplus': SoftPlus
 }
+good_act_fn_names = ['relu', 'sigmoid', 'softmax', 'tanh']
 
 # Why tanh is popular in RNN?
 # A: ReLU is not a good choice for RNN, it will lead to gradient explosion because
@@ -529,11 +532,10 @@ class Embedding(Layer):
 
 class LSTMCell(Layer):
     def __init__(self,
-                 n_out,
-                 act_fn = "Tanh",
-                 gate_fn="Sigmoid",
-                 init="glorot_uniform",
-                 optimizer=None):
+                 n_units,
+                 input_shape,
+                 act_fn = "tanh",
+                 gate_fn="sigmoid"):
 
         """
         A single step of a long short-term memory (LSTM) RNN
@@ -573,90 +575,62 @@ class LSTMCell(Layer):
         optimizer: str
             The optimization strategyto use when performing gradient updates
         """
-        super().__init__(optimizer)
-        self.init = init
-        self.n_in = None
-        self.n_out = n_out
-        self.n_timesteps = None
-        self.act_fn = ActivationInitializer(act_fn)()
-        self.gate_fn = ActivationInitializer(gate_fn)()
-        self.parameters = {
-            "Wf":None,
-            "Wu":None,
-            "Wc":None,
-            "Wo":None,
-            "bf":None,
-            "bu":None,
-            "bc":None,
-            "bo":None
-        }
-        self.is_initialized = False
+        self.n_units = n_units
+        self.input_shape = input_shape
+        self.act_fn = activation_functions[act_fn]()
+        self.gate_fn = activation_functions[gate_fn]()
+        self.trainable = True
 
-    def _init_params(self):
+    def initialize(self, optimizer):
         self.X = []
-        # str(self.gate_fn) will be effective only when self.init is glorot
-        init_weight_gate = WeightInitializer(str(self.gate_fn),mode=self.init)
-        init_weights_act = WeightInitializer(str(self.act_fn),mode=self.init)
+        limit = 1 / math.sqrt(self.input_shape[0])
+        self.Wc = np.random.uniform(-limit,limit, (self.input_shape[0]+self.n_units, self.n_units))
+        self.Wf = np.random.uniform(-limit,limit, (self.input_shape[0]+self.n_units, self.n_units))
+        self.Wo = np.random.uniform(-limit,limit, (self.input_shape[0]+self.n_units, self.n_units))
+        self.Wu = np.random.uniform(-limit,limit, (self.input_shape[0]+self.n_units, self.n_units))
 
-        Wf = init_weights_gate((self.n_in+self.n_out,self.n_out))
-        Wu = init_weights_gate((self.n_in+self.n_out,self.n_out))
-        Wc = init_weights_act((self.n_in+self.n_out,self.n_out))
-        Wo = init_weights_gate((self.n_in+self.n_out,self.n_out))
+        self.bc = np.zeros((1, self.n_units))
+        self.bf = np.zeros((1, self.n_units))
+        self.bo = np.zeros((1, self.n_units))
+        self.bu = np.zeros((1, self.n_units))
 
-        bf = np.zeros((1,self.n_out))
-        bu = np.zeros((1,self.n_out))
-        bc = np.zeros((1,self.n_out))
-        bo = np.zeros((1,self.n_out))
+        self.dWc = np.zeros_like(self.Wc)
+        self.dWf = np.zeros_like(self.Wf)
+        self.dWo = np.zeros_like(self.Wo)
+        self.dWu = np.zeros_like(self.Wu)
 
-        self.parameters={
-            "Wf":Wf,
-            "Wu":Wu,
-            "Wc":Wc,
-            "Wo":Wo,
-            "bf":bf,
-            "bu":bu,
-            "bc":bc,
-            "bo":bo
-        }
+        self.dbc = np.zeros_like(self.bc)
+        self.dbf = np.zeros_like(self.bf)
+        self.dbo = np.zeros_like(self.bo)
+        self.dbu = np.zeros_like(self.bu)
 
-        self.gradients = {
-            "Wf":np.zeros_like(Wf),
-            "Wu":np.zeros_like(Wu),
-            "Wc":np.zeros_like(Wc),
-            "Wo":np.zeros_like(Wo),
-            "bf":np.zeros_like(bf),
-            "bu":np.zeros_like(bu),
-            "bc":np.zeros_like(bc),
-            "bo":np.zeros_like(bo)
-        }
+        # weight optimizers
+        self.Wc_opt = copy.copy(optimizer)
+        self.Wf_opt = copy.copy(optimizer)
+        self.Wo_opt = copy.copy(optimizer)
+        self.Wu_opt = copy.copy(optimizer)
+
+        self.bc_opt = copy.copy(optimizer)
+        self.bf_opt = copy.copy(optimizer)
+        self.bo_opt = copy.copy(optimizer)
+        self.bu_opt = copy.copy(optimizer)
 
         self.derived_variables = {
-            "C": [],
             "A": [],
-            "Gf": [],
-            "Gu": [],
-            "Go": [],
-            "Gc": [],
+            "C": [],
             "Cc": [],
-            "n_timesteps": 0,
+            "Gc": [],
+            "Gf": [],
+            "Go": [],
+            "Gu": [],
             "current_step": 0,
             "dLdA_accumulator": None,
-            "dLdC_accumulator": None
+            "dLdC_accumulator": None,
+            "n_timesteps": 0,
         }
-        self.is_initialized = True
 
-    def _get_params(self):
-        Wf = self.parameters['Wf']
-        Wu = self.parameters['Wu']
-        Wc = self.parameters['Wc']
-        Wo = self.parameters['Wo']
-        bf = self.parameters['bf']
-        bu = self.parameters['bu']
-        bc = self.parameters['bc']
-        bo = self.parameters['bo']
-        return Wf,Wu,Wc,Wo,bf,bu,bc,bo
 
-    def forward(self,Xt):
+    def forward_pass(self,Xt, training=True):
         """
         Compute the layer output for a single timestep
 
@@ -672,17 +646,13 @@ class LSTMCell(Layer):
         Ct: np.array of shape (n_ex,n_out). The value of the cell/memory state at
             timestep t for each of the n_ex observations
         """
-        if not self.initialized:
-            self.n_in = Xt.shape[1]
-            self._init_params()
 
-        Wf,Wu,Wc,Wo,bf,bu,bc,bo = self._get_params()
         self.derived_variables['n_timesteps']+=1
         self.derived_variables['current_step']+=1
 
         if len(self.derived_variables['A']) == 0:
             n_ex,n_in = Xt.shape
-            init = np.zeros((n_ex,n_in))
+            init = np.zeros((n_ex,self.n_units))
             self.derived_variables['A'].append(init)
             self.derived_variables['C'].append(init)
 
@@ -690,27 +660,26 @@ class LSTMCell(Layer):
         C_prev = self.derived_variables['C'][-1] # the last C
 
         # concatenate A_prev and Xt to create Zt
-        Zt = np.hstack([A_prev,Xt])
-
-        Gft = self.gate_fn(Zt@Wf+bf)
-        Gut = self.gate_fn(Zt@Wu+bu)
-        Got = self.gate_fn(Zt@Wo+bo)
-        Cct = self.act_fn(Zt@Wc+bc)
+        Zt = np.hstack([A_prev, Xt])
+        Gft = self.gate_fn(Zt@self.Wf+self.bf)
+        Gut = self.gate_fn(Zt@self.Wu+self.bu)
+        Got = self.gate_fn(Zt@self.Wo+self.bo)
+        Cct = self.act_fn(Zt@self.Wc+self.bc)
         Ct = Gft*C_prev+Gut*Cct
         At = Got*self.act_fn(Ct)
-
 
         # bookkeeping
         self.X.append(Xt)
         self.derived_variables['A'].append(At)
         self.derived_variables['C'].append(Ct)
+        self.derived_variables['Cc'].append(Cct)
         self.derived_variables['Gf'].append(Gft)
         self.derived_variables['Gu'].append(Gut)
         self.derived_variables['Go'].append(Got)
-        self.derived_variables['Cc'].append(Cct)
+
         return At, Ct
 
-    def backward(self,dLdAt):
+    def backward_pass(self,dLdAt):
         """
         Run a backward pass across all timesteps in the input
 
@@ -724,21 +693,21 @@ class LSTMCell(Layer):
         dLdXt:np.array of shape (n_ex,n_in). The gradient of the loss w.r.t. the
               layer input at timestep t
         """
-        Wf, Wu, Wc, Wo, bf, bu, bc, bo, bf = self._get_params()
+
         self.derived_variables['current_step']-=1
         t = self.derived_variables['current_step']
 
-        Got = self.derived_variables['Go'][t]
-        Gft = self.derived_variables['Gf'][t]
-        Gut = self.derived_variables['Gu'][t]
-        Cct = self.derived_variables['Cc'][t]
-        At = self.derived_variables['A'][t+1]
-        Ct = self.derived_variables['C'][t+1]
-        C_prev = self.derived_variables['C'][t]
         A_prev = self.derived_variables['A'][t]
+        At = self.derived_variables['A'][t+1]
+        C_prev = self.derived_variables['C'][t]
+        Ct = self.derived_variables['C'][t+1]
+        Cct = self.derived_variables['Cc'][t]
+        Gft = self.derived_variables['Gf'][t]
+        Got = self.derived_variables['Go'][t]
+        Gut = self.derived_variables['Gu'][t]
 
         Xt = self.X[t]
-        Zt = self.hstack([A_prev,Xt])
+        Zt = np.hstack([A_prev,Xt])
 
         dA_acc = self.derived_variables["dLdA_accumulator"]
         dC_acc = self.derived_variables["dLdC_accumulator"]
@@ -753,41 +722,51 @@ class LSTMCell(Layer):
         # Gradient calculations
         # ---------------------------
         dA = dLdAt + dA_acc
-        dC = dC_acc + dA * Got * self.act_fn.grad(Ct)
+        dC = dC_acc + dA * Got * self.act_fn.gradient(Ct)
 
         # Compute the input to the gate functions at timestamp t
-        _Go = Zt @ Wo + bo
-        _Gf = Zt @ Wf + bf
-        _Gu = Zt @ Wu + bu
-        _Gc = Zt @ Wc + bc
+        _Gc = Zt @ self.Wc + self.bc
+        _Gf = Zt @ self.Wf + self.bf
+        _Go = Zt @ self.Wo + self.bo
+        _Gu = Zt @ self.Wu + self.bu
 
         # Compute gradients w.r.t. the input to each gate
-        dGot = dA * self.act_fn(Ct) * self.gate_fn.grad(_Go)
-        dCct = dC * Gut * self.act_fn.grad(_Gc)
-        dGut = dC * Cct * self.gate_fn.grad(_Gu)
-        dGft = dC * C_prev * self.gate_fn.grad(_Gf)
+        dCct = dC * Gut * self.act_fn.gradient(_Gc)
+        dGft = dC * C_prev * self.gate_fn.gradient(_Gf)
+        dGot = dA * self.act_fn(Ct) * self.gate_fn.gradient(_Go)
+        dGut = dC * Cct * self.gate_fn.gradient(_Gu)
 
-        dZ = dGft @ Wf.T + dGut @ Wu.t + dCct @ Wc.T + dGot @ Wo.T
-        dXt = dZ[:, self.n_out:]
 
-        self.gradients['Wc'] += Zt.T @ dCct
-        self.gradients['Wu'] += Zt.T @ dGut
-        self.gradients['Wf'] += Zt.T @ dGft
-        self.gradients['Wo'] += Zt.T @ dGot
-        self.gradients['bo'] += dGot.sum(axis=0, keepdims = True)
-        self.gradients['bu'] += dGut.sum(axis=0, keepdims = True)
-        self.gradients['bf'] += dGft.sum(axis=0, keepdims = True)
-        self.gradients['bc'] += dCct.sum(axis=0, keepdims = True)
+        dZ = dGft @ self.Wf.T + dGut @ self.Wu.T + dCct @ self.Wc.T + dGot @ self.Wo.T
+        dXt = dZ[:, self.n_units:]
 
-        self.derived_variables['dLdA_accumulator'] = dZ[:,:self.n_out]
+        self.dWc += Zt.T @ dCct
+        self.dWf += Zt.T @ dGft
+        self.dWo += Zt.T @ dGot
+        self.dWu += Zt.T @ dGut
+        self.dbc += dCct.sum(axis=0, keepdims = True)
+        self.dbf += dGft.sum(axis=0, keepdims = True)
+        self.dbo += dGot.sum(axis=0, keepdims = True)
+        self.dbu += dGut.sum(axis=0, keepdims = True)
+
+        if self.trainable:
+            self.Wc_opt.update(self.Wc, self.dWc)
+            self.Wf_opt.update(self.Wf, self.dWf)
+            self.Wo_opt.update(self.Wo, self.dWo)
+            self.Wu_opt.update(self.Wu, self.dWu)
+
+            self.bc_opt.update(self.bc, self.dbc)
+            self.bf_opt.update(self.bf, self.dbf)
+            self.bo_opt.update(self.bo, self.dbo)
+            self.bu_opt.update(self.bu, self.dbu)
+
+        self.derived_variables['dLdA_accumulator'] = dZ[:,:self.n_units]
         self.derived_variables['dLdC_accumulator'] = Gft * dC
 
         return dXt
 
 class LSTM(Layer):
-    def __init__(
-            self,n_out,act_fn='Tanh',gate_fn='Sigmoid',
-            init="glorot_uniform",optimizer=None):
+    def __init__(self,n_units, input_shape, act_fn='tanh',gate_fn='sigmoid', optimizer=None):
         """
         A single long short-term memory (LSTM) RNN layer
 
@@ -808,36 +787,25 @@ class LSTM(Layer):
         super().__init__(optimizer)
 
         self.init = init
-        self.n_in = None
+        self.n_in = n_in
         self.n_out = n_out
         self.n_timesteps = None
-        self.act_fn = ActivationInitializer(act_fn)()
-        self.gate_fn = ActivationInitializer(gate_fn)()
-        self.is_initialized = False
+        if act_fn not in good_act_fn_names:
+            raise Exception('The activation function name is not understood')
+        if gate_fn not in good_act_fn_names:
+            raise Exception('The gate function name is not understood')
+        self.act_fn = act_fn
+        self.gate_fn = gate_fn
 
-    def _init_params(self):
+    def initialize(self, optimizer):
         self.cell = LSTMCell(
             n_in=self.n_in,
             n_out=self.n_out,
             act_fn=self.act_fn,
-            gate_fn=self.gate_fn,
-            init=self.init)
-        self.is_initialized = True
+            gate_fn=self.gate_fn)
+        self.cell.initialize(optimizer)
 
-    @property
-    def hyperparameter(self):
-        """Return a dictionary containing the layer hyperparameters"""
-        return {
-            'layer': 'LSTM',
-            'init': self.init,
-            'n_in': self.n_in,
-            'n_out': self.n_out,
-            'act_fn': str(self.act_fn),
-            'gate_fn': str(self.gate_fn),
-            'optimizer': self.cell.hyperparameters['optimizer']
-        }
-
-    def forward(self,X):
+    def forward_pass(self,X):
         """
         Run a forward pass across all timesteps in the input.
 
@@ -864,7 +832,7 @@ class LSTM(Layer):
             Y.append(yt)
         return np.dstack(Y)
 
-    def backward(self,dLdA):
+    def backward_pass(self,dLdA):
         """
         Run a backward pass across all timesteps in the input
 
