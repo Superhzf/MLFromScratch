@@ -342,8 +342,8 @@ class many2manyRNN(Layer):
         for t in range(timestamps):
             # ref https://www.cs.toronto.edu/~tingwuwang/rnn_tutorial.pdf
             # All input share self.W_i and self.W_p and self.W_o
-            self.state_input[:, t, :] = X[:,t, :].dot(self.W_i.T)+self.states[:,t-1, :].dot(self.W_p.T)
-            self.states[:,t, :] = self.activation(self.state_input[:,t, :])
+            self.state_input[:, t, :] = X[:, t, :].dot(self.W_i.T)+self.states[:, t-1, :].dot(self.W_p.T)
+            self.states[:, t, :] = self.activation(self.state_input[:, t, :])
             # Here might need an activation for classification problems
             self.outputs[:,t, :] = self.states[:,t, :].dot(self.W_o.T)
 
@@ -471,7 +471,7 @@ class many2oneRNN(Layer):
 
 
 class Embedding(Layer):
-    def __init__(self, n_out, vocab_size, n_in):
+    def __init__(self, n_out, vocab_size, n_in=None):
         """
         Parameters:
         ---------------------
@@ -488,6 +488,7 @@ class Embedding(Layer):
         self.vocab_size = vocab_size
         self.n_in = n_in
         self.W = None
+        self.trainable = True
 
     def initialize(self, optimizer):
         limit = 1
@@ -514,8 +515,11 @@ class Embedding(Layer):
         """
         self.X = X
         Y = self.W[X]
-        n_ex, n_in, n_out = Y.shape
-        Y = Y.reshape((n_ex, n_in * n_out))
+        if self.n_in is not None:
+            n_ex, n_in, n_out = Y.shape
+            Y = Y.reshape((n_ex, n_in * n_out))
+        # If the self.n_in is None, then the shape of Y meets the input requirement
+        # of LSTM/RNN
         return Y
 
     def backward_pass(self, accum_grad):
@@ -530,10 +534,17 @@ class Embedding(Layer):
                 dW[v_id] += dy[ix]
             self.grad_W += dW
 
-        self.W = self.W_opt.update(self.W, self.grad_W)
+        if self.trainable:
+            self.W = self.W_opt.update(self.W, self.grad_W)
 
     def output_shape(self):
-        return (self.n_in * self.n_out, )
+        if self.n_in is not None:
+            return (self.n_in * self.n_out, )
+        else:
+            # self.n_in is None means the number of input categorical variables are
+            # varied. So users have to set up the input shape of following
+            # layers manually
+            return (None, )
 
 
 class LSTMCell(Layer):
@@ -772,7 +783,7 @@ class LSTMCell(Layer):
 class LSTM(Layer):
     def __init__(self,n_units, input_shape, act_fn='tanh',gate_fn='sigmoid'):
         """
-        A single long short-term memory (LSTM) RNN layer
+        A single long short-term memory (LSTM) layer
 
         Parameters
         --------------------
@@ -820,11 +831,13 @@ class LSTM(Layer):
            across each of the n_t timesteps
         """
 
-        batch_szie, n_timesteps, n_in = X.shape
-        Y = np.zeros_like((batch_size, n_timesteps, self.n_units))
+        batch_size, n_t, n_in = X.shape
+        Y = np.zeros((batch_size, n_t, self.n_units))
         for t in range(n_t):
-            yt, _ = self.cell.forward(x[:,t,:])
+            yt, _ = self.cell.forward_pass(X[:, t, :])
             Y[:, t, :] = yt
+        n_ex, n_t, n_units = Y.shape
+        # Y = Y.reshape((n_t, n_ex * n_units))
         return Y
 
     def backward_pass(self,dLdA):
@@ -844,12 +857,13 @@ class LSTM(Layer):
             each of the n_t examples
         """
         assert self.cell.trainable, "Layer is frozen"
-        dldX = []
-        n_ex, n_out, n_t = dLdA.shape
+        dLdX = []
+        n_ex, n_t, n_out = dLdA.shape
+        # print (dLdA.shape)
         for t in reversed(range(n_t)):
-            dLdXt, _ = self.cell.backward_pass(dLdA[:,:,t])
+            dLdXt = self.cell.backward_pass(dLdA[:,t,:])
             dLdX.insert(0,dLdXt)
-        dLdX = np.dstak(dLdX)
+        dLdX = np.dstack(dLdX)
         return dLdX
 
     def output_shape(self):

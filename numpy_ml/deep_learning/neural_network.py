@@ -46,7 +46,7 @@ class NeuralNetwork():
         """Method which adds a layer to the neural network"""
         # If this is not the first layer added then set the input shape
         # to the output shape of the last added layer
-        if self.layers:
+        if self.layers and self.layers[-1].output_shape() != (None, ):
             layer.set_input_shape(shape = self.layers[-1].output_shape())
 
         # If the layer has weights that needs to be initialized
@@ -81,11 +81,19 @@ class NeuralNetwork():
         """Train the model for a fixed number of epochs"""
         for epoch in self.progressbar(range(n_epochs)):
             batch_error = []
-            for X_batch,y_batch in batch_generator(X,y,batch_size = batch_size):
-                loss = self.train_on_batch(X_batch,y_batch)
-                batch_error.append(loss)
-            if epoch % print_loss_every_epoch == 0:
-                print ('epoch:',epoch,'loss:',loss)
+            if isinstance(X, np.ndarray):
+                for X_batch,y_batch in batch_generator(X,y,batch_size = batch_size):
+                    loss = self.train_on_batch(X_batch,y_batch)
+                    batch_error.append(loss)
+                if epoch % print_loss_every_epoch == 0:
+                    print ('epoch:',epoch,'loss:',loss)
+            elif isinstance(X, list):
+                for X_batch, y_batch in zip(X,y):
+                    X_batch = X_batch[None, :]
+                    loss = self.train_on_batch(X_batch,y_batch)
+                    batch_error.append(loss)
+                if epoch % print_loss_every_epoch == 0:
+                    print ('epoch:',epoch,'loss:',loss)
 
             self.errors['training'].append(np.mean(batch_error))
 
