@@ -89,7 +89,8 @@ class NeuralNetwork():
                     print ('epoch:',epoch,'loss:',loss)
             elif isinstance(X, list):
                 for X_batch, y_batch in zip(X,y):
-                    X_batch = X_batch[None, :]
+                    if len(X_batch.shape) == 1:
+                        X_batch = X_batch[None, :]
                     loss = self.train_on_batch(X_batch,y_batch)
                     batch_error.append(loss)
                 if epoch % print_loss_every_epoch == 0:
@@ -140,6 +141,20 @@ class NeuralNetwork():
         print ("Total Parameters: {}\n".format(tot_params))
 
 
-    def predict(self,X):
-        """Use the trained model to predict labels of X"""
-        return self._forward_pass(X, training=False)
+    def predict(self, X, fixed_len=True):
+        """
+        Use the trained model to predict labels of X. fixed_len==False means
+        that the input length is variable and we cannot take the advantage of
+        vectorization.
+        """
+
+        if fixed_len:
+            return self._forward_pass(X, training=False)
+        else:
+            res = []
+            for this_x in X:
+                if len(this_x.shape) == 1:
+                    this_x = this_x[None, :]
+                this_pred = self._forward_pass(this_x, training=False)
+                res.append(this_pred)
+            return res
