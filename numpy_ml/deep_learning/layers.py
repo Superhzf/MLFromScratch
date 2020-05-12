@@ -694,7 +694,7 @@ class LSTMCell(Layer):
 
         return At, Ct
 
-    def backward_pass(self,dLdAt):
+    def backward_pass(self,dLdAt, upper_bound):
         """
         Run a backward pass across all timesteps in the input
 
@@ -709,62 +709,69 @@ class LSTMCell(Layer):
               layer input at timestep t
         """
 
-        self.derived_variables['current_step']-=1
-        t = self.derived_variables['current_step']
+        for t in reversed(range(upper_bound+1)):
 
-        A_prev = self.derived_variables['A'][t]
-        At = self.derived_variables['A'][t+1]
-        C_prev = self.derived_variables['C'][t]
-        Ct = self.derived_variables['C'][t+1]
-        Cct = self.derived_variables['Cc'][t]
-        Gft = self.derived_variables['Gf'][t]
-        Got = self.derived_variables['Go'][t]
-        Gut = self.derived_variables['Gu'][t]
+            A_prev = self.derived_variables['A'][t]
+            At = self.derived_variables['A'][t+1]
+            C_prev = self.derived_variables['C'][t]
+            Ct = self.derived_variables['C'][t+1]
+            Cct = self.derived_variables['Cc'][t]
+            Gft = self.derived_variables['Gf'][t]
+            Got = self.derived_variables['Go'][t]
+            Gut = self.derived_variables['Gu'][t]
 
-        Xt = self.X[t]
-        Zt = np.hstack([A_prev,Xt])
+            Xt = self.X[t]
+            Zt = np.hstack([A_prev,Xt])
 
-        dA_acc = self.derived_variables["dLdA_accumulator"]
-        dC_acc = self.derived_variables["dLdC_accumulator"]
+            dA_acc = self.derived_variables["dLdA_accumulator"]
+            dC_acc = self.derived_variables["dLdC_accumulator"]
 
-        # Initialize accumulators
-        if dA_acc is None:
-            dA_acc = np.zeros_like(At)
+            # Initialize accumulators
+            if dA_acc is None:
+                dA_acc = np.zeros_like(At)
 
-        if dC_acc is None:
-            dC_acc = np.zeros_like(Ct)
+            if dC_acc is None:
+                dC_acc = np.zeros_like(Ct)
 
-        # Gradient calculations
-        # ---------------------------
-        dA = dLdAt + dA_acc
-        dC = dC_acc + dA * Got * self.act_fn.gradient(Ct)
+            # Gradient calculations
+            # ---------------------------
+            dA = dLdAt + dA_acc
+            dC = dC_acc + dA * Got * self.act_fn.gradient(Ct)
 
-        # Compute the input to the gate functions at timestamp t
-        _Gc = Zt @ self.Wc + self.bc
-        _Gf = Zt @ self.Wf + self.bf
-        _Go = Zt @ self.Wo + self.bo
-        _Gu = Zt @ self.Wu + self.bu
+            # Compute the input to the gate functions at timestamp t
+            _Gc = Zt @ self.Wc + self.bc
+            _Gf = Zt @ self.Wf + self.bf
+            _Go = Zt @ self.Wo + self.bo
+            _Gu = Zt @ self.Wu + self.bu
 
-        # Compute gradients w.r.t. the input to each gate
-        dCct = dC * Gut * self.act_fn.gradient(_Gc)
-        dGft = dC * C_prev * self.gate_fn.gradient(_Gf)
-        dGot = dA * self.act_fn(Ct) * self.gate_fn.gradient(_Go)
-        dGut = dC * Cct * self.gate_fn.gradient(_Gu)
+            # Compute gradients w.r.t. the input to each gate
+            dCct = dC * Gut * self.act_fn.gradient(_Gc)
+            dGft = dC * C_prev * self.gate_fn.gradient(_Gf)
+            dGot = dA * self.act_fn(Ct) * self.gate_fn.gradient(_Go)
+            dGut = dC * Cct * self.gate_fn.gradient(_Gu)
 
 
-        dZ = dGft @ self.Wf.T + dGut @ self.Wu.T + dCct @ self.Wc.T + dGot @ self.Wo.T
-        dXt = dZ[:, self.n_units:]
+            dZ = dGft @ self.Wf.T + dGut @ self.Wu.T + dCct @ self.Wc.T + dGot @ self.Wo.T
 
-        self.dWc += Zt.T @ dCct
-        self.dWf += Zt.T @ dGft
-        self.dWo += Zt.T @ dGot
-        self.dWu += Zt.T @ dGut
-        self.dbc += dCct.sum(axis=0, keepdims = True)
-        self.dbf += dGft.sum(axis=0, keepdims = True)
-        self.dbo += dGot.sum(axis=0, keepdims = True)
-        self.dbu += dGut.sum(axis=0, keepdims = True)
+            if t == upper_bound:
+                dXt = dZ[:, self.n_units:]
 
-        if self.trainable:
+            self.dWc += Zt.T @ dCct
+            self.dWf += Zt.T @ dGft
+            self.dWo += Zt.T @ dGot
+            self.dWu += Zt.T @ dGut
+            self.dbc += dCct.sum(axis=0, keepdims = True)
+            self.dbf += dGft.sum(axis=0, keepdims = True)
+            self.dbo += dGot.sum(axis=0, keepdims = True)
+            self.dbu += dGut.sum(axis=0, keepdims = True)
+
+            self.derived_variables['dLdA_accumulator'] = dZ[:,:self.n_units]
+            self.derived_variables['dLdC_accumulator'] = Gft * dC
+
+        self.derived_variables['dLdA_accumulator'] = None
+        self.derived_variables['dLdC_accumulator'] = None
+
+        if self.trainable and upper_bound == 0:
             self.Wc_opt.update(self.Wc, self.dWc)
             self.Wf_opt.update(self.Wf, self.dWf)
             self.Wo_opt.update(self.Wo, self.dWo)
@@ -774,9 +781,6 @@ class LSTMCell(Layer):
             self.bf_opt.update(self.bf, self.dbf)
             self.bo_opt.update(self.bo, self.dbo)
             self.bu_opt.update(self.bu, self.dbu)
-
-        self.derived_variables['dLdA_accumulator'] = dZ[:,:self.n_units]
-        self.derived_variables['dLdC_accumulator'] = Gft * dC
 
         return dXt
 
@@ -861,7 +865,7 @@ class LSTM(Layer):
         n_ex, n_t, n_out = dLdA.shape
         # print (dLdA.shape)
         for t in reversed(range(n_t)):
-            dLdXt = self.cell.backward_pass(dLdA[:,t,:])
+            dLdXt = self.cell.backward_pass(dLdA[:,t,:], t)
             dLdX.insert(0,dLdXt)
         dLdX = np.dstack(dLdX)
         return dLdX
