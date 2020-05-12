@@ -492,7 +492,7 @@ class Embedding(Layer):
 
     def initialize(self, optimizer):
         limit = 1
-        self.W = np.random.uniform(-limit,limit,(self.vocab_size, self.n_out))
+        self.W = np.random.uniform(-limit,limit, (self.vocab_size, self.n_out))
         self.grad_W = np.zeros_like(self.W)
         self.W_opt = copy.copy(optimizer)
 
@@ -708,70 +708,81 @@ class LSTMCell(Layer):
         dLdXt:np.array of shape (n_ex,n_in). The gradient of the loss w.r.t. the
               layer input at timestep t
         """
+        if upper_bound is not None:
+            for t in reversed(range(upper_bound+1)):
+                if t == upper_bound:
+                    dXt = self._bwd(t, dLdAt)
+                else:
+                    _ = self._bwd(t, dLdAt)
+            # self.derived_variables['dLdA_accumulator'] = None
+            # self.derived_variables['dLdC_accumulator'] = None
+        else:
+            self.derived_variables['current_step'] -= 1
+            t = self.derived_variables['current_step']
+            dXt = self._bwd(t, dLdAt)
 
-        for t in reversed(range(upper_bound+1)):
+        return dXt
 
-            A_prev = self.derived_variables['A'][t]
-            At = self.derived_variables['A'][t+1]
-            C_prev = self.derived_variables['C'][t]
-            Ct = self.derived_variables['C'][t+1]
-            Cct = self.derived_variables['Cc'][t]
-            Gft = self.derived_variables['Gf'][t]
-            Got = self.derived_variables['Go'][t]
-            Gut = self.derived_variables['Gu'][t]
+    def _bwd(self, t, dLdAt):
+        A_prev = self.derived_variables['A'][t]
+        At = self.derived_variables['A'][t+1]
+        C_prev = self.derived_variables['C'][t]
+        Ct = self.derived_variables['C'][t+1]
+        Cct = self.derived_variables['Cc'][t]
+        Gft = self.derived_variables['Gf'][t]
+        Got = self.derived_variables['Go'][t]
+        Gut = self.derived_variables['Gu'][t]
 
-            Xt = self.X[t]
-            Zt = np.hstack([A_prev,Xt])
+        Xt = self.X[t]
+        Zt = np.hstack([A_prev,Xt])
 
-            dA_acc = self.derived_variables["dLdA_accumulator"]
-            dC_acc = self.derived_variables["dLdC_accumulator"]
+        dA_acc = self.derived_variables["dLdA_accumulator"]
+        dC_acc = self.derived_variables["dLdC_accumulator"]
 
-            # Initialize accumulators
-            if dA_acc is None:
-                dA_acc = np.zeros_like(At)
+        # Initialize accumulators
+        if dA_acc is None:
+            dA_acc = np.zeros_like(At)
 
-            if dC_acc is None:
-                dC_acc = np.zeros_like(Ct)
+        if dC_acc is None:
+            dC_acc = np.zeros_like(Ct)
 
-            # Gradient calculations
-            # ---------------------------
-            dA = dLdAt + dA_acc
-            dC = dC_acc + dA * Got * self.act_fn.gradient(Ct)
+        # Gradient calculations
+        # ---------------------------
+        dA = dLdAt + dA_acc
+        dC = dC_acc + dA * Got * self.act_fn.gradient(Ct)
 
-            # Compute the input to the gate functions at timestamp t
-            _Gc = Zt @ self.Wc + self.bc
-            _Gf = Zt @ self.Wf + self.bf
-            _Go = Zt @ self.Wo + self.bo
-            _Gu = Zt @ self.Wu + self.bu
+        # Compute the input to the gate functions at timestamp t
+        _Gc = Zt @ self.Wc + self.bc
+        _Gf = Zt @ self.Wf + self.bf
+        _Go = Zt @ self.Wo + self.bo
+        _Gu = Zt @ self.Wu + self.bu
 
-            # Compute gradients w.r.t. the input to each gate
-            dCct = dC * Gut * self.act_fn.gradient(_Gc)
-            dGft = dC * C_prev * self.gate_fn.gradient(_Gf)
-            dGot = dA * self.act_fn(Ct) * self.gate_fn.gradient(_Go)
-            dGut = dC * Cct * self.gate_fn.gradient(_Gu)
+        # Compute gradients w.r.t. the input to each gate
+        dCct = dC * Gut * self.act_fn.gradient(_Gc)
+        dGft = dC * C_prev * self.gate_fn.gradient(_Gf)
+        dGot = dA * self.act_fn(Ct) * self.gate_fn.gradient(_Go)
+        dGut = dC * Cct * self.gate_fn.gradient(_Gu)
 
+        dZ = dGft @ self.Wf.T + dGut @ self.Wu.T + dCct @ self.Wc.T + dGot @ self.Wo.T
 
-            dZ = dGft @ self.Wf.T + dGut @ self.Wu.T + dCct @ self.Wc.T + dGot @ self.Wo.T
+        dXt = dZ[:, self.n_units:]
 
-            if t == upper_bound:
-                dXt = dZ[:, self.n_units:]
+        self.dWc += Zt.T @ dCct
+        self.dWf += Zt.T @ dGft
+        self.dWo += Zt.T @ dGot
+        self.dWu += Zt.T @ dGut
+        self.dbc += dCct.sum(axis=0, keepdims = True)
+        self.dbf += dGft.sum(axis=0, keepdims = True)
+        self.dbo += dGot.sum(axis=0, keepdims = True)
+        self.dbu += dGut.sum(axis=0, keepdims = True)
 
-            self.dWc += Zt.T @ dCct
-            self.dWf += Zt.T @ dGft
-            self.dWo += Zt.T @ dGot
-            self.dWu += Zt.T @ dGut
-            self.dbc += dCct.sum(axis=0, keepdims = True)
-            self.dbf += dGft.sum(axis=0, keepdims = True)
-            self.dbo += dGot.sum(axis=0, keepdims = True)
-            self.dbu += dGut.sum(axis=0, keepdims = True)
+        self.derived_variables['dLdA_accumulator'] = dZ[:,:self.n_units]
+        self.derived_variables['dLdC_accumulator'] = Gft * dC
 
-            self.derived_variables['dLdA_accumulator'] = dZ[:,:self.n_units]
-            self.derived_variables['dLdC_accumulator'] = Gft * dC
+        return dXt
 
-        self.derived_variables['dLdA_accumulator'] = None
-        self.derived_variables['dLdC_accumulator'] = None
-
-        if self.trainable and upper_bound == 0:
+    def update(self):
+        if self.trainable:
             self.Wc_opt.update(self.Wc, self.dWc)
             self.Wf_opt.update(self.Wf, self.dWf)
             self.Wo_opt.update(self.Wo, self.dWo)
@@ -782,10 +793,8 @@ class LSTMCell(Layer):
             self.bo_opt.update(self.bo, self.dbo)
             self.bu_opt.update(self.bu, self.dbu)
 
-        return dXt
-
 class LSTM(Layer):
-    def __init__(self,n_units, input_shape, act_fn='tanh',gate_fn='sigmoid'):
+    def __init__(self,n_units, input_shape, bptt=True, act_fn='tanh', gate_fn='sigmoid'):
         """
         A single long short-term memory (LSTM) layer
 
@@ -795,6 +804,8 @@ class LSTM(Layer):
             The dimension of a single hidden state / output on a given timestamp.
         input_shape: tuple
             n_in * n_units
+        bptt: bool
+            Use BPTT?
         act_fn: str
             The activation function for computing A[t]. Defacult is Tanh
         gate_fn: str
@@ -803,6 +814,7 @@ class LSTM(Layer):
         """
         self.n_units = n_units
         self.input_shape = input_shape
+        self.bptt = bptt
         if act_fn not in good_act_fn_names:
             raise Exception('The activation function name is not understood')
         if gate_fn not in good_act_fn_names:
@@ -865,8 +877,12 @@ class LSTM(Layer):
         n_ex, n_t, n_out = dLdA.shape
         # print (dLdA.shape)
         for t in reversed(range(n_t)):
-            dLdXt = self.cell.backward_pass(dLdA[:,t,:], t)
+            if self.bptt:
+                dLdXt = self.cell.backward_pass(dLdA[:,t,:], t)
+            else:
+                dLdXt = self.cell.backward_pass(dLdA[:,t,:], None)
             dLdX.insert(0,dLdXt)
+        self.cell.update()
         dLdX = np.dstack(dLdX)
         return dLdX
 
