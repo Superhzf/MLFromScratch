@@ -132,3 +132,9 @@ output = np.array([W[x].sum(axis=0) for x in X])[:, None, :]
 15. Q: Why do embedding layers should be put in the very first positions?
 A: Because we cannot calculate the gradient w.r.t the input since the input is
 just the indices.
+
+15. Why does LSTM can deal with gradient vanishing (cannot handle gradient exploding)?
+A: LSTM is invented specifically to avoid the RNN gradient vanishing problem.
+Basically, LSTM changes the gradient of loss w.r.t. the hidden state from multiplication
+to addition. So, it is unlikely that the gradients would be small, however, it could
+be large.
