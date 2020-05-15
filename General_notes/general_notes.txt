@@ -138,3 +138,24 @@ A: LSTM is invented specifically to avoid the RNN gradient vanishing problem.
 Basically, LSTM changes the gradient of loss w.r.t. the hidden state from multiplication
 to addition. So, it is unlikely that the gradients would be small, however, it could
 be large.
+
+16. Why use negative sampling/Noise Contrastive Estimation (NCE) in word2vec?
+A: Traditionally, if we want to do a multiple-class classification problem, softmax
+tends to be the last layer. Basically, softmax helps us normalize the final
+output so that they sum up to 1. The problem is that if the total possible classes
+is very large, for example, the vocabulary size of NLP problems could be huge,then
+the calculation of denominator is expensive. NCE is invented to solve this problem
+
+17. What is the difference between negative sampling and NCE in word2vec?
+A: Both negative sampling and NCE are used to solve the problem that a huge vocabulary
+size could slow the calculation of softmax.
+
+The idea of negative sampling is that
+instead of summing over the probabilities of every incorrect vocabulary word in
+the denominator, just pick a few. Therefore, in the training stage, make predictions
+for the target word and a random sample of the other words and pretend that
+represents the entire vocabulary.
+
+One added advantage of negative sampling is that we do not have to update weights
+for every vocabulary word, but instead only the weights for the target word
+and a few negative samples.
