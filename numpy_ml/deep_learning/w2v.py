@@ -1,4 +1,5 @@
 import numpy as np
+from ..utils import Vocabulary
 
 class Word2Vec:
     def __init__(self,
@@ -59,29 +60,99 @@ class Word2Vec:
         self.num_negative_samples = num_negative_samples
         self.special_chars = set(["<unk>", "<eol>", "<bol>"])
 
-        def initialize(self):
-            self._dv = {}
-            self._build_noise_distribution()
-            self.embeddings = Embedding()
-            self.loss = NCELoss()
+    def initialize(self):
+        self._dv = {}
+        self._build_noise_distribution()
+        self.embeddings = Embedding()
+        self.loss = NCELoss()
 
-        def _build_noise_distribution(self):
-            """
-            Construct the noise distribution for use during negative sampling.
+    def _build_noise_distribution(self):
+        """
+        Construct the noise distribution for use during negative sampling.
 
-            For a word w in the corpus, the noise distribution is:
-                P_n(w) = Count(w) ** noise_dist_power / Z
-            where Z is a normalizing constant and noise_dist_power is a hyperparameter
-            """
-            probs = np.zeros(len(self.vocab))
-            power = self.noise_dist_power
+        For a word w in the corpus, the noise distribution is:
+            P_n(w) = Count(w) ** noise_dist_power / Z
+        where Z is a normalizing constant and noise_dist_power is a hyperparameter
+        """
+        probs = np.zeros(len(self.vocab))
+        power = self.noise_dist_power
 
-            for idx, token in enumerate(self.vocab):
-                count = token.count
-                probs[idx] = count ** power
+        for idx, token in enumerate(self.vocab):
+            count = token.count
+            probs[idx] = count ** power
 
-            probs = probs/np.sum(probs)
-            self._noise_sampler = DiscreteSampler(probs, log=False, with_replacement=False)
+        probs = probs/np.sum(probs)
+        self._noise_sampler = DiscreteSampler(probs, log=False, with_replacement=False)
+
+    def minibatcher(self, corpus_fps, encoding):
+        """
+        A minibatch generator for skip-gram and CBOW models.
+
+        Parameters:
+        --------------------
+        corpus_fps: str or List[str]
+            The filepath / list of filepaths to the document(s) to be encoded.
+            Each document is expected to be encoded as newline-separated
+            string of text, with adjacent tokens separated by a whitespace
+
+        encoding: str
+            Specifies the text encoding for corpus.
+
+        Returns:
+        -------------------
+        
+        """
+
+
+    def _train_epoch(self, corpus_fps, encoding):
+        total_loss = 0
+        batch_generator = self.minibatcher(corpus_fps, encoding)
+
+    def fit(self, corpus_fps, encoding='utf-8-sig', n_epochs=20, batchsize=128, verbose=True):
+        """
+        Learn word2vec embeddings for the examples in X_train
+
+        Parameters:
+        -------------------------
+        corpus_fps: str or a list of strs
+            The filepath / list of filepaths to the documents to be encoded.
+            Each document is expected to be encoded as newline-separated string
+            of text, with adjacent tokens separated by a whitespace.
+        encoding: str
+            Specifies the text encoding for corpus. Common entries are either
+            utf-8 or utf-8-sig.
+        n_epochs: int
+            The maximum number of training epochs to run
+        batchsize: int
+            The desired number of examples in each training batch.
+        verbose: bool
+            Print batch information during training.
+        """
+        self.verbose = verbose
+        self.n_epochs = n_epochs
+        self.batchsize = batchsize
+
+        self.vocab = Vocabulary(
+            lowercase = True,
+            min_count=self.min_count,
+            max_tokens=self.max_tokens,
+            filter_stopwords=self.filter_stopwords,
+        )
+        self.vocab.fit(corpus_fps, encoding=encoding)
+        self.vocab_size = len(self.vocab)
+
+        # ignore special characters when training the model
+        for sp in self.special_chars:
+            self.vocab.counts[sp] = 0
+
+        self.initialize()
+
+        prev_loss = np.inf
+        for i in range(n_epochs):
+            loss = 0
+            loss = self._train_epoch(corpus_fps, encoding)
+            prev_loss = loss
+
 
 
 class DiscreteSampler:

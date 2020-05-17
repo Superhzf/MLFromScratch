@@ -95,6 +95,8 @@ class BinomialDeviance(Loss):
                 this_node.value = 0.0
             else:
                 this_node.value = numerator / denominator
+
+
 class NCELoss(Loss):
     def __init__(self, n_classes, noise_sampler, num_negative_samples, n_in=None,optimizer=None,subtract_log_label_prob=True):
         """
@@ -339,4 +341,29 @@ class NCELoss(Loss):
         dX_target = np.vstack(
             [dLdZ_target[[ix]] @ W[[t]] for ix, t in enumerate(target)]
         )
-        
+        dX_neg = dLdZ_neg @ W[neg_samples]
+
+        hits = list(set(target)).intersection(set(neg_samples))
+        hit_ixs = [np.where(target == h)[0] for h in hits]
+
+        # adjust param gradients if there is an accidental hit
+        if len(hits)!=0:
+            hit_ixs = np.concatenate(hit_ixs)
+            target = np.delete(target, hit_ixs)
+            dB_target = np.delete(dB_target, hit_ixs)
+            dW_target = np.delete(dW_target, hit_ixs, 0)
+
+        dX = dX_target + dX_neg
+        # use np.add.at to ensure that repeated indices in the target (or
+        # possibly in neg_samples if sampling is done with replacement) are
+        # properly accounted for
+        dB = np.zeros_like(b).flatten()
+        np.add.at(dB, target, dB_target)
+        np.add.at(dB, neg_samples, dB_neg)
+        dB = dB.reshape(*b.shape)
+
+        dW = np.zeros_like(W)
+        np.add.at(dW, target, dW_target)
+        np.add.at(dW, neg_samples, dW_neg)
+
+        return dX, dW, dB
