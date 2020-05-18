@@ -1,5 +1,5 @@
 import numpy as np
-from ..utils import Vocabulary
+from ..utils import Vocabulary,tokenize_words
 
 class Word2Vec:
     def __init__(self,
@@ -100,13 +100,107 @@ class Word2Vec:
 
         Returns:
         -------------------
-        
-        """
+        X: List of length of batchsize or NumPy ndarray of shape (batchsize, n_in)
 
+        target: NumPy ndarray of shape (batchsize, 1)
+            The target IDs associated with each example in X
+        """
+        batchsize = self.batchsize
+        X_mb = []
+        target_mb = []
+        mb_ready = False
+        for d_ix, doc_fp in enumerate(corpus_fps):
+            with open(doc_fp, "r", encoding=encoding) as doc:
+                for line in doc:
+                    words = tokenize_words(line, lowercase=True, filter_stopwords=self.filter_stopwords)
+                    word_ixs = self.vocab.words_to_indices(self.vocab.filter(words, unk=False))
+
+                    for word_loc, word in enumerate(word_ixs):
+                        # since more distant words are usually less related to
+                        # the target word, we downweight them by sampling from
+                        # them less frequently during training.
+                        R = np.random.randint(1, self.context_len)
+                        left = word_ixs[max(word_loc - R, 0) : word_loc]
+                        right = word_ixs[word_loc + 1 : word_loc + 1 + R]
+                        context = left + right
+
+                        if len(context) == 0:
+                            continue
+
+                        # in the skip-gram architecture we use each of the
+                        # surrounding context to predict `word` / avoid
+                        # predicting negative samples
+                        if self.skip_gram:
+                            X_mb.extend([word] * len(context))
+                            target_mb.extend(context)
+                            mb_ready = len(target_mb) >= batchsize
+                        # in the CBOW architecture we use the average of the
+                        # context embeddings to predict the target `word` / avoid
+                        # predicting the negative samples
+                        else:
+                            context = np.array(context)
+                            X_mb.append(context)  # X_mb will be a ragged array
+                            target_mb.append(word)
+                            mb_ready = len(X_mb) == batchsize
+
+        if len(X_mb) > 0:
+            if self.skip_gram:
+                X_mb = np.array(X_mb)[:, None]
+            target_mb = np.array(target_mb)[:, None]
+            yield X_mb, target_mb
+
+    def _train_batch(self, X, target):
+        loss, _ = self.forward(X, target)
+        self.backward()
+        self.update(loss)
+        return loss
+
+    def forward(sel, X, targets, retain_derived=True):
+        """
+        Evaluate the network on a single minibatch.
+
+        Parameters
+        ------------------------
+        X: numpy ndarray of shape (n_ex, n_in)
+            Layer input, representing a minibatch of n_ex examples, each
+            consisting of n_in integer word indices
+        targets: numpy ndarray of shape (n_ex, )
+            Target word index for each example in the minibatch.
+        retain_derived: bool
+            Whether to retain the variables calculated during the forward pass
+            for use later during backprop. If False, this suggests the layer
+            will not be expected to backprop through w.r.t. this input.
+
+        Returns
+        ----------------------
+        loss: float
+            The loss associated with the current minibatch
+        y_pred: numpy ndarray of shape (n_ex,)
+            The conditional probabilities of the words in targets given the
+            corresponding example / context in X.
+        """
+        X_emb = self.embeddings.forward(X, retain_derived=True)
+        loss, y_pred = self.loss.loss(X_emb, targets.flatten(), retain_derived=True)
+        return loss, y_pred
+
+    def backward(self):
+        """
+        Compute the gradient of the loss wrt the current network parameters.
+        """
+        dX_emb = self.loss.grad(retain_grads=True, update_params=False)
+        self.embeddings.backward(dX_emb)
 
     def _train_epoch(self, corpus_fps, encoding):
         total_loss = 0
         batch_generator = self.minibatcher(corpus_fps, encoding)
+        for ix, (X, target) in enumerate(batch_generator):
+            loss = self._train_batch(X, target)
+            total_loss += loss
+            if self.verbose:
+                smooth_loss = 0.99 * smooth_loss + 0.01 * loss if ix > 0 else loss
+                fstr = "[Batch {}] Loss: {:.5f} | Smoothed Loss: {:.5f}"
+                print(fstr.format(ix + 1, loss, smooth_loss))
+        return total_loss / (ix + 1)
 
     def fit(self, corpus_fps, encoding='utf-8-sig', n_epochs=20, batchsize=128, verbose=True):
         """

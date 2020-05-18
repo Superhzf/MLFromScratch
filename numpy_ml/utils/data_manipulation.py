@@ -150,7 +150,7 @@ class Vocabulary:
         if isinstance(key, int):
             return self._tokens[key]
 
-    @peoperty
+    @property
     def n_tokens(self):
         """The number of unique word tokens in the vocabulary"""
         return len(self.token2idx)

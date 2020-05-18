@@ -159,3 +159,8 @@ represents the entire vocabulary.
 One added advantage of negative sampling is that we do not have to update weights
 for every vocabulary word, but instead only the weights for the target word
 and a few negative samples.
+
+references for NCE:
+https://datascience.stackexchange.com/a/17905
+https://leimao.github.io/article/Noise-Contrastive-Estimation/
+The basic idea of NCE is that

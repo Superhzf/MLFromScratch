@@ -168,7 +168,7 @@ class NCELoss(Loss):
         Parameters
         -------------------
         X: np.ndarray of shape (n_ex, n_c, n_in)
-            n_ex observations,
+            n_ex observations, n_in words and each word has n_c embeddings.
         target: np.ndarray of shape (n_ex, )
             Target indices of the target classes for each example in the minibatch
             (e.g. the target word id for an example in a CBOW model)
