@@ -169,3 +169,7 @@ distributions. To be specific, with the same context h, we have a target from
 the corpus and incorrect targets from a noise distribution. The object of NCE
 loss is to maximize the expected value of likelihood under the correct corpus
 distribution using logistic regression.
+
+18. Why does NCE work?
+A: Based on MLE of softmax function, as the ratio of noise samples to observations
+from dataset k increases, the NCE gradient approaches MLE gradient.
