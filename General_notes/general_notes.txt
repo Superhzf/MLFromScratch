@@ -143,7 +143,7 @@ be large.
 A: Traditionally, if we want to do a multiple-class classification problem, softmax
 tends to be the last layer. Basically, softmax helps us normalize the final
 output so that they sum up to 1. The problem is that if the total possible classes
-is very large, for example, the vocabulary size of NLP problems could be huge,then
+is very large, for example, the vocabulary size of NLP problems could be huge, then
 the calculation of denominator is expensive. NCE is invented to solve this problem
 
 17. What is the difference between negative sampling and NCE in word2vec?
@@ -163,4 +163,9 @@ and a few negative samples.
 references for NCE:
 https://datascience.stackexchange.com/a/17905
 https://leimao.github.io/article/Noise-Contrastive-Estimation/
-The basic idea of NCE is that
+The basic idea of NCE is that it changes the problem type from a multiple-class
+classification to a binary classification problem by sampling from noise
+distributions. To be specific, with the same context h, we have a target from
+the corpus and incorrect targets from a noise distribution. The object of NCE
+loss is to maximize the expected value of likelihood under the correct corpus
+distribution using logistic regression.
