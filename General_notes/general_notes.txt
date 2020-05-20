@@ -173,3 +173,17 @@ distribution using logistic regression.
 18. Why does NCE work?
 A: Based on MLE of softmax function, as the ratio of noise samples to observations
 from dataset k increases, the NCE gradient approaches MLE gradient.
+
+19. What is the formula of NCE loss?
+A: S_delta = S(target, context) - log((n/m)*P(target))
+where
+S(target, context) = X @ weight[target] + b
+S(target, context) = X @ weight[neg_samples] + b
+P(target) = probs[target] or
+P(target) = probs[neg_samples]
+probs are noise probabilities.
+
+Loss = 1/m*(SIGMA(1,m)log(sigma(S_delta)) + SIGMA(1,n)log(1-sigma(S_delta)))
+(it is logloss)
+where m: number of samples, n: number of negative samples, k = n/m means
+that 1 positive sample corresponds to k negative samples.
