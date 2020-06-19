@@ -187,3 +187,9 @@ Loss = 1/m*(SIGMA(1,m)log(sigma(S_delta)) + SIGMA(1,n)log(1-sigma(S_delta)))
 (it is logloss)
 where m: number of samples, n: number of negative samples, k = n/m means
 that 1 positive sample corresponds to k negative samples.
+
+
+20. What is the advantages of VAE?
+A: VAE has a latent variable, based on that latent variable, the output of VAE
+models will be pretty much like but not exactly the same as the input. You can
+control what you want
