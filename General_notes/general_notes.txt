@@ -191,8 +191,9 @@ that 1 positive sample corresponds to k negative samples.
 
 20. What is the advantages of VAE?
 A: VAE has a latent variable, based on that latent variable, the output of VAE
-models will be pretty much like but not exactly the same as the input. You can
-control what you want
+models will be pretty much like but not exactly the same as the input (which means
+new samples and the input will come from the same distribution but not the same).
+You can control what you want.
 
 21. What are the problems of VAE?
 A: The VAE model does not try to generate new images.
