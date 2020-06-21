@@ -211,3 +211,74 @@ distribution but you use q to approximate it. This ensures that it is always
 larger than 0 because whenever p is the real distribution, you always need
 more information.
 ref: https://stats.stackexchange.com/questions/299176/where-does-the-kullback-leibler-come-from
+
+22. What is the motivation of variational inference?
+A: Based on the formula P(Z|X) = P(XZ)/P(X), if we want to get the conditional
+distribution P(Z|X), in reality it is easy to get the joint distribution P(XZ),
+but it could be hard to get the prior P(X) because P(X) might be a very complex.
+integral. Now, the problem becomes whether somehow we can get the conditional
+distribution P(Z|X) by using the join distribution P(XZ) without needing
+the prior P(X). According to my description in the question 23, variational
+inference finds q(Z) that maximizes the lower bound.
+
+Variational inference is one of the solutions to this problem. Other solutions
+include
+* Metropolis–Hastings algorithm:
+  - It is a solution based on sampling
+  - More accurate
+  - Takes longer to compute
+  - Easy to understand
+* Variational Inference:
+  - It is a deterministic solution
+  - Less accurate
+  - Takes less time to compute
+  - Hard to understand
+* Laplace Approximation:
+ - Very poor solution
+
+23. What is the relationship between logP(X) and KL divergence?
+A: In the formula P(Z|X) = P(XZ)/P(X), in order to get P(Z|X) based P(XZ), we
+will approximate P(Z|X) using q(Z) which is a probability distribution function.
+For sure, we do not know what q(Z) is as well. But, we can use KL divergence
+to measure whether we have a good approximation, if it is a good estimation, then
+the KL divergence should be small. So, the equation could be as follows:
+KL(q(Z)||p(Z|X)) = - SIMGMA(q(Z)*log(P(Z|X)/q(Z))). Based on the formula
+P(Z|X) = P(XZ)/P(X), plug this in. By doing some math, I get
+-------------------------------------------
+KL + SIGMA(q(Z)*log(P(XZ)/q(Z))) = logP(X) | This is very important!
+-------------------------------------------
+KL + LowerBound = logP(X). This is where the lower bound of variational inference
+comes from.
+
+The idea here is that P(X) is a prior, in other words, X is fixed. So logP(X)
+cannot be changed. So, in order for KL to be as small as possible (ideally zero),
+we can maximize the lower bound!
+
+The reason to deal with the lower bound instead of directly the KL divergence is
+because in reality it is easy to get P(XZ) but hard to get P(Z|X).
+
+
+24. How to find the best q(Z) / How to maximize the lower bound?
+A: Let's say we have two sets of variables
+Z = {z1, z2, z3} and X = {x1, x2, x3} (the size of Z and X could be anything).
+They have a joint PDF P(XZ) = P(x1, x2, x3, z1, z2, z3). Now, we want to
+find the conditional probability P(Z|X) == P(z1, z3, z3 | x1, x2, x3), since it
+is hard to get the prior P(x1x2x3), We will use variational inference to solve
+this problem:
+We want to know: P(Z|X)
+We already know: P(x1, x2, x3, z1, z2, z3).
+We will use q(z1, z2, z3) to estimate P(Z|X).
+
+LowerBound = SIGMAz1z2z3(q(z1z2z3)*log(P(x1x2x3z1z2z3)/q(z1z2z3))), the goal is to
+maximize this and find what q(z1z2z3) is.
+
+This is hard, so we make some assumptions on this:
+* Let's assume z1, z2 and z3 are independent, the q(z1z2z3) = q(z1)q(z2)q(z3)
+Then, plug this in, then
+LowerBound = SIGMAz1z2z3(q(z1)q(z2)q(z3)*log(P(x1x2x3z1z2z3)/q(z1)q(z2)q(z3)))
+= SIGMAz1z2z3(q(z1)q(z2)q(z3)*(logP(x1x2x3z1z2z3) - log(q(z1)q(z2)q(z3)))
+= SIGMAz1z2z3(q(z1)q(z2)q(z3)*(logP(x1x2x3z1z2z3) - logq(z1)-logq(z2)-logq(z3))
+Instead of solving them entirely, why not solve them one at a time? What if we
+just solve for q(z1) and assume that q(z2) and q(z3) are known.
+The math is complicated and I will not do it here.
+ref: https://www.youtube.com/watch?v=OsunRTEh1pw&t=199s
