@@ -195,6 +195,10 @@ models will be pretty much like but not exactly the same as the input (which mea
 new samples and the input will come from the same distribution but not the same).
 You can control what you want.
 
+The goal of VAE is to find a distribution q_phi(Z|X) of some latent variables,
+which we can sample from Z~q_phi(Z|X), to generate new samples x` from p_theta(X|Z)
+
+
 21. What are the problems of VAE?
 A: The VAE model does not try to generate new images.
 
@@ -283,3 +287,21 @@ Instead of solving them entirely, why not solve them one at a time? What if we
 just solve for q(z1) and assume that q(z2) and q(z3) are known.
 The math is complicated and I will not do it here.
 ref: https://www.youtube.com/watch?v=OsunRTEh1pw&t=199s
+
+24. How to derivative the loss function of VAE?
+A: ref:https://www.youtube.com/watch?v=Hlr3CYfRMf0&list=PLdxQ7SoCLQANizknbIiHzL_hYjEaI-wUe&index=4
+Let X be a set of variables and Z be the set of latent variables. Then the problems
+becomes that we want to calculate P(Z|X).
+
+P(Z|X) = P(XZ)/P(X), here the idea is the same as variational inference. The joint
+probability P(XZ) is easy to get, but in reality the prior P(X) is difficult to
+get. We will use q(Z|X) to approach P(Z|X) and hopefully q(Z|X) is a very simple
+distribution like Gaussian distribution.
+
+So, the next step is to evaluating the estimation with the help of KL divergence.
+For details, please refer to VAE_loss.jpeg.
+
+25. How to optimize the objective function of VAE?
+A: As described above, logP(X) - KL[q||P] = Loss, so logP(X) = Loss + KL[q||P].
+According to the knowledge from variational inference, in order to minimize
+KL[q||P], we have to maximize the loss.
