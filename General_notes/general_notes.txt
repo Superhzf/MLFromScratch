@@ -301,7 +301,25 @@ distribution like Gaussian distribution.
 So, the next step is to evaluating the estimation with the help of KL divergence.
 For details, please refer to VAE_loss.jpeg.
 
+26. Why is the reparameterization trick is needed in VAE?
+A: We train a deep neural network to get a VAE model. In order to achieve that,
+the network should be differentiable. However, the problem is that we cannot
+get Z from the encoder output. Obviously we could sample Z from a Gaussian which
+parameters are the outputs of the encoder. But sampling won't do because sampling
+operation doesn't have gradient!
+
+The reparameterization trick diverts the non-differentiable operation out of the
+network, so that, even though we still involve a thing that is non-differentiable,
+at least it is out of the network, hence the network could still be trained.
+Specifically, we sample A from N(0, 1) before encoder. Then A and input X will
+together enter the encoder, based on the input X, we will get the mean(X) and
+std(X) of the latent variable Z. Next, instead of sampling Z from
+(mean(X), std(x)), we already get Z by std(X)*A+mean(X).
+
+
 25. How to optimize the objective function of VAE?
 A: As described above, logP(X) - KL[q||P] = Loss, so logP(X) = Loss + KL[q||P].
 According to the knowledge from variational inference, in order to minimize
 KL[q||P], we have to maximize the loss.
+
+26.
