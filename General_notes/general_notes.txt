@@ -317,3 +317,9 @@ std(X) of the latent variable Z. Next, instead of sampling Z from
 (mean(X), std(x)), we already get Z by std(X)*A+mean(X). Please refer to
 reparameterization_tricks.png.
 ref: https://wiseodd.github.io/techblog/2016/12/10/variational-autoencoder/
+
+
+25. How to optimize the objective function of VAE?
+A: As described above, logP(X) - KL[q||P] = Loss, so logP(X) = Loss + KL[q||P].
+According to the knowledge from variational inference, in order to minimize
+KL[q||P], we have to maximize the loss.

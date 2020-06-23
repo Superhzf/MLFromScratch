@@ -95,3 +95,80 @@ class BinomialDeviance(Loss):
                 this_node.value = 0.0
             else:
                 this_node.value = numerator / denominator
+
+
+class VAELoss(Loss):
+    def __init__(self):
+        """
+        The variational lower bound for a variational autoencoder
+
+        VAELoss = cross_entropy(y, y_hat) + KL(q||p), p is a unit Gaussian distributiom
+        and q = q(Z|X) follows a Gaussian distribution N(mean(X), std(X))
+        """
+        pass
+
+    def loss(self, y, y_pred, t_mean, t_log_var):
+        """
+        Variational lower bound for VAE.
+
+        parameters:
+        ----------------
+        y: np.ndarray of shape (n_ex, N).
+            The n_ex number of original images with N pixels.
+        y_pred: np.ndarray of shape (n_ex, N)
+            The n_ex number of VAE reconstruction images with N pixels.
+        t_mean: np.ndarray of shape (n_ex, T)
+            Mean of the encoder q(Z|X)
+        t_log_var: np.ndarray of shape (n_ex, T)
+            Log of the variance vector of the encoder q(Z|X)
+
+        Return:
+        -----------------
+        loss: float
+            The variational lower bound across the batch
+        """
+        # prevent nan on log(0)
+        eps = np.finfo(float).eps
+        y_pred = np.clip(y_pred, eps, 1 - eps)
+
+        # reconstruction loss
+        rec_loss = -np.sum(y * np.log(y_pred) + (1 - y) * np.log(1 - y_pred), axis=1)
+
+        # KL divergence between q and p
+        kl_loss = -0.5 * np.sum(1 + t_log_var - t_mean ** 2 - np.exp(t_log_var), axis=1)
+
+        loss = kl_loss + rec_loss
+        return loss
+
+    def gradient(self, y, y_pred, t_mean, t_log_var):
+        """
+        Compute the graident of the variational lower bound with respect to the
+        network parameters.
+
+        parameters:
+        ----------------
+        y: np.ndarray of shape (n_ex, N)
+            The n_ex number of original images with N pixels.
+        y_pred: np.ndarray of shape (n_ex, N)
+            The n_ex number of VAE reconstruction images with N pixels.
+        t_mean: np.ndarray of shape (n_ex, T)
+            Mean of the encoder q(Z|X)
+        t_log_var: np.ndarray of shape (n_ex, T)
+            Log of the variance vector of the encoder q(Z|X)
+
+        Returns:
+        ---------------
+        dY_pred: np.ndarray of (n_ex, N)
+            The gradient of the lower bound with respect to y_pred
+        dMean: np.ndarray of (n_ex, T)
+            The gradient of the lower bound wih respect to t_mean
+        dLogVar: np.ndarray of (n_ex, T)
+            The gradient of the lower bound wih respect to t_log_var
+        """
+        eps = np.finfo(float).eps
+        y_pred = np.clip(y_pred, eps, 1 - eps)
+
+        dY_pred = -y / (y_pred) - (y - 1) / (1 - y_pred)
+        dMean = t_mean
+        dLogVar = (np.exp(t_log_var) - 1) / 2
+        return dY_pred, dMean, dLogVar
