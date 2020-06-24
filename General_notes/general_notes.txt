@@ -323,3 +323,9 @@ ref: https://wiseodd.github.io/techblog/2016/12/10/variational-autoencoder/
 A: As described above, logP(X) - KL[q||P] = Loss, so logP(X) = Loss + KL[q||P].
 According to the knowledge from variational inference, in order to minimize
 KL[q||P], we have to maximize the loss.
+
+
+26. What are the degradation problems that deep residual networks try to solve?
+A: Basically, degradation problems are that when we have deeper and deeper neural
+networks, the performance on training set is worse than the performance on
+shallower networks. This is counterintuitive.
