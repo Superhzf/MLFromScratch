@@ -165,10 +165,11 @@ class VAELoss(Loss):
         dLogVar: np.ndarray of (n_ex, T)
             The gradient of the lower bound wih respect to t_log_var
         """
+        N = y.shape[0]
         eps = np.finfo(float).eps
         y_pred = np.clip(y_pred, eps, 1 - eps)
 
-        dY_pred = -y / (y_pred) - (y - 1) / (1 - y_pred)
-        dMean = t_mean
-        dLogVar = (np.exp(t_log_var) - 1) / 2
+        dY_pred = (-y / (N * y_pred) - (y - 1) / (N - N * y_pred))
+        dMean = t_mean / N
+        dLogVar = (np.exp(t_log_var) - 1) / (2 * N)
         return dY_pred, dMean, dLogVar
