@@ -370,5 +370,27 @@ are used to train the discriminator.
 
 After the discriminator is trained, combine the generator and the discriminator
 as the one big network and keep the parameters of the discriminator fixed. Next,
-train the whole network and tune the parameters of the generator,
-the target is to make the output as close to 1 as possible.
+train the whole network and tune the parameters of the generator using gradient
+descent, the target is to make the output as close to 1 as possible.
+ref: https://www.youtube.com/watch?v=8zomhgKrsmQ&t=1008s
+
+
+31. Why is GAN hard to train?/What are the problems of GAN?
+A:
+Vanishing gradients:
+Research has suggested that if your discriminator is too good, then generator
+training can fail due to vanishing gradients. In effect, an optimal discriminator
+doesn't provide enough information for the generator to make progress.
+
+Mode collapse:
+Usually you want your GAN to produce a wide variety of outputs. You want,
+for example, a different face for every random input to your face generator.
+
+However, if a generator produces an especially plausible output,
+the generator may learn to produce only that output. In fact, the generator
+is always trying to find the one output that seems most plausible to the discriminator.
+
+Failure to Converge：
+GANs frequently fail to converge
+
+Ref: https://developers.google.com/machine-learning/gan/problems
