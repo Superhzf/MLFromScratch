@@ -200,7 +200,13 @@ which we can sample from Z~q_phi(Z|X), to generate new samples x` from p_theta(X
 
 
 21. What are the problems of VAE?
-A: The VAE model does not try to generate new images.
+A: The VAE model does not try to generate new images. At most, the images are
+the linear combination of existing images in the training set.
+
+Another problem is described here:
+https://www.borealisai.com/en/blog/tutorial-5-variational-auto-encoders/
+But I quite do not understand what those problems mean.
+
 
 22. What is the idea of KL divergence?
 A: Another name of KL divergence is relative entropy because we use entropy
@@ -345,4 +351,24 @@ connections can learn something useful, the networks performance would be improv
 It is worth noting that sometimes the shape of a[l] and Z[l+2]
 (a[l] and Z[l+2] are referring to variables in ResBlock.jpeg) could be different
 dimensions. The solution is using zero padding or a new matrix multiplied to
-a[l]
+a[l].
+
+29. What is the basic idea behind GAN?
+A: GAN is invented to solve that problem that VAEs have which is that VAEs can
+only generate images that are a linear combination of images in the database.
+
+There are two elements in a GAN: generator and discriminator. Generator aims to
+generate fake images/samples to fool discriminator. Discriminator tempts to
+differentiate whether an image/sample comes from generator or the real world.
+
+30. How generators and discriminators are trained?
+A: In the first generation, a random vector is generated as the input to the
+generator and the generator will generate a bunch of outputs. Those outputs have
+the label 0 which means they come from generators. Along with the real-world
+samples which are labeled as 1 which means they come from the real-world, they
+are used to train the discriminator.
+
+After the discriminator is trained, combine the generator and the discriminator
+as the one big network and keep the parameters of the discriminator fixed. Next,
+train the whole network and tune the parameters of the generator,
+the target is to make the output as close to 1 as possible.
