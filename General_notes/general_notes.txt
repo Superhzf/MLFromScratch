@@ -329,3 +329,20 @@ KL[q||P], we have to maximize the loss.
 A: Basically, degradation problems are that when we have deeper and deeper neural
 networks, the performance on training set is worse than the performance on
 shallower networks. This is counterintuitive.
+
+27. What are the skip connections?
+A: Skip connections are created to solve the degradation problems described above,
+and skip connections make it possible to train much deeper neural networks. Gradients
+vanishing and exploding problems are also alleviated.
+Please refer to the ResBlock.jpeg for implementation details.
+
+28. Why do residual networks work?
+A: It is easy to skip connections to learn the identity function, which means that
+it will purely copy it's input and do nothing. As a result, residual networks
+at least does not hurt your network performance. Then, if you are lucky and skip
+connections can learn something useful, the networks performance would be improved.
+
+It is worth noting that sometimes the shape of a[l] and Z[l+2]
+(a[l] and Z[l+2] are referring to variables in ResBlock.jpeg) could be different
+dimensions. The solution is using zero padding or a new matrix multiplied to
+a[l]
