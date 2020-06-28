@@ -1,5 +1,14 @@
-from sklearn.datasets import fetch_mldata
+import matplotlib.pyplot as plt
+from sklearn.datasets import fetch_openml
 import numpy as np
+from IPython.display import clear_output
+
+from numpy_ml.deep_learning.optimizers import Adam
+from numpy_ml.deep_learning.loss_functions import BinaryCrossEntropy
+from numpy_ml.deep_learning.layers import Dense, Dropout, Activation, BatchNormalization
+from numpy_ml.deep_learning import NeuralNetwork
+
+
 
 class GAN():
     """
@@ -7,14 +16,16 @@ class GAN():
 
     Training Data: MNIST Handwritten Digits (28x28 images)
     """
-    def __init__(self):
+    def __init__(self, print_loss=False, save_img=False):
         self.img_rows = 28
         self.img_cols = 28
         self.img_dim = self.img_rows * self.img_cols
         self.latent_dim = 100
+        self.save_img = save_img
+        self.print_loss = print_loss
 
         optimizer = Adam(learning_rate=0.0002, b1=0.5)
-        loss_function = CrossEntropy
+        loss_function = BinaryCrossEntropy
 
         # Build the discriminator
         self.discriminator = self.build_discriminator(optimizer, loss_function)
@@ -58,7 +69,7 @@ class GAN():
         return model
 
     def train(self, n_epochs, batch_size=128, save_interval=50):
-        mnist = fetch_mldata('MNIST original')
+        mnist = fetch_openml('mnist_784')
         X = mnist.data
         y = mnist.target
 
@@ -70,9 +81,7 @@ class GAN():
             # ---------------------
             #  Train Discriminator
             # ---------------------
-
             self.discriminator.set_trainable(True)
-
             # Select a random half batch of images
             idx = np.random.randint(0, X.shape[0], half_batch)
             imgs = X[idx]
@@ -88,10 +97,9 @@ class GAN():
             fake = np.concatenate((np.zeros((half_batch, 1)), np.ones((half_batch, 1))), axis=1)
 
             # Train the discriminator
-            d_loss_real, d_acc_real = self.discriminator.train_on_batch(imgs, valid)
-            d_loss_fake, d_acc_fake = self.discriminator.train_on_batch(gen_imgs, fake)
+            d_loss_real = self.discriminator.train_on_batch(imgs, valid)
+            d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake)
             d_loss = 0.5 * (d_loss_real + d_loss_fake)
-            d_acc = 0.5 * (d_acc_real + d_acc_fake)
 
             # ---------------------
             #  Train Generator
@@ -106,10 +114,11 @@ class GAN():
             valid = np.concatenate((np.ones((batch_size, 1)), np.zeros((batch_size, 1))), axis=1)
 
             # Train the generator
-            g_loss, g_acc = self.combined.train_on_batch(noise, valid)
+            g_loss = self.combined.train_on_batch(noise, valid)
 
             # Display the progress
-            print ("%d [D loss: %f, acc: %.2f%%] [G loss: %f, acc: %.2f%%]" % (epoch, d_loss, 100*d_acc, g_loss, 100*g_acc))
+            if self.print_loss:
+                print ("epoch:{}, discriminator loss:{}, generator loss:{}".format(epoch, d_loss, g_loss))
 
             # If at save interval => save generated image samples
             if epoch % save_interval == 0:
@@ -132,10 +141,12 @@ class GAN():
                 axs[i,j].imshow(gen_imgs[cnt,:,:], cmap='gray')
                 axs[i,j].axis('off')
                 cnt += 1
-        fig.savefig("mnist_%d.png" % epoch)
+        plt.show()
+        clear_output(wait=True)
+        if self.save_img:
+            fig.savefig("mnist_%d.png" % epoch)
         plt.close()
 
-if __name__ == '__main__':
-    gan = GAN()
-    gan.train(n_epochs=200000, batch_size=64, save_interval=400)
-    
+
+# gan = GAN()
+# gan.train(n_epochs=200000, batch_size=64, save_interval=400)
