@@ -1,7 +1,7 @@
 import copy
 import numpy as np
 import math
-from .activation_functions import ReLU, Sigmoid, Softmax, TanH
+from .activation_functions import ReLU, Sigmoid, Softmax, TanH, LeakyReLU
 
 class Layer(object):
     def set_input_shape(self,shape):
@@ -241,11 +241,11 @@ activation_functions = {
     # 'selu': SELU,
     # 'elu': ELU,
     'softmax': Softmax,
-    # 'leaky_relu': LeakyReLU,
+    'leaky_relu': LeakyReLU,
     'tanh': TanH,
     # 'softplus': SoftPlus
 }
-good_act_fn_names = ['relu', 'sigmoid', 'softmax', 'tanh']
+good_act_fn_names = ['relu', 'sigmoid', 'softmax', 'tanh', 'leaky_relu']
 
 # Why tanh is popular in RNN?
 # A: ReLU is not a good choice for RNN, it will lead to gradient explosion because
