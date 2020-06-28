@@ -92,14 +92,19 @@ class GAN():
             # Generate a half batch of images
             gen_imgs = self.generator.predict(noise)
 
+            combined_imgs = np.concatenate([imgs,gen_imgs])
+
             # Valid = [1, 0], Fake = [0, 1]
             valid = np.concatenate((np.ones((half_batch, 1)), np.zeros((half_batch, 1))), axis=1)
             fake = np.concatenate((np.zeros((half_batch, 1)), np.ones((half_batch, 1))), axis=1)
 
+            combined_target = np.concatenate([valid,fake])
+
             # Train the discriminator
-            d_loss_real = self.discriminator.train_on_batch(imgs, valid)
-            d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake)
-            d_loss = 0.5 * (d_loss_real + d_loss_fake)
+            d_loss = self.discriminator.train_on_batch(combined_imgs, combined_target)
+            # d_loss_real = self.discriminator.train_on_batch(imgs, valid)
+            # d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake)
+            # d_loss = 0.5 * (d_loss_real + d_loss_fake)
 
             # ---------------------
             #  Train Generator
