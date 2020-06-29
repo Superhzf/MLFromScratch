@@ -16,12 +16,11 @@ class GAN():
 
     Training Data: MNIST Handwritten Digits (28x28 images)
     """
-    def __init__(self, print_loss=False, save_img=False):
+    def __init__(self, print_loss=False):
         self.img_rows = 28
         self.img_cols = 28
         self.img_dim = self.img_rows * self.img_cols
         self.latent_dim = 100
-        self.save_img = save_img
         self.print_loss = print_loss
 
         optimizer = Adam(learning_rate=0.0002, b1=0.5)
@@ -69,6 +68,7 @@ class GAN():
         return model
 
     def train(self, n_epochs, batch_size=128, save_interval=50):
+        self.n_epochs = n_epochs
         mnist = fetch_openml('mnist_784')
         X = mnist.data
         y = mnist.target
@@ -77,7 +77,7 @@ class GAN():
         X = (X.astype(np.float32) - 127.5) / 127.5
 
         half_batch = int(batch_size / 2)
-        for epoch in range(n_epochs):
+        for epoch in range(self.n_epochs):
             # ---------------------
             #  Train Discriminator
             # ---------------------
@@ -148,10 +148,10 @@ class GAN():
                 cnt += 1
         plt.show()
         clear_output(wait=True)
-        if self.save_img:
+        if epoch == self.n_epochs - 1:
             fig.savefig("mnist_%d.png" % epoch)
         plt.close()
 
 
-# gan = GAN()
-# gan.train(n_epochs=200000, batch_size=64, save_interval=400)
+gan = GAN()
+gan.train(n_epochs=200000, batch_size=64, save_interval=400)
