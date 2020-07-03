@@ -378,9 +378,7 @@ ref: https://www.youtube.com/watch?v=8zomhgKrsmQ&t=1008s
 31. Why is GAN hard to train?/What are the problems of GAN?
 A:
 Vanishing gradients:
-Research has suggested that if your discriminator is too good, then generator
-training can fail due to vanishing gradients. In effect, an optimal discriminator
-doesn't provide enough information for the generator to make progress.
+For more details please refer to Q32
 
 Mode collapse:
 Usually you want your GAN to produce a wide variety of outputs. You want,
@@ -394,3 +392,12 @@ Failure to Converge：
 GANs frequently fail to converge
 
 Ref: https://developers.google.com/machine-learning/gan/problems
+
+32. Why does vanishing gradients happen?
+A: Basically, when the discriminator is perfect, minimizing the loss function of
+the discriminator is equal to minimizing the JS divergence between the real
+distribution P and the generated distribution Q
+
+Under the condition that the distribution P and the distribution Q are far
+from each other, the JS divergence becomes a constant. As a result, the gradient
+becomes zero and the discriminator can learn nothing from gradient descent.
