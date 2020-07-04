@@ -375,10 +375,34 @@ descent, the target is to make the output as close to 1 as possible.
 ref: https://www.youtube.com/watch?v=8zomhgKrsmQ&t=1008s
 
 
-31. Why is GAN hard to train?/What are the problems of GAN?
+32. What are the (alternative) loss functions of the vanilla GAN?
+A: Essentially, GANs try to replicate a probability distribution. They should
+therefore use loss functions that reflect the distance between the generated
+distribution and the real distribution.
+
+The loss function that was introduced in the paper that introduced GAN was
+the cross entropy loss, for both the discriminator and the generator. It is
+worth noting that Loss_generator = - Loss_discriminator. In reality, actually
+we tend to set up the target variable of fake instances as valid to use cross
+entropy for simplicity purpose.
+
+For training the discriminator, the training procedure will not affect the
+distribution, so the loss function could be reduced to maximize -log(1-D) (*the target
+variable of training the generator is 0, *people call it the log D alternative).
+It is equal to maximize log(D) (people call it the - log D trick). One difference
+between log D alternative and the log D trick is that log D trick helps alleviate
+vanishing-gradients.
+
+If we change the target variable to 1, then the loss function becomes -log(D) (we
+want to minimize it).
+
+ref: https://developers.google.com/machine-learning/gan/loss
+
+
+33. Why is GAN hard to train?/What are the problems of GAN?
 A:
 Vanishing gradients:
-For more details please refer to Q32
+For more details please refer to Q34
 
 Mode collapse:
 Usually you want your GAN to produce a wide variety of outputs. You want,
@@ -393,11 +417,21 @@ GANs frequently fail to converge
 
 Ref: https://developers.google.com/machine-learning/gan/problems
 
-32. Why does vanishing gradients happen?
+34. Why does vanishing gradients happen in the vanilla GAN?
 A: Basically, when the discriminator is perfect, minimizing the loss function of
 the discriminator is equal to minimizing the JS divergence between the real
-distribution P and the generated distribution Q
+distribution P and the generated distribution Q.
 
 Under the condition that the distribution P and the distribution Q are far
-from each other, the JS divergence becomes a constant. As a result, the gradient
+from each other (far from each other means that P and Q do not overlap),
+the JS divergence becomes a constant. As a result, the gradient
 becomes zero and the discriminator can learn nothing from gradient descent.
+
+Finally, the problem is that how often P and Q are far from each other (do not
+overlap with each other)? Based on the paper, it is very often. The proof
+is closely related to Measure Theory which I don't understand.
+
+ref: https://zhuanlan.zhihu.com/p/25071913
+
+35. Why does mode collapse happen in the vanilla GAN?
+A:
