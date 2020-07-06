@@ -434,4 +434,47 @@ is closely related to Measure Theory which I don't understand.
 ref: https://zhuanlan.zhihu.com/p/25071913
 
 35. Why does mode collapse happen in the vanilla GAN?
-A:
+A: Before delving into the loss functions, let's discuss KL(Pg||Pr) where Pg
+is the probability distribution of the generator and Pr is the probability
+distribution of the real data distribution. Then
+KL(Pg||Pr) = Ex_pg[log(Pg/Pr)] = Ex_pg[log(Pg/(Pg+Pr)/Pr/(Pg+Pr))]
+where Pr/(Pg+Pr) = D is the optimal discriminator.
+So, KL(Pg||Pr) = Ex_pg[log((1-D)/D)].
+
+According to Q32, the loss functions of the generator have three different
+forms but same properties. So, I will elaborate why mode collapse happens in GAN
+with the help of those 3 different loss functions. First, let us check out the
+log D trick. The form of log D trick is maximizing log(D) which is equal to
+minimizing -log(D). If we add generator to it, we have
+Loss = Ex_pg[-log(D)]
+if we add one Ex_pg[log(1-D)] and subtract it, we get
+Loss = Ex_pg[log(1-D)] - Ex_pg[log(1-D)] + Ex_pg[-log(D)]
+= Ex_pg[log((1-D)/D)] - Ex_pg[log(1-D)]
+= KL(Pg||Pr) - Ex_pg[log(1-D)]
+The original loss function that the paper introduced is
+Ex_pr[log(D)] + Ex_pg[log(1-D)] = 2JS(Pr||Pg) - 2log2, based on this, we get:
+Ex_pg[log(1-D)] = 2JS(Pr||Pg) - 2log2 - Ex_pr[log(D)], so
+Loss = KL(Pg||Pr) - Ex_pg[log(1-D)] = KL(Pg||Pr) - 2JS(Pr||Pg) + 2log2 + Ex_pr[log(D)]
+Note that the last two terms of the loss, at this time, do not depend on the
+generator, so we can ignore it if we aim to fix the discriminator and train the
+generator:
+----------------------------------
+Loss = KL(Pg||Pr) - 2JS(Pr||Pg)  |
+----------------------------------
+
+Now, it's time to analyze the formula above. It has two problems.
+* Intuitively, the sign of the first term is positive and the sign of the second
+term is negative; what KL divergence and JS divergence is doing is that measure
+how far two distributions are. So, to minimize loss is to minimize the distance
+between Pg and Pr (what the first term is doing) and maximize the distance between
+Pg and Pr (what the second term is doing) at the same! As a consequence, gradients
+would be unstable!
+
+* For the first term KL(Pg||Pr), the value is proportional to Pg*log(Pg/Pr).
+Therefore,
+  s1: when Pg = 0 and Pr = 1, KL(Pg||Pr) = 0, JS(Pr||Pg) = constant, the loss is small.
+  s2: when Pg = 1 and Pr = 0, KL(Pg||Pr) = +inf, JS(Pr||Pg) = constant, the loss becomes +inf.
+s1 means that the generator cannot generate samples,
+s2 means that the generated samples cannot fool the discriminator.
+In order to minimize the loss function, it would be safer for the generator not to
+generate many different samples to avoid s2.
