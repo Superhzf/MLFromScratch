@@ -405,15 +405,10 @@ Vanishing gradients:
 For more details please refer to Q34
 
 Mode collapse:
-Usually you want your GAN to produce a wide variety of outputs. You want,
-for example, a different face for every random input to your face generator.
-
-However, if a generator produces an especially plausible output,
-the generator may learn to produce only that output. In fact, the generator
-is always trying to find the one output that seems most plausible to the discriminator.
+For more details please refer to Q35
 
 Failure to Converge：
-GANs frequently fail to converge
+For more details please refer to Q35
 
 Ref: https://developers.google.com/machine-learning/gan/problems
 
@@ -468,7 +463,7 @@ term is negative; what KL divergence and JS divergence is doing is that measure
 how far two distributions are. So, to minimize loss is to minimize the distance
 between Pg and Pr (what the first term is doing) and maximize the distance between
 Pg and Pr (what the second term is doing) at the same! As a consequence, gradients
-would be unstable!
+would be unstable which means that GAN would be easily diverged.
 
 * For the first term KL(Pg||Pr), the value is proportional to Pg*log(Pg/Pr).
 Therefore,
@@ -478,3 +473,21 @@ s1 means that the generator cannot generate samples,
 s2 means that the generated samples cannot fool the discriminator.
 In order to minimize the loss function, it would be safer for the generator not to
 generate many different samples to avoid s2.
+
+ref: https://zhuanlan.zhihu.com/p/25071913
+
+36. How to solve the three problems that the vanilla GANs have in Q33?
+A: In order to generate useable gradients. The author of WGAN invented a new
+method to measure the distance between the real data distribution and the
+distribution of generated data which is Wasserstein distance (or Earth-Mover
+distance or EM distance). I will not list the formula of EM distance because
+the form is pretty complicated and it is not the final form of the loss function.
+
+The intuition behind the EM distance is to calculate the expected distance
+between one point from the real data distribution and one point from the
+distribution of the generated data. Then EM distance is the minimum value of
+this distribution. The advantage of EM distance is that it is a smooth function
+(which means EM distance is continuous and differentiable in indefinite orders).
+Therefore, EM distance will provide stable gradients.
+
+Next, the author describes how to simplify EM distance. 
