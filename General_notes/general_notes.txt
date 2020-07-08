@@ -490,4 +490,10 @@ this distribution. The advantage of EM distance is that it is a smooth function
 (which means EM distance is continuous and differentiable in indefinite orders).
 Therefore, EM distance will provide stable gradients.
 
-Next, the author describes how to simplify EM distance. 
+Next, the author describes how to simplify EM distance. With the help of duality
+and Lipschitz constraints, WGAN solved vanishing gradients and model collapse
+problems.
+
+Note: I plan to write a blog to show the details of this questions.
+
+https://kexue.fm/archives/6139
