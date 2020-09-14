@@ -42,6 +42,12 @@ efficient as possible
 <img src="/images/svm.png">
 </p>
 
+### Polynomial Lasso Regression
+<p align="center">
+<img src="/images/poly_lasso_regress.png">
+</p>
+
+
 ### Decision Tree for Classification
 <p align="center">
 <img src="/images/decision_tree_classification.png">
