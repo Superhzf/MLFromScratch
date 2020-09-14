@@ -1,5 +1,5 @@
 import numpy as np
-from numpy_ml.utls import normalize,polynomial_features
+from ..utils import normalize,polynomial_features
 
 class l1_regularization():
     """
@@ -137,10 +137,9 @@ class LinearRegression(Regression):
         return y_pred
 
 
-class PolynominalLassoRegression(Regression):
+class PolynominalRidgeRegression(Regression):
     """
-    Linear regression model with a l1 regularization factor which does variable
-    selection
+    Linear regression model with a l2 regularization factor
 
     Parameters
     ----------------------------------------
@@ -155,16 +154,16 @@ class PolynominalLassoRegression(Regression):
     """
     def __init__(self,degree,reg_factor,n_iterations=3000,learning_rate=0.01):
         self.degree=degree
-        self.regularization=l1_regularization
-        super(PolynominalLassoRegression,self).__init__(n_iterations,learning_rate)
+        self.regularization=l2_regularization(alpha=reg_factor)
+        super(PolynominalRidgeRegression,self).__init__(n_iterations,learning_rate)
 
     def fit(self,X,y):
         X = normalize(polynomial_features(X,degree=self.degree))
-        super(PolynominalLassoRegression,self).fit(X,y)
+        super(PolynominalRidgeRegression,self).fit(X,y)
 
     def predict(self,X):
         X = normalize(polynomial_features(X,degree=self.degree))
-        return super(PolynominalLassoRegression,self).predict(X)
+        return super(PolynominalRidgeRegression,self).predict(X)
 
 
 class RidgeRegression(Regression):

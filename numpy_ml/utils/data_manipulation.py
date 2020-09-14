@@ -59,15 +59,15 @@ def train_test_split(X, y, test_size=0.5, shuffle=True, seed=None):
 
 
 def polynomial_features(X,degree):
-    n_samples,n_features = X.shape(X)
+    n_samples,n_features = X.shape
 
     def index_combinations():
         combs = [combinations_with_replacement(range(n_features),i) for i in range(0,degree+1)]
         flat_combs = [item for sublist in combs for item in sublist]
         return flat_combs
 
-    combinnations = index_combinations()
-    n_output_features = len(combinnations)
+    combinations = index_combinations()
+    n_output_features = len(combinations)
     X_new = np.empty((n_samples,n_output_features))
 
     for i,index_combs in enumerate(combinations):
@@ -362,3 +362,42 @@ class Vocabulary:
         self._tokens = tokens
         self.token2idx = word2idx
         self.idx2token = idx2word
+
+def shuffle_data(X, y, seed=None):
+    """ Random shuffle of the samples in X and y """
+    if seed:
+        np.random.seed(seed)
+    idx = np.arange(X.shape[0])
+    np.random.shuffle(idx)
+    return X[idx], y[idx]
+
+
+def k_fold_cross_validation_sets(X, y, k, shuffle=True):
+    """ Split the data into k sets of training / test data """
+    if shuffle:
+        X, y = shuffle_data(X, y)
+
+    n_samples = len(y)
+    left_overs = {}
+    n_left_overs = (n_samples % k)
+    if n_left_overs != 0:
+        left_overs["X"] = X[-n_left_overs:]
+        left_overs["y"] = y[-n_left_overs:]
+        X = X[:-n_left_overs]
+        y = y[:-n_left_overs]
+
+    X_split = np.split(X, k)
+    y_split = np.split(y, k)
+    sets = []
+    for i in range(k):
+        X_test, y_test = X_split[i], y_split[i]
+        X_train = np.concatenate(X_split[:i] + X_split[i + 1:], axis=0)
+        y_train = np.concatenate(y_split[:i] + y_split[i + 1:], axis=0)
+        sets.append([X_train, X_test, y_train, y_test])
+
+    # Add left over samples to last set as training samples
+    if n_left_overs != 0:
+        np.append(sets[-1][0], left_overs["X"], axis=0)
+        np.append(sets[-1][2], left_overs["y"], axis=0)
+
+    return np.array(sets)

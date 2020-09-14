@@ -3,3 +3,4 @@ from .decision_tree import RegressionTree, ClassificationTree, XGBoostRegression
 from .support_vector_machine import SVM
 from .gradient_boosting import GradientBoostingClassifier, GradientBoostingRegressor
 from .xgboost import XGBoost
+from .regression import PolynominalRidgeRegression
