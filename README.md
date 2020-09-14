@@ -41,3 +41,18 @@ efficient as possible
 <p align="center">
 <img src="/images/svm.png">
 </p>
+
+### Decision Tree for Classification
+<p align="center">
+<img src="/images/decision_tree_classification.png">
+</p>
+
+### Decision Tree for Regression
+<p align="center">
+<img src="/images/decision_tree_regression.png">
+</p>
+
+### Xgboost
+<p align="center">
+<img src="/images/xgb.png">
+</p>
