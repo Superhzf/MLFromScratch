@@ -34,3 +34,10 @@ efficient as possible
 ## Unsupervised Learning
 
 - [Generative Adversarial Network](https://github.com/Superhzf/MLFromScratch/blob/master/numpy_ml/unsupervised_learning/generative_adversarial_network.py)
+
+# Examples
+
+### SVM
+<p align="center">
+<img src="/images/svm.png">
+</p>
