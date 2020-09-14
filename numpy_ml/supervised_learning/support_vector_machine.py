@@ -17,7 +17,7 @@ import numpy as np
 # However, logistic regression has some assumptions: observations are independent
 # to each other; little or no multicollinearity among the independent variables;
 # linear relationship between log odds and independnet variables.
-# 
+#
 class SVM():
     """
     An implementation of SVM algorithm using the Sequential Minimal Optimization
@@ -166,6 +166,7 @@ class SVM():
                     if this_change > 0:
                         num_changed += this_change
                         continue
+                # Loop through non-zero and non-C alphas
                 i_candidate_list = np.where((alpha != 0) & (alpha != self.C))[0]
                 for i in i_candidate_list:
                     this_change = self._take_one_step(i, j, kernel, alpha)
@@ -173,6 +174,7 @@ class SVM():
                         num_changed += this_change
                         continue
 
+                # loop through all alphas
                 for i in range(self.n):
                     this_change = self._take_one_step(i, j, kernel, alpha)
                     if this_change > 0:
