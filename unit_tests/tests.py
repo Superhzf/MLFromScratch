@@ -2,15 +2,15 @@ import sys
 sys.path.append('..')
 import numpy as np
 from sklearn.metrics import log_loss
-from .helpers import random_one_hot_matrix, random_stochastic_matrix
+from .helpers import random_one_hot_matrix, random_stochastic_matrix,random_tensor
 from numpy_ml.deep_learning.loss_functions import BinaryCrossEntropy
 from numpy.testing import assert_almost_equal
 import torch.nn as nn
 import torch
-from .conftest import test_log
+from numpy_ml.deep_learning.activation_functions import Sigmoid
 
 
-def test_cross_entropy(cases):
+def test_binary_cross_entropy(cases):
     np.random.seed(12346)
 
     cases = int(cases)
@@ -48,4 +48,30 @@ def test_cross_entropy(cases):
         # compare backward value
         assert_almost_equal(mine.gradient(y, y_pred), y_pred_tensor.grad)
 
+        i += 1
+
+def test_sigmoid_activation(cases):
+
+    N = int(cases)
+
+    mine = Sigmoid()
+    gold = nn.Sigmoid()
+
+    i = 0
+    while i < N:
+        n_dims = np.random.randint(1, 100)
+        z = random_tensor((1, n_dims))
+        z_tensor = torch.tensor(z,requires_grad=True)
+
+        gold_output = gold(z_tensor)
+        my_output = mine(z)
+        # sum up the output value of sigmoid as the loss function
+        loss = torch.sum(gold_output)
+        loss.backward()
+        # compare forward
+        assert_almost_equal(my_output, gold_output.detach().numpy())
+        # compare backward
+        assert_almost_equal(mine.gradient(z), z_tensor.grad)
+
+        print("PASSED")
         i += 1
