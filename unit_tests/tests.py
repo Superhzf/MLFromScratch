@@ -7,7 +7,7 @@ from numpy_ml.deep_learning.loss_functions import BinaryCrossEntropy
 from numpy.testing import assert_almost_equal
 import torch.nn as nn
 import torch
-from numpy_ml.deep_learning.activation_functions import Sigmoid
+from numpy_ml.deep_learning.activation_functions import Sigmoid, Softmax
 
 
 def test_binary_cross_entropy(cases):
@@ -49,6 +49,8 @@ def test_binary_cross_entropy(cases):
         assert_almost_equal(mine.gradient(y, y_pred), y_pred_tensor.grad)
 
         i += 1
+    print ()
+    print (' Finish testing binary cross entropy function!')
 
 def test_sigmoid_activation(cases):
 
@@ -72,6 +74,32 @@ def test_sigmoid_activation(cases):
         assert_almost_equal(my_output, gold_output.detach().numpy())
         # compare backward
         assert_almost_equal(mine.gradient(z), z_tensor.grad)
-
-        print("PASSED")
         i += 1
+    print ('Finish testing Sigmoid!')
+
+def test_softmax_activation(cases):
+    N = int(cases)
+
+    np.random.seed(12345)
+
+    mine = Softmax()
+    gold = nn.Softmax(dim=1)
+
+    i = 0
+    while i < N:
+        n_dims = np.random.randint(1, 100)
+        z = random_stochastic_matrix(1, n_dims)
+        z_tensor = torch.tensor(z,requires_grad=True)
+
+        # let sum function as the loss function
+        loss_tensor = torch.sum(z_tensor)
+        loss_tensor.backward()
+        gold_value = gold(z_tensor)
+        mine_value = mine(z)
+        # compare forward value
+        assert_almost_equal(mine_value, gold_value.detach().numpy())
+        # compare backward value
+        assert_almost_equal(mine.gradient(z), z_tensor.grad)
+        i += 1
+
+    print ('Finish testing Softmax function!')
