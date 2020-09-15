@@ -34,9 +34,9 @@ class Dense(Layer):
     Parameters:
     -------------------
     n_units: int
-        The number of neurons in the layer.
+        The number of neurons in the layer. It is also called n_out in other packages
     input_shape: tuple
-        The expected shape of the weight matrix
+        The expected shape of the weight matrix. input_shape[0] is the the number of features.
     """
     def __init__(self,n_units,input_shape=None):
         self.input_shape = input_shape
@@ -62,7 +62,7 @@ class Dense(Layer):
 
     def forward_pass(self,X,training=True):
         self.layer_input = X
-        return X.dot(self.W)+self.b # Z = W*A + b
+        return X.dot(self.W)+self.b # Z = X*W + b
 
     def backward_pass(self,accum_grad):
         # accum_grad = dZ_curr
