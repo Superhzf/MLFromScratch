@@ -8,7 +8,7 @@ from numpy.testing import assert_almost_equal
 import torch.nn as nn
 import torch
 from numpy_ml.deep_learning.activation_functions import Sigmoid, Softmax, ReLU, LeakyReLU, TanH
-from numpy_ml.deep_learning.layers import Dense, Embedding
+from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization
 
 
 def test_binary_cross_entropy(cases):
@@ -297,3 +297,53 @@ def test_Embedding(cases):
         assert_almost_equal(mine_value, gold_value.detach().numpy(), decimal=decimal)
         i += 1
     print ('Successfully testing embedding layer!')
+
+def test_BatchNorm(cases):
+
+    np.random.seed(12345)
+
+    N = int(cases)
+
+    np.random.seed(12345)
+    decimal=4
+
+    i = 1
+    while i < N + 1:
+        n_ex = np.random.randint(2, 1000)
+        n_in = np.random.randint(1, 1000)
+
+        X = random_tensor((n_ex, n_in), standardize=True)
+        X_tensor = torch.tensor(X,dtype=torch.float, requires_grad=True)
+
+        # initialize BatchNorm layer
+        gold = nn.BatchNorm1d(num_features=n_in, momentum=0.6)
+        mine = BatchNormalization(momentum=1-0.6, input_shape=np.array([n_in,]))
+        mine.trainable=True
+        mine.initialize(None)
+
+        # forward prop
+        gold_value = gold(X_tensor)
+        mine_value = mine.forward_pass(X)
+
+        # loss
+        gold_loss = torch.square(gold_value).sum()/2.
+        gold_loss.backward()
+
+        # backprop
+        gold_dLdgamma=gold.weight.grad
+        gold_dLdbeta = gold.bias.grad
+        gold_dLdX = X_tensor.grad.detach().numpy()
+
+        dLdX = mine.backward_pass(mine_value)
+        dLdgama = mine.grad_gamma
+        dLdbeta = mine.beta
+
+        # compare forward
+        assert_almost_equal(mine_value, gold_value.detach().numpy(), decimal=decimal)
+        # compare backward
+        assert_almost_equal(dLdX, gold_dLdX, decimal=decimal)
+        assert_almost_equal(dLdgama, gold_dLdgamma, decimal=decimal)
+        assert_almost_equal(dLdbeta, gold_dLdbeta, decimal=decimal)
+        i += 1
+
+    print ('Successfully testing bacth normalization layer!')

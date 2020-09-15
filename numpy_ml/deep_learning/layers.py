@@ -100,12 +100,13 @@ class Dense(Layer):
 # Also, the mean and var are learned across the training
 class BatchNormalization(Layer):
     """Batch Normalization"""
-    def __init__(self,momentum = 0.99):
+    def __init__(self,momentum = 0.99, input_shape=None):
         self.momentum = momentum
         self.trainable = True
-        self.eps = 0.01
+        self.eps = 1e-05
         self.running_mean = None
         self.running_var = None
+        self.input_shape=input_shape
 
     def initialize(self,optimizer):
         # Initialize the parameters
@@ -150,13 +151,14 @@ class BatchNormalization(Layer):
         # save parameters used during the forward pass
         gamma = self.gamma
 
-        # if the layer is trainable, updatet the parameters
+        # if the layer is trainable, update the parameters
         if self.trainable:
             X_norm = self.X_centered*self.stddev_inv
-            grad_gamma = np.sum(accum_grad*X_norm,axis=0)
-            grad_beta = np.sum(accum_grad,axis=0)
-            self.gamma = self.gamma_opt.update(self.gamma, grad_gamma)
-            self.beta = self.beta_opt.update(self.beta, grad_beta)
+            self.grad_gamma = np.sum(accum_grad*X_norm,axis=0)
+            self.grad_beta = np.sum(accum_grad,axis=0)
+            if self.gamma_opt is not None and self.beta_opt is not None:
+                self.gamma = self.gamma_opt.update(self.gamma, self.grad_gamma)
+                self.beta = self.beta_opt.update(self.beta, self.grad_beta)
 
         batch_size = accum_grad.shape[0]
 
