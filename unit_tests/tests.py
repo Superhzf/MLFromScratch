@@ -169,3 +169,33 @@ def test_leakyrelu_activation(cases):
         i += 1
 
     print ('Successfully testing LeakyReLU function!')
+
+def test_tanh_activation(cases):
+
+    N = int(cases)
+
+    i = 0
+    while i < N:
+        n_dims = np.random.randint(1, 100)
+        z = random_tensor((1, n_dims))
+        z_tensor = torch.tensor(z,requires_grad=True)
+        z_tensor.retain_grad()
+
+        mine = TanH()
+        gold = nn.Tanh()
+
+        gold_value = gold(z_tensor)
+        gold_value.retain_grad()
+
+        loss_tensor = torch.square(gold_value).sum()/2.
+        loss_tensor.backward()
+
+        gold_grad = z_tensor.grad
+        mine_value = mine(z)
+
+        # compare forward
+        assert_almost_equal(mine_value, gold_value.detach().numpy())
+        # compare backward
+        assert_almost_equal(mine.gradient(z)*gold_value.grad.numpy(), gold_grad)
+        i += 1
+    print ('Successfully testing TanH function!')
