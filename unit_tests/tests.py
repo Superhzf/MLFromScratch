@@ -1,42 +1,51 @@
-from numpy_ml.deep_learning.loss_functions import VAELoss
+import sys
+sys.path.append('..')
+import numpy as np
+from sklearn.metrics import log_loss
+from .helpers import random_one_hot_matrix, random_stochastic_matrix
+from numpy_ml.deep_learning.loss_functions import BinaryCrossEntropy
+from numpy.testing import assert_almost_equal
+import torch.nn as nn
+import torch
+from .conftest import test_log
 
-def test_VAE_loss(N=15):
-    np.random.seed(12345)
 
-    N = np.inf if N is None else N
-    eps = np.finfo(float).eps
+def test_cross_entropy(cases):
+    np.random.seed(12346)
 
+    cases = int(cases)
+
+    mine = BinaryCrossEntropy()
+    gold = nn.BCELoss(reduction='sum')
+
+    # ensure we get 0 when the two arrays are equal
+    n_classes = 2
+    n_examples = np.random.randint(1, 1000)
+    y = y_pred = random_one_hot_matrix(n_examples, n_classes)
+    y_tensor = torch.tensor(y)
+
+    y_pred_tensor = torch.tensor(y_pred)
+    assert_almost_equal(mine.loss(y, y_pred), gold(y_tensor, y_pred_tensor))
+
+    # test on random inputs
     i = 1
-    while i < N:
-        n_ex = np.random.randint(1, 10)
-        t_dim = np.random.randint(2, 10)
-        t_mean = random_tensor([n_ex, t_dim], standardize=True)
-        t_log_var = np.log(np.abs(random_tensor([n_ex, t_dim], standardize=True) + eps))
-        im_cols, im_rows = np.random.randint(2, 40), np.random.randint(2, 40)
-        X = np.random.rand(n_ex, im_rows * im_cols)
-        X_recon = np.random.rand(n_ex, im_rows * im_cols)
 
-        mine = VAELoss()
-        mine_loss = np.mean(mine.loss(X, X_recon, t_mean, t_log_var))
+    while i < cases:
+        n_classes = 2
+        n_examples = np.random.randint(1, 10)
 
-        dX_recon, dMean, dLogVar = mine.gradient(X, X_recon, t_mean, t_log_var)
-        golds = TorchVAELoss().extract_grads(X, X_recon, t_mean, t_log_var)
+        y = random_one_hot_matrix(n_examples, n_classes)
+        y_tensor = torch.tensor(y)
 
-        params = [
-            (mine_loss, "loss"),
-            (dX_recon, "dX_recon"),
-            (dLogVar, "dt_log_var"),
-            (dMean, "dt_mean"),
-        ]
-        print("\nTrial {}".format(i))
-        for ix, (mine, label) in enumerate(params):
-            np.testing.assert_allclose(
-                mine,
-                golds[label],
-                err_msg=err_fmt(params, golds, ix),
-                rtol=1e-5,
-                atol=1e-5,
-            )
-            print("\tPASSED {}".format(label))
+        y_pred = random_stochastic_matrix(n_examples, n_classes)
+        y_pred_tensor = torch.tensor(y_pred, requires_grad=True)
+        y_pred_tensor.retain_grad()
+
+        gold_value = gold(y_pred_tensor,y_tensor)
+        gold_value.backward()
+        # compare forward value
+        assert_almost_equal(np.sum(mine.loss(y, y_pred)), gold_value.detach().numpy())
+        # compare backward value
+        assert_almost_equal(mine.gradient(y, y_pred), y_pred_tensor.grad)
+
         i += 1
-test_VAE_loss(10)
