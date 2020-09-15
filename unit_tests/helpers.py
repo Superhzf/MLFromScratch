@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 # credits go to https://github.com/ddbourgin/numpy-ml/blob/master/numpy_ml/tests/nn_torch_models.py
+# I adjust the test and helper functions based on ddbourgin's work
 def random_one_hot_matrix(n_examples, n_classes):
     """Create a random one-hot matrix of shape (`n_examples`, `n_classes`)"""
     X = np.eye(n_classes)

@@ -8,7 +8,7 @@ from numpy.testing import assert_almost_equal
 import torch.nn as nn
 import torch
 from numpy_ml.deep_learning.activation_functions import Sigmoid, Softmax, ReLU, LeakyReLU, TanH
-from numpy_ml.deep_learning.layers import Dense
+from numpy_ml.deep_learning.layers import Dense, Embedding
 
 
 def test_binary_cross_entropy(cases):
@@ -255,3 +255,45 @@ def test_FullyConnected(cases):
         i += 1
 
     print ('Successfully testing fully connected layer!')
+
+def test_Embedding(cases):
+
+    np.random.seed(12345)
+
+    N = int(cases)
+    decimal=5
+    i = 1
+    while i < N + 1:
+        vocab_size = np.random.randint(1, 2000)
+        n_ex = np.random.randint(1, 100)
+        n_in = np.random.randint(1, 100)
+        emb_dim = np.random.randint(1, 100)
+
+        X = np.random.randint(0, vocab_size, (n_ex, n_in))
+        X_tensor = torch.LongTensor(X)
+
+
+        # initialize Embedding layer
+        mine = Embedding(n_out=emb_dim, vocab_size=vocab_size)
+        mine.initialize(None)
+        mine.trainable = False
+        gold = nn.Embedding(num_embeddings=vocab_size, embedding_dim=emb_dim)
+
+        # Adjust parameters to make them share the same set of weights
+        mine.W = gold.weight.detach().numpy()
+
+        # forward prop
+        mine_value = mine.forward_pass(X)
+        gold_value = gold(X_tensor)
+
+        # loss
+        gold_loss = torch.square(gold_value).sum()/2.
+        gold_loss.backward()
+        # backward prop
+        gold_dLdW = gold.weight.grad
+        mine.backward_pass(mine_value)
+        dLdW = mine.grad_W
+        # For embedding, normally we don't have to calculate dLdX
+        assert_almost_equal(mine_value, gold_value.detach().numpy(), decimal=decimal)
+        i += 1
+    print ('Successfully testing embedding layer!')
