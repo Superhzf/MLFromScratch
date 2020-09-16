@@ -108,3 +108,5 @@ venv.bak/
 *.ipynb
 *.csv
 data
+
+general_notes/
