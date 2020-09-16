@@ -30,6 +30,18 @@ efficient as possible
   * RNN Layer: many-to-many
   * RNN Layer: many-to-one
   * LSTM ayer
+- [Loss Functions](https://github.com/Superhzf/MLFromScratch/blob/master/numpy_ml/deep_learning/loss_functions.py)
+
+  * Cross Entropy
+  * Loss for VAE
+  * BinomialDeviance
+- [Optimizer](https://github.com/Superhzf/MLFromScratch/blob/master/numpy_ml/deep_learning/optimizers.py)
+
+  * SGD with momentum
+  * RMSprop
+  * Adagrad
+  * Adadelta
+  * Adam
 
 ## Unsupervised Learning
 
@@ -71,3 +83,5 @@ efficient as possible
 <p align="center">
     The result of unit test for different parts of deep learning
 </p>
+
+[unit test page]()
