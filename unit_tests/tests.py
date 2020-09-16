@@ -51,7 +51,6 @@ def test_binary_cross_entropy(cases):
         assert_almost_equal(mine.gradient(y, y_pred), y_pred_tensor.grad)
 
         i += 1
-    print ()
     print (' Successfully testing binary cross entropy function!')
 
 def test_sigmoid_activation(cases):
