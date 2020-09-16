@@ -424,3 +424,4 @@ def test_SGD_momentum(cases):
             assert_almost_equal(mine_weight, gold_weight.transpose(),decimal=decimal)
             assert_almost_equal(mine_bias, gold_bias[None,:],decimal=decimal)
         i += 1
+    print ('Successfully testing SGD optimizer!')

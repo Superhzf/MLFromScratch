@@ -15,13 +15,7 @@ class StochasticGradientDescent():
 
     # ref: https://cs231n.github.io/neural-networks-3/
     def update(self,w,grad_wrt_w):
-        # print ('initial weight')
-        # print (w)
-        # print ('dw')
-        # print (grad_wrt_w)
-        # if not initialized
         if self.w_update is None:
-            # self.w_update = np.zeros(np.shape(w))
             self.w_update = grad_wrt_w.copy()
         else:
             # Use momentum if set
@@ -31,11 +25,6 @@ class StochasticGradientDescent():
             grad_wrt_w = grad_wrt_w + self.momentum * self.w_update
         else:
             grad_wrt_w = self.w_update
-        # grad_wrt_w = self.w_update
-        # print ('initial wwww')
-        # print (w)
-        # print ('dwwww')
-        # print (grad_wrt_w)
         return w - self.learning_rate * grad_wrt_w
 
 # why RMSprop?
