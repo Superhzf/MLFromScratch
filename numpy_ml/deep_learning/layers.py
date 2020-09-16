@@ -67,7 +67,7 @@ class Dense(Layer):
     def backward_pass(self,accum_grad):
         # accum_grad = dZ_curr
         # Save weights used during forward pass
-        W = self.W
+        W = self.W.copy()
 
         # Calculate gradient w.r.t layer weights
         self.dw = self.layer_input.T.dot(accum_grad)
