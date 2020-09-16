@@ -5,3 +5,11 @@ This is the part for unit test mainly for deep learning. The main reason that I 
 The ground truth of unit tests are based on [PyTorch](https://pytorch.org/) assuming the work of [PyTorch](https://pytorch.org/) is fully correct.
 
 # How to run the tests
+
+The test tool is [PyTest](https://docs.pytest.org/en/stable/).
+
+Usage:
+In the current folder, run:
+```
+pytest -s tests.py
+```
