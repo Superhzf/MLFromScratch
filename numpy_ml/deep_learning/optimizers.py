@@ -58,10 +58,10 @@ class RMSprop():
 # The downside of adagrad is that the learning rate becomes smaller and smaller
 # and finally could stop, this won't work for saddle points
 class Adagrad():
-    def __init__(self,learning_rate=0.01):
+    def __init__(self,learning_rate=0.01, eps=1e-10):
         self.learning_rate = learning_rate
         self.G = None # sum of squares of the gradients
-        self.eps = 1e-8
+        self.eps = eps
 
     def update(self,w,grad_wrt_w):
         # If not initialized
@@ -72,7 +72,7 @@ class Adagrad():
         # Adaptive gradient with higher learning_rate for sparse data
         # If the feature is missing, then self.G becomes relatively smaller
         # and the step is relatively larger
-        return w-self.learning_rate*grad_wrt_w/np.sqrt(self.G+self.eps)
+        return w-self.learning_rate*grad_wrt_w/(np.sqrt(self.G)+self.eps)
 
 # The inspiration of adadelta is to avoid monotonically decreasing learning rate
 class Adadelta():
