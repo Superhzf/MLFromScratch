@@ -1,10 +1,6 @@
 import numpy as np
 
 # ref: http://web.cs.iastate.edu/~honavar/smo-svm.pdf
-# The idea of SMO:
-# 1. Optimize two variables (alpha1 and alpha2) at a time, the reason for optimizing
-# two variables is that sum of alpha_i * y_i == 0
-# 2. There is a closed form updates which makes the update really fast
 
 # Q: what is the difference between SVM and logistic regression?
 # A: 1. LR optimizes the likelihood. SVM is much more geometrically motivated.
