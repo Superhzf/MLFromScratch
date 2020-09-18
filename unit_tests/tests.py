@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch
 from numpy_ml.deep_learning.activation_functions import Sigmoid, Softmax, ReLU, LeakyReLU, TanH
 from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization
-from numpy_ml.deep_learning.optimizers import StochasticGradientDescent
+from numpy_ml.deep_learning.optimizers import StochasticGradientDescent, Adagrad, RMSprop
 
 
 def test_binary_cross_entropy(cases):
@@ -497,3 +497,77 @@ def test_Adagrad(cases):
             assert_almost_equal(mine_bias, gold_bias[None,:],decimal=decimal)
         i += 1
     print ('Successfully testing Adagrad optimizer!')
+
+def test_RMSprop(cases):
+    """
+    The idea is to do one epoch training and the compare the weights and bias. This test depends on
+    fully connected layers, and fully connected layer has been tested.
+    """
+
+    np.random.seed(12345)
+
+    N = int(cases)
+
+    decimal = 4
+    LR = 0.05
+    ALPHA=0.99
+    EPOCHS = 2
+
+    i = 1
+    while i < N + 1:
+        n_ex = np.random.randint(1, 100)
+        n_in = np.random.randint(1, 100)
+        n_out = np.random.randint(1, 100)
+
+        X = random_tensor((n_ex, n_in), standardize=True)
+        X_tensor = torch.tensor(X,dtype=torch.float, requires_grad=True)
+
+        # initialize FC layer
+        model = nn.Linear(in_features=n_in, out_features=n_out, bias=True)
+
+        mine = Dense(n_units = n_out, input_shape=(n_in,))
+
+        # initialize the SGD optimizer
+        optimizer = torch.optim.RMSprop(model.parameters(), lr=LR, alpha=ALPHA)
+        mine_optim = RMSprop(learning_rate=LR,rho=ALPHA)
+
+        mine.trainable=True
+        mine.initialize(mine_optim)
+
+
+        # Adjust parameters to make them share the same set of weights and bias
+        # we have to make a copy of the value, otherwise it will be changed to the updated one
+        mine.W = model.weight.detach().numpy().transpose().copy()
+        mine.b = model.bias.detach().numpy()[None,:].copy()
+        gold_initial_weight = model.weight.detach().numpy().copy()
+
+        # make sure initial weights are the same
+        assert_almost_equal(mine.W, model.weight.detach().numpy().transpose(),decimal=decimal)
+        assert_almost_equal(mine.b, model.bias.detach().numpy()[None,:],decimal=decimal)
+
+        for this_epoch in range(EPOCHS):
+            optimizer.zero_grad()
+            # forward prop
+            model_value = model(X_tensor)
+            mine_value = mine.forward_pass(X)
+            # loss
+            # a fake loss function, the target of it is just returning a single value and it should have gradients
+            model_loss = torch.square(model_value).sum()/2.
+
+            # backward prop
+            model_loss.backward()
+            optimizer.step()
+
+            gold_weight = model.weight.detach().numpy()
+            gold_bias = model.bias.detach().numpy()
+
+            _ = mine.backward_pass(mine_value)
+
+            mine_weight = mine.W
+            mine_bias = mine.b
+
+            # make comparison
+            assert_almost_equal(mine_weight, gold_weight.transpose(),decimal=decimal)
+            assert_almost_equal(mine_bias, gold_bias[None,:],decimal=decimal)
+        i += 1
+    print('Successfully testing RMSprop optimizer!')
