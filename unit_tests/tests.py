@@ -8,7 +8,7 @@ from numpy.testing import assert_almost_equal
 import torch.nn as nn
 import torch
 from numpy_ml.deep_learning.activation_functions import Sigmoid, Softmax, ReLU, LeakyReLU, TanH
-from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization
+from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization, RNNCell
 from numpy_ml.deep_learning.optimizers import StochasticGradientDescent, Adagrad, RMSprop, Adadelta, Adam
 
 
@@ -219,7 +219,7 @@ def test_FullyConnected(cases):
 
         # initialize FC layer
         gold = nn.Linear(in_features=n_in, out_features=n_out, bias=True)
-        mine = Dense(n_units = n_out, input_shape=(n_in,))
+        mine = Dense(n_units = n_out, input_shape=(n_in,n_in))
         # Do not allow the weights to be updated
         mine.trainable=False
         mine.initialize(None)
@@ -375,7 +375,7 @@ def test_SGD_momentum(cases):
         # initialize FC layer
         model = nn.Linear(in_features=n_in, out_features=n_out, bias=True)
 
-        mine = Dense(n_units = n_out, input_shape=(n_in,))
+        mine = Dense(n_units = n_out, input_shape=(n_ex, n_in))
 
         # initialize the SGD optimizer
         optimizer = torch.optim.SGD(model.parameters(),
@@ -451,7 +451,7 @@ def test_Adagrad(cases):
         # initialize FC layer
         model = nn.Linear(in_features=n_in, out_features=n_out, bias=True)
 
-        mine = Dense(n_units = n_out, input_shape=(n_in,))
+        mine = Dense(n_units = n_out, input_shape=(n_ex, n_in))
 
         # initialize the SGD optimizer
         optimizer = torch.optim.Adagrad(model.parameters(), lr=LR)
@@ -525,7 +525,7 @@ def test_RMSprop(cases):
         # initialize FC layer
         model = nn.Linear(in_features=n_in, out_features=n_out, bias=True)
 
-        mine = Dense(n_units = n_out, input_shape=(n_in,))
+        mine = Dense(n_units = n_out, input_shape=(n_ex, n_in))
 
         # initialize the SGD optimizer
         optimizer = torch.optim.RMSprop(model.parameters(), lr=LR, alpha=ALPHA)
@@ -598,7 +598,7 @@ def test_Adadelta(cases):
         # initialize FC layer
         model = nn.Linear(in_features=n_in, out_features=n_out, bias=True)
 
-        mine = Dense(n_units = n_out, input_shape=(n_in,))
+        mine = Dense(n_units = n_out, input_shape=(n_ex, n_in))
 
         # initialize the SGD optimizer
         optimizer = torch.optim.Adadelta(model.parameters(), rho=ALPHA)
@@ -674,7 +674,7 @@ def test_Adam(cases):
         # initialize FC layer
         model = nn.Linear(in_features=n_in, out_features=n_out, bias=True)
 
-        mine = Dense(n_units = n_out, input_shape=(n_in,))
+        mine = Dense(n_units = n_out, input_shape=(n_ex, n_in))
 
         # initialize the SGD optimizer
         optimizer = torch.optim.Adam(model.parameters(), lr=LR, betas=(b1, b2))
@@ -720,3 +720,68 @@ def test_Adam(cases):
             assert_almost_equal(mine_bias, gold_bias[None,:],decimal=decimal)
         i += 1
     print('Successfully testing Adam optimizer!')
+
+def test_RNNCell(cases):
+
+    np.random.seed(12345)
+
+    N = int(cases)
+
+    decimal = 5
+
+    i = 1
+    while i < N + 1:
+        n_ex = np.random.randint(1, 100)
+        n_in = np.random.randint(1, 100)
+        n_out = np.random.randint(1, 100)
+        X = random_tensor((n_ex, n_in), standardize=True)
+        X_tensor = torch.tensor(X,dtype=torch.float, requires_grad=True)
+        print ("n_ex",n_ex,"n_in",n_in,"n_out",n_out)
+
+        # initialize FC layer
+        gold = nn.RNNCell(input_size=n_in, hidden_size=n_out, bias=True)
+        mine = RNNCell(n_units = n_out, activation='tanh',input_shape=(n_ex,n_in))
+        # Do not allow the weights to be updated
+        mine.trainable=False
+        mine.initialize(None)
+
+        # Adjust parameters to make them share the same set of weights and bias
+        mine.W_i = gold.weight_ih.detach().numpy().transpose()
+        mine.b_i = gold.bias_ih.detach().numpy()[None,:]
+
+        mine.W_p = gold.weight_hh.detach().numpy().transpose()
+        mine.b_p = gold.bias_hh.detach().numpy()[None,:]
+
+        # forward prop
+        gold_value = gold(X_tensor)
+        mine_value = mine.forward_pass(X)
+
+
+        # loss
+        gold_loss = torch.square(gold_value).sum()/2.
+        gold_loss.backward()
+
+        # backprop
+        gold_dLdwi = gold.weight_ih.grad.detach().numpy()
+        gold_dLdbi = gold.bias_ih.grad.detach().numpy()
+        gold_dLdWp = gold.weight_hh.grad.detach().numpy()
+        gold_dLdbp = gold.bias_hh.grad.detach().numpy()
+        gold_dLdX = X_tensor.grad.detach().numpy()
+
+        dLdX = mine.backward_pass(mine_value)
+        dLdWi = mine.dW_i
+        dLdbi = mine.db_i
+        dLdWp = mine.dW_p
+        dLdbp = mine.db_p
+
+
+        # compare forward
+        assert_almost_equal(mine_value,gold_value.detach().numpy(),decimal=decimal)
+        # compare backward
+        assert_almost_equal(dLdWi.transpose(), gold_dLdwi,decimal=decimal)
+        assert_almost_equal(dLdbi, gold_dLdbi[None,:],decimal=decimal)
+        assert_almost_equal(dLdWp.transpose(), gold_dLdWp,decimal=decimal)
+        assert_almost_equal(dLdbp, gold_dLdbp[None,:],decimal=decimal)
+        assert_almost_equal(dLdX, gold_dLdX,decimal=decimal)
+        i += 1
+    print ("Successfully testing one RNN cell!")

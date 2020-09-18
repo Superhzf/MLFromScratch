@@ -36,7 +36,7 @@ class Dense(Layer):
     n_units: int
         The number of neurons in the layer. It is also called n_out in other packages
     input_shape: tuple
-        The expected shape of the weight matrix. input_shape[0] is the the number of features.
+        The expected shape of the weight matrix. input_shape[1] is the the number of features.
     """
     def __init__(self,n_units,input_shape=None):
         self.input_shape = input_shape
@@ -50,7 +50,7 @@ class Dense(Layer):
         # TODO: Kaiming initialization
         # Initialize the weights
         limit = 1 / math.sqrt(self.input_shape[0])
-        self.W = np.random.uniform(-limit,limit,(self.input_shape[0],self.n_units))
+        self.W = np.random.uniform(-limit,limit,(self.input_shape[1],self.n_units))
         self.b = np.zeros((1,self.n_units))
         # Weight optimizer
         self.W_opt = copy.copy(optimizer)
@@ -274,6 +274,108 @@ good_act_fn_names = ['relu', 'sigmoid', 'softmax', 'tanh', 'leaky_relu']
 # initialize weights, most of time,we should be fine.
 # Solution: Gradient clipping could help, RNN initialized with identity matrix + ReLU
 # LSTM, advanced optimization
+
+class RNNCell(Layer):
+    """
+    This is the one to one cell.
+    """
+    def __init__(self, n_units, activation='tanh', bptt_trunc=5, input_shape=None):
+        self.input_shape=input_shape
+        self.n_units=n_units
+        self.activation=activation_functions[activation]()
+        self.trainable = True
+        self.bptt_trunc=bptt_trunc
+        self.W_p=None
+        self.W_i=None
+
+    def initialize(self, optimizer):
+        # initialize weights
+        self.X=[]
+        _, input_dim=self.input_shape
+        limit = 1/math.sqrt(input_dim)
+        self.W_i = np.random.uniform(-limit,limit,(input_dim, self.n_units))
+        self.b_i = np.zeros((1,self.n_units))
+        limit = 1/math.sqrt(self.n_units)
+        self.W_p = np.random.uniform(-limit,limit,(self.n_units,self.n_units))
+        self.b_p = np.zeros((1,self.n_units))
+        # initialize optimizers
+        self.W_i_opt = copy.copy(optimizer)
+        self.b_i_opt = copy.copy(optimizer)
+        self.W_p_opt = copy.copy(optimizer)
+        self.b_p_opt = copy.copy(optimizer)
+        # initialize gradients
+        self.dW_i = np.zeros_like(self.W_i)
+        self.db_i = np.zeros_like(self.b_i)
+        self.dW_p = np.zeros_like(self.W_p)
+        self.db_p = np.zeros_like(self.b_p)
+
+        self.derived_variables={
+            "A":[],
+            "Z":[],
+            "n_timesteps":0,
+            "current_step":0,
+            "dLdA_accumulator":None
+        }
+
+
+    def parameters(self):
+        return np.prod(self.W_i.shape)+np.prod(self.W_o.shape)+np.prod(self.W_p.shape)
+
+    def forward_pass(self, Xt):
+        """
+        Xt: np.array of shape (n_ex, n_in), the input at timestemp t with n_ex observations
+        and n_in features
+        """
+        self.derived_variables['n_timesteps']+=1
+        self.derived_variables['current_step']+=1
+
+        As=self.derived_variables["A"]
+        if len(As) == 0:
+            n_ex,  n_in=Xt.shape
+            A0 = np.zeros((n_ex, self.n_units))
+            As.append(A0)
+        # By default, X is a group of batchs
+        Zt = As[-1] @ self.W_p + self.b_p + Xt @ self.W_i + self.b_i
+        At = self.activation(Zt)
+        self.derived_variables["Z"].append(Zt)
+        self.derived_variables["A"].append(At)
+
+        self.X.append(Xt)
+        return At
+
+    def backward_pass(self, dLdAt):
+        self.derived_variables["current_step"] -= 1
+        Zs = self.derived_variables["Z"]
+        As = self.derived_variables["A"]
+        t = self.derived_variables["current_step"]
+        dA_acc = self.derived_variables["dLdA_accumulator"]
+
+        if dA_acc is None:
+            dA_acc = np.zeros_like(As[0])
+
+        dA = dLdAt + dA_acc
+        dZ = self.activation.gradient(Zs[t]) * dA
+        assert dZ.size == Zs[t].size
+        dXt = dZ @ self.W_i.T
+        # print ("dZ",dZ.shape)
+        # print ("self.W_i.T",self.W_i.T.shape)
+        # print ("dXt.shape",dXt.shape)
+        # print ("As[t].shape",As[t].shape)
+        assert dXt.shape == self.X[t].shape
+
+        self.dW_i=self.dW_i+self.dW_i+self.X[t].T @ dZ
+        self.dW_p+=dA_acc.T @ dZ
+        self.db_i=self.db_i + np.sum(dZ, axis=0, keepdims=True)
+        self.db_p=self.db_p + np.sum(dZ, axis=0, keepdims=True)
+        self.derived_variables["dLdA_accumulator"]=dZ@self.dW_p
+        # if self.trainable:
+        #     self.W_i = self.W_i_opt.update(self.W_i,grad_W_i)
+        #     self.W_p = self.W_p_opt.update(self.W_p,grad_W_p)
+
+        return dXt
+
+
+
 
 class many2manyRNN(Layer):
     """
