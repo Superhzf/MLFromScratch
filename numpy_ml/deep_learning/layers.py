@@ -277,13 +277,26 @@ good_act_fn_names = ['relu', 'sigmoid', 'softmax', 'tanh', 'leaky_relu']
 
 class RNNCell(Layer):
     """
-    This is the one to one cell.
+    This is the one to one RNNcell.
+    Formula: https://pytorch.org/docs/stable/generated/torch.nn.RNNCell.html
+
+    Parameters:
+    --------------------------------------
+    n_units: int
+        The number of hidden states in a layer
+    activation: string
+        The name of the activation function which will be applied to the output
+    bptt_trunc: int
+        Decides how many time steps the gradient should be propagated backwards
+    through states given the loss gradient for time step t
+    input_shape: tuple
+        n_ex * n_in. Must be specified if it is the first layer in the network
     """
-    def __init__(self, n_units, activation='tanh', bptt_trunc=5, input_shape=None):
+    def __init__(self, n_units, activation='tanh', bptt_trunc=5, input_shape=None, trainable=True):
         self.input_shape=input_shape
         self.n_units=n_units
         self.activation=activation_functions[activation]()
-        self.trainable = True
+        self.trainable = trainable
         self.bptt_trunc=bptt_trunc
         self.W_p=None
         self.W_i=None
@@ -314,7 +327,7 @@ class RNNCell(Layer):
             "Z":[],
             "n_timesteps":0,
             "current_step":0,
-            "dLdA_accumulator":None
+            "dLdA_accumulator":[]
         }
 
 
@@ -334,7 +347,10 @@ class RNNCell(Layer):
             n_ex,  n_in=Xt.shape
             A0 = np.zeros((n_ex, self.n_units))
             As.append(A0)
-        # By default, X is a group of batchs
+
+        # We only calculate the value of hidden state
+        # Under the condition that it is a many2many problem, refer to:
+        # https://stanford.edu/~shervine/teaching/cs-230/cheatsheet-recurrent-neural-networks
         Zt = As[-1] @ self.W_p + self.b_p + Xt @ self.W_i + self.b_i
         At = self.activation(Zt)
         self.derived_variables["Z"].append(Zt)
@@ -348,33 +364,111 @@ class RNNCell(Layer):
         Zs = self.derived_variables["Z"]
         As = self.derived_variables["A"]
         t = self.derived_variables["current_step"]
+        # dLdA_accumulator is the gradient of loss w.r.t each hidden state
         dA_acc = self.derived_variables["dLdA_accumulator"]
 
-        if dA_acc is None:
-            dA_acc = np.zeros_like(As[0])
+        if len(dA_acc) == 0 :
+            # dA_acc.append(np.zeros_like(As[0]))
+            dA_acc.insert(0, dLdAt)
 
-        dA = dLdAt + dA_acc
+        # dA = dLdAt + dA_acc
+        dA = dLdAt
         dZ = self.activation.gradient(Zs[t]) * dA
         assert dZ.size == Zs[t].size
         dXt = dZ @ self.W_i.T
-        # print ("dZ",dZ.shape)
-        # print ("self.W_i.T",self.W_i.T.shape)
-        # print ("dXt.shape",dXt.shape)
-        # print ("As[t].shape",As[t].shape)
         assert dXt.shape == self.X[t].shape
 
-        self.dW_i=self.dW_i+self.dW_i+self.X[t].T @ dZ
-        self.dW_p+=dA_acc.T @ dZ
+        self.dW_i=self.dW_i+self.X[t].T @ dZ
+        self.dW_p=self.dW_p+As[t].T @ dZ
         self.db_i=self.db_i + np.sum(dZ, axis=0, keepdims=True)
         self.db_p=self.db_p + np.sum(dZ, axis=0, keepdims=True)
-        self.derived_variables["dLdA_accumulator"]=dZ@self.dW_p
-        # if self.trainable:
-        #     self.W_i = self.W_i_opt.update(self.W_i,grad_W_i)
-        #     self.W_p = self.W_p_opt.update(self.W_p,grad_W_p)
+        dLdHidden = dZ@self.W_p.transpose()
+        self.derived_variables["dLdA_accumulator"].insert(0, dLdHidden)
+        return dXt, dLdHidden
 
-        return dXt
+    def update(self):
+        if self.trainable:
+            self.W_i = self.W_i_opt.update(self.W_i,self.dW_i)
+            self.b_i = self.b_i_opt.update(self.b_i,self.db_i)
+            self.W_p = self.W_p_opt.update(self.W_p,self.dW_p)
+            self.b_p = self.b_p_opt.update(self.b_p,self.db_p)
 
+    def output_shape(self):
+        assert 1==0, "This function has not been implemented"
 
+class many2oneRNN(Layer):
+    """
+    This is the RNN many to one layer, the use case is sentiment classification
+
+    Parameters:
+    ----------------------
+    n_units: int
+        The number of hidden states in a layer. It might be called n_out in other packages
+    activation: str
+        The name of activation functions. Choices could be relu, sigmoid,
+    softmax, leaky_relu or tanh. The default value is tanh
+    bptt_trunc: int
+        This parameter means how far are dated to for backpropagation through time
+    input_shape: (int, int)
+        The shape of the input, the first int is the number of observations and the second
+    int is the number of features.
+    trainable: bool
+        If true, then parameters will be updated through bptt.
+    """
+    def __init__(self,n_units, activation='tanh', bptt_trunc=5, input_shape=None, trainable=True):
+        self.input_shape=input_shape
+        self.n_units = n_units
+        self.activation = activation
+        self.trainable = True
+        self.bptt_trunc = bptt_trunc
+        self.trainable=trainable
+
+    def initialize(self,optimizer):
+        self.cell = RNNCell(n_units=self.n_units,
+                            activation=self.activation,
+                            bptt_trunc=self.bptt_trunc,
+                            input_shape=self.input_shape,
+                            trainable=self.trainable)
+        self.cell.initialize(optimizer)
+
+    def forward_pass(self, X):
+        """
+        Parameter:
+        ----------------
+        X: of shape (n_ex, n_in, n_t)
+            The input for the forward process of RNN. n_ex shows the number of
+        examples, n_in shows the number of features and n_t shows the number of
+        timesteps.
+
+        Output:
+        -----------------
+        np.dstack(Y): of shape (n_t, n_ex, n_out:
+            The hidden state (or output) at each timestep. Since it is the many to
+        one problem, so probably the output of the last timestep (np.dstack(Y)[-1,:,:])
+        is what you want.
+        """
+        Y = []
+        n_ex, n_in, self.n_t = X.shape
+        for t in range(self.n_t):
+            yt=self.cell.forward_pass(X[:, :, t])
+            Y.append(yt)
+        # The output of each hidden layer
+        # return Y
+        return np.dstack(Y)
+
+    def backward_pass(self, dLdA):
+        dLdX = []
+        for t in reversed(range(self.n_t)):
+            # dLdXt = self.cell.backward_pass(dLdA[:, :, t])
+            dLdXt,dLdHidden_t = self.cell.backward_pass(dLdA)
+            dLdA = dLdHidden_t
+            dLdX.insert(0, dLdXt)
+        dLdX=np.stack(dLdX)
+        self.cell.update()
+        return dLdX
+
+    def output_shape(self):
+        assert 1==0, "This function has not been implemented"
 
 
 class many2manyRNN(Layer):
@@ -394,30 +488,26 @@ class many2manyRNN(Layer):
     input_shape: tuple
         n_units * n_in. Must be specified if it is the first layer in the network
 
-    Reference:
-    http://www.wildml.com/2015/09/recurrent-neural-networks-tutorial-part-2-implementing-a-language-model-rnn-with-python-numpy-and-theano/
     """
-    def __init__(self,n_units,activation='tanh',bptt_trunc=5,input_shape=None):
+    def __init__(self,n_units, activation='tanh', bptt_trunc=5, input_shape=None):
         self.input_shape=input_shape
         self.n_units = n_units
         self.activation = activation_functions[activation]()
         self.trainable = True
         self.bptt_trunc = bptt_trunc
         self.W_p = None # Weight of the previous state
-        self.W_o = None # Weight of the output
         self.W_i = None # Weight of the input
 
     def initialize(self,optimizer):
         _,input_dim = self.input_shape
         # Initialize the weights
         limit = 1/math.sqrt(input_dim)
-        self.W_i = np.random.uniform(-limit,limit,(self.n_units,input_dim))
+        self.W_i = np.random.uniform(-limit,limit,(input_dim,self.n_units))
         limit = 1/math.sqrt(self.n_units)
         # TODO: This is not correct, the first dimension of self.W_o should be
         # n_units. Even worse, self.W_o could be removed, it is just another
         # dense layer which is not a must. It passed the test because input_dim
         # == n_units in the test case
-        self.W_o = np.random.uniform(-limit,limit,(input_dim,self.n_units))
         self.W_p = np.random.uniform(-limit,limit,(self.n_units,self.n_units))
         # weight optimizers
         self.W_i_opt = copy.copy(optimizer)
@@ -487,90 +577,6 @@ class many2manyRNN(Layer):
 
     def output_shape(self):
         # TODO: this seems to be not correct, it should be self.n_units
-        return self.input_shape
-
-
-class many2oneRNN(Layer):
-    # TODO: refactor by removing output_dim arguments becuase output_dim == input_shape[0]
-    #  == n_units
-    def __init__(self,n_units,activation='tanh', output_dim=None,input_shape=None):
-        self.input_shape=input_shape
-        self.n_units = n_units
-        self.activation = activation_functions[activation]()
-        self.trainable = True
-        self.output_dim = output_dim
-        self.W_p = None # Weight of the previous state
-        self.W_o = None # Weight of the output
-        self.W_i = None # Weight of the input
-
-    def initialize(self,optimizer):
-        _,feature_dim = self.input_shape
-        # Initialize the weights
-        limit = 1/math.sqrt(feature_dim)
-        self.W_i = np.random.uniform(-limit,limit,(self.n_units,feature_dim))
-        limit = 1/math.sqrt(self.n_units)
-        self.W_o = np.random.uniform(-limit,limit,(self.output_dim,self.n_units))
-        self.W_p = np.random.uniform(-limit,limit,(self.n_units,self.n_units))
-        # weight optimizers
-        self.W_i_opt = copy.copy(optimizer)
-        self.W_o_opt = copy.copy(optimizer)
-        self.W_p_opt = copy.copy(optimizer)
-
-    def parameters(self):
-        return np.prod(self.W_i.shape)+np.prod(self.W_o.shape)+np.prod(self.W_p.shape)
-
-    def forward_pass(self,X,training=True):
-
-        self.layer_input = X
-        # By default, X is a group of batchs
-        batch_size, timestamps, feature_size = self.layer_input.shape
-        self.timestamps = timestamps
-        # cache values for use in backprop
-        self.state_input = np.zeros((batch_size, timestamps, self.n_units))
-        self.states = np.zeros((batch_size, timestamps+1, self.n_units))
-        self.outputs = np.zeros((batch_size, self.output_dim))
-
-        # Set last timestamps to zero for calculation of the state_input at time
-        # step zero
-        self.states[:, -1, :] = np.zeros((batch_size,self.n_units))
-
-        for t in range(timestamps):
-            # ref https://www.cs.toronto.edu/~tingwuwang/rnn_tutorial.pdf
-            # All input share self.W_i and self.W_p and self.W_o
-            self.state_input[:, t, :] = X[:,t, :].dot(self.W_i.T)+self.states[:,t-1, :].dot(self.W_p.T)
-            self.states[:,t, :] = self.activation(self.state_input[:,t, :])
-            # Here might need an activation for classification problems
-
-        self.outputs = self.states[:,t, :].dot(self.W_o.T)
-
-        return self.outputs
-
-    def backward_pass(self,accum_grad):
-        # Variables where we save the accumulated gradient w.r.t each parameter
-        grad_W_p = np.zeros_like(self.W_p)
-        grad_W_i = np.zeros_like(self.W_i)
-        grad_W_o = np.zeros_like(self.W_o)
-
-        # Back Propagation through time
-        grad_W_o = accum_grad.T.dot(self.states[:,self.timestamps-1])
-        grad_wrt_state = accum_grad.dot(self.W_o)*self.activation.gradient(self.state_input[:,self.timestamps-1])
-        for t in reversed(range(self.timestamps)):
-            # Update gradient w.r.t W_i and W_p by backprop.
-            grad_W_i += grad_wrt_state.T.dot(self.layer_input[:,t])
-            grad_W_p += grad_wrt_state.T.dot(self.states[:,t-1])
-            # Calculate gradient w.r.t previous state
-            grad_wrt_state=grad_wrt_state.dot(self.W_p)*self.activation.gradient(self.state_input[:,t-1])
-
-        accum_grad_next = grad_wrt_state.dot(self.W_i)
-        # update weights
-        self.W_i = self.W_i_opt.update(self.W_i,grad_W_i)
-        self.W_o = self.W_o_opt.update(self.W_o,grad_W_o)
-        self.W_p = self.W_p_opt.update(self.W_p,grad_W_p)
-
-        return accum_grad_next
-
-    def output_shape(self):
-        # TODO: This seems to be not correct
         return self.input_shape
 
 

@@ -866,4 +866,4 @@ def test_RNN_many2one(cases):
                                 gold_value[this_t].grad,
                                 decimal=decimal)
         i += 1
-        print ('Successfully testing RNN many2one layer!')
+    print ('Successfully testing RNN many2one layer!')
