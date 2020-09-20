@@ -8,7 +8,7 @@ from numpy.testing import assert_almost_equal
 import torch.nn as nn
 import torch
 from numpy_ml.deep_learning.activation_functions import Sigmoid, Softmax, ReLU, LeakyReLU, TanH
-from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization, RNNCell
+from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization, RNNCell, many2oneRNN
 from numpy_ml.deep_learning.optimizers import StochasticGradientDescent, Adagrad, RMSprop, Adadelta, Adam
 
 
@@ -736,7 +736,6 @@ def test_RNNCell(cases):
         n_out = np.random.randint(1, 100)
         X = random_tensor((n_ex, n_in), standardize=True)
         X_tensor = torch.tensor(X,dtype=torch.float, requires_grad=True)
-        print ("n_ex",n_ex,"n_in",n_in,"n_out",n_out)
 
         # initialize FC layer
         gold = nn.RNNCell(input_size=n_in, hidden_size=n_out, bias=True)
@@ -768,7 +767,7 @@ def test_RNNCell(cases):
         gold_dLdbp = gold.bias_hh.grad.detach().numpy()
         gold_dLdX = X_tensor.grad.detach().numpy()
 
-        dLdX = mine.backward_pass(mine_value)
+        dLdX,_ = mine.backward_pass(mine_value)
         dLdWi = mine.dW_i
         dLdbi = mine.db_i
         dLdWp = mine.dW_p
@@ -784,4 +783,87 @@ def test_RNNCell(cases):
         assert_almost_equal(dLdbp, gold_dLdbp[None,:],decimal=decimal)
         assert_almost_equal(dLdX, gold_dLdX,decimal=decimal)
         i += 1
-    print ("Successfully testing one RNN cell!")
+    print ("Successfully testing single RNN cell!")
+
+def test_RNN_many2one(cases):
+
+    np.random.seed(12345)
+    N = int(cases)
+    decimal = 5
+    i = 1
+    while i < N + 1:
+        n_ex = np.random.randint(1, 100)
+        n_in = np.random.randint(1, 100)
+        n_out = np.random.randint(1, 100)
+        n_layer = np.random.randint(2,10)
+        n_t = np.random.randint(1, 10)
+        X = random_tensor((n_ex, n_in, n_t), standardize=True)
+        X_tensor = torch.tensor(X, dtype=torch.float, requires_grad=True)
+
+        # initialize FC layer
+        gold = nn.RNNCell(input_size=n_in, hidden_size=n_out, bias=True)
+        mine = many2oneRNN(n_units = n_out, activation='tanh',input_shape=(n_ex,n_in),trainable=False)
+        # Do not allow the weights to be updated
+        mine.initialize(None)
+
+        # Adjust parameters to make them share the same set of weights and bias
+        mine.cell.W_i = gold.weight_ih.detach().numpy().transpose()
+        mine.cell.b_i = gold.bias_ih.detach().numpy()[None,:]
+
+        mine.cell.W_p = gold.weight_hh.detach().numpy().transpose()
+        mine.cell.b_p = gold.bias_hh.detach().numpy()[None,:]
+
+        # forward prop
+        gold_hidden_val = [] # gold_hidden_val is used to compare the forward progress
+        gold_value = [] # gold_value is used to compare backward progress
+        ht = torch.tensor(np.zeros((n_ex, n_out)), dtype=torch.float, requires_grad=True)
+        ht.retain_grad()
+        for this_t in range(n_t):
+            gold_value += [ht]
+            gold_value_t = gold(input=X_tensor[:,:,this_t], hx=ht)
+            gold_hidden_val.append(gold_value_t.detach().numpy())
+            ht.retain_grad()
+            ht = gold_value_t
+
+        ht.retain_grad()
+        gold_value += [ht]
+
+        gold_hidden_val = np.dstack(gold_hidden_val)
+        mine_value = mine.forward_pass(X)
+
+        # loss
+        gold_loss = torch.square(gold_value[-1]).sum()/2.
+        gold_loss.backward()
+
+        # backprop
+        gold_dLdwi = gold.weight_ih.grad.detach().numpy()
+        gold_dLdbi = gold.bias_ih.grad.detach().numpy()
+        gold_dLdWp = gold.weight_hh.grad.detach().numpy()
+        gold_dLdbp = gold.bias_hh.grad.detach().numpy()
+        gold_dLdX = X_tensor.grad.detach().numpy()
+
+        # we will do many to one backpropagation, considering the loss function the input is mine_value[:,:,-1]
+        dLdX = mine.backward_pass(mine_value[:,:,-1])
+        dLdWi = mine.cell.dW_i
+        dLdbi = mine.cell.db_i
+        dLdWp = mine.cell.dW_p
+        dLdbp = mine.cell.db_p
+
+
+        # compare forward
+        assert_almost_equal(mine_value,gold_hidden_val,decimal=decimal)
+        # compare backward
+        assert_almost_equal(dLdWi.transpose(), gold_dLdwi,decimal=decimal)
+        assert_almost_equal(dLdbi, gold_dLdbi[None,:],decimal=decimal)
+        assert_almost_equal(dLdWp.transpose(), gold_dLdWp,decimal=decimal)
+        assert_almost_equal(dLdbp, gold_dLdbp[None,:],decimal=decimal)
+
+        for this_t in range(n_t):
+            # compare dLdX
+            assert_almost_equal(dLdX[this_t], gold_dLdX[:,:,this_t],decimal=decimal)
+            # compare dLdhidden_state
+            assert_almost_equal(mine.cell.derived_variables['dLdA_accumulator'][this_t],
+                                gold_value[this_t].grad,
+                                decimal=decimal)
+        i += 1
+        print ('Successfully testing RNN many2one layer!')
