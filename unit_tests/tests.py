@@ -8,7 +8,7 @@ from numpy.testing import assert_almost_equal
 import torch.nn as nn
 import torch
 from numpy_ml.deep_learning.activation_functions import Sigmoid, Softmax, ReLU, LeakyReLU, TanH
-from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization, RNNCell, many2oneRNN
+from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization, RNNCell, many2oneRNN, LSTMCell
 from numpy_ml.deep_learning.optimizers import StochasticGradientDescent, Adagrad, RMSprop, Adadelta, Adam
 
 
@@ -867,3 +867,68 @@ def test_RNN_many2one(cases):
                                 decimal=decimal)
         i += 1
     print ('Successfully testing RNN many2one layer!')
+
+def test_LSTMCell(cases):
+
+    np.random.seed(12345)
+    N = int(cases)
+    decimal = 5
+
+    i = 1
+    while i < N + 1:
+        n_ex = np.random.randint(1, 100)
+        n_in = np.random.randint(1, 100)
+        n_out = np.random.randint(1, 100)
+        X = random_tensor((n_ex, n_in), standardize=True)
+        X_tensor = torch.tensor(X,dtype=torch.float, requires_grad=True)
+
+        # initialize FC layer
+        gold = nn.LSTMCell(input_size=n_in, hidden_size=n_out, bias=True)
+        mine = LSTMCell(n_units = n_out, input_shape=(n_ex,n_in))
+        # Do not allow the weights to be updated
+        mine.trainable=False
+        mine.initialize(None)
+
+
+        # Adjust parameters to make them share the same set of weights and bias
+        # Reference on the the shape of weight in PyTorch:
+        # https://pytorch.org/docs/stable/generated/torch.nn.LSTMCell.html
+        mine.W_ih = gold.weight_ih.detach().numpy().transpose()
+        mine.W_hh = gold.weight_hh.detach().numpy().transpose()
+
+        mine.b_ih = gold.bias_ih.detach().numpy()[None,:]
+        mine.b_hh = gold.bias_hh.detach().numpy()[None,:]
+
+        # forward prop
+        gold_hidden, gold_cell = gold(X_tensor)
+        mine_hidden, mine_cell = mine.forward_pass(X)
+
+        # loss
+        gold_loss = torch.square(gold_hidden).sum()/2.
+        gold_loss.backward()
+
+        # backprop
+        gold_dLdwi = gold.weight_ih.grad.detach().numpy()
+        gold_dLdbi = gold.bias_ih.grad.detach().numpy()
+        gold_dLdWh = gold.weight_hh.grad.detach().numpy()
+        gold_dLdbh = gold.bias_hh.grad.detach().numpy()
+        gold_dLdX = X_tensor.grad.detach().numpy()
+
+        dLdX,_ = mine.backward_pass(mine_hidden)
+        dLdWi = mine.dW_ih
+        dLdbi = mine.db_ih
+        dLdWh = mine.dW_hh
+        dLdbh = mine.db_hh
+
+
+        # compare forward
+        assert_almost_equal(mine_hidden,gold_hidden.detach().numpy(),decimal=decimal)
+        assert_almost_equal(mine_cell,gold_cell.detach().numpy(),decimal=decimal)
+        # compare backward
+        assert_almost_equal(dLdWi.transpose(), gold_dLdwi,decimal=decimal)
+        assert_almost_equal(dLdbi, gold_dLdbi[None,:],decimal=decimal)
+        assert_almost_equal(dLdWh.transpose(), gold_dLdWh,decimal=decimal)
+        assert_almost_equal(dLdbh, gold_dLdbh[None,:],decimal=decimal)
+        assert_almost_equal(dLdX, gold_dLdX,decimal=decimal)
+        i += 1
+    print ("Successfully testing a single LSTM cell!")
