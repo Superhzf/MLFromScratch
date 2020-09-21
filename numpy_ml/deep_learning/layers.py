@@ -49,7 +49,7 @@ class Dense(Layer):
     def initialize(self,optimizer):
         # TODO: Kaiming initialization
         # Initialize the weights
-        limit = 1 / math.sqrt(self.input_shape[0])
+        limit = 1 / math.sqrt(self.input_shape[1])
         self.W = np.random.uniform(-limit,limit,(self.input_shape[1],self.n_units))
         self.b = np.zeros((1,self.n_units))
         # Weight optimizer
@@ -665,7 +665,7 @@ class LSTMCell(Layer):
                  gate_fn="sigmoid"):
 
         """
-        A single step of a long short-term memory (LSTM) RNN
+        A single step (one to one) of a long short-term memory (LSTM) RNN
 
         Notes:
         ----------------------
@@ -681,7 +681,7 @@ class LSTMCell(Layer):
         Equations:
             Z[t] = hstack(A[t-1],X[t]) # stack arrays horizontally
             Gf[t] = gate_fn(Wf@Z[t]+bf)
-            Gu[t] = gate_fn(Wu@Z[t]+bu)
+            Gu[t] = gate_fn(Wu@Z[t]+bu) (It is called input gate in PyTorch)
             Go[t] = gate_fn(Wo@Z[t]+bo)
             Cc[t] = act_fn(Wc@Z[t]+bc)
             C[t] = Gf[t]*C[t-1]+Gu[t]*Cc[t]
@@ -708,37 +708,24 @@ class LSTMCell(Layer):
 
     def initialize(self, optimizer):
         self.X = []
-        limit = 1 / math.sqrt(self.input_shape[0])
-        self.Wc = np.random.uniform(-limit,limit, (self.input_shape[0]+self.n_units, self.n_units))
-        self.Wf = np.random.uniform(-limit,limit, (self.input_shape[0]+self.n_units, self.n_units))
-        self.Wo = np.random.uniform(-limit,limit, (self.input_shape[0]+self.n_units, self.n_units))
-        self.Wu = np.random.uniform(-limit,limit, (self.input_shape[0]+self.n_units, self.n_units))
+        limit = 1 / math.sqrt(self.input_shape[1])
+        self.W_ih = np.random.uniform(-limit,limit, (self.input_shape[1],4*self.n_units))
+        self.b_ih = np.zeros((1, 4*self.n_units))
 
-        self.bc = np.zeros((1, self.n_units))
-        self.bf = np.zeros((1, self.n_units))
-        self.bo = np.zeros((1, self.n_units))
-        self.bu = np.zeros((1, self.n_units))
+        self.W_hh = np.random.uniform(-limit,limit, (self.n_units,4*self.n_units))
+        self.b_hh = np.zeros((1, 4*self.n_units))
 
-        self.dWc = np.zeros_like(self.Wc)
-        self.dWf = np.zeros_like(self.Wf)
-        self.dWo = np.zeros_like(self.Wo)
-        self.dWu = np.zeros_like(self.Wu)
+        self.dW_ih = np.zeros_like(self.W_ih)
+        self.db_ih = np.zeros_like(self.b_ih)
 
-        self.dbc = np.zeros_like(self.bc)
-        self.dbf = np.zeros_like(self.bf)
-        self.dbo = np.zeros_like(self.bo)
-        self.dbu = np.zeros_like(self.bu)
+        self.dW_hh = np.zeros_like(self.W_hh)
+        self.db_hh = np.zeros_like(self.b_hh)
 
-        # weight optimizers
-        self.Wc_opt = copy.copy(optimizer)
-        self.Wf_opt = copy.copy(optimizer)
-        self.Wo_opt = copy.copy(optimizer)
-        self.Wu_opt = copy.copy(optimizer)
+        self.W_ih_opt = copy.copy(optimizer)
+        self.b_ih_opt = copy.copy(optimizer)
 
-        self.bc_opt = copy.copy(optimizer)
-        self.bf_opt = copy.copy(optimizer)
-        self.bo_opt = copy.copy(optimizer)
-        self.bu_opt = copy.copy(optimizer)
+        self.W_hh_opt = copy.copy(optimizer)
+        self.b_bh_opt = copy.copy(optimizer)
 
         self.derived_variables = {
             "A": [],
@@ -749,8 +736,8 @@ class LSTMCell(Layer):
             "Go": [],
             "Gu": [],
             "current_step": 0,
-            "dLdA_accumulator": None,
-            "dLdC_accumulator": None,
+            "dLdA_prev": None,
+            "dLdC_prev": None,
             "n_timesteps": 0,
         }
 
@@ -784,12 +771,13 @@ class LSTMCell(Layer):
         A_prev = self.derived_variables["A"][-1] # the last A
         C_prev = self.derived_variables['C'][-1] # the last C
 
-        # concatenate A_prev and Xt to create Zt
-        Zt = np.hstack([A_prev, Xt])
-        Gft = self.gate_fn(Zt@self.Wf+self.bf)
-        Gut = self.gate_fn(Zt@self.Wu+self.bu)
-        Got = self.gate_fn(Zt@self.Wo+self.bo)
-        Cct = self.act_fn(Zt@self.Wc+self.bc)
+        gates = Xt @ self.W_ih + self.b_ih + A_prev @ self.W_hh + self.b_hh
+        ut, ft, cellt, ot= np.array_split(gates, 4, axis=1)
+        Gut = self.gate_fn(ut)
+        Gft = self.gate_fn(ft)
+        Cct = self.act_fn(cellt)
+        Got = self.gate_fn(ot)
+
         Ct = Gft*C_prev+Gut*Cct
         At = Got*self.act_fn(Ct)
 
@@ -804,7 +792,7 @@ class LSTMCell(Layer):
 
         return At, Ct
 
-    def backward_pass(self,dLdAt, upper_bound):
+    def backward_pass(self,dLdAt):
         """
         Run a backward pass across all timesteps in the input
 
@@ -818,18 +806,9 @@ class LSTMCell(Layer):
         dLdXt:np.array of shape (n_ex,n_in). The gradient of the loss w.r.t. the
               layer input at timestep t
         """
-        if upper_bound is not None:
-            for t in reversed(range(upper_bound+1)):
-                if t == upper_bound:
-                    dXt = self._bwd(t, dLdAt)
-                else:
-                    _ = self._bwd(t, dLdAt)
-            # self.derived_variables['dLdA_accumulator'] = None
-            # self.derived_variables['dLdC_accumulator'] = None
-        else:
-            self.derived_variables['current_step'] -= 1
-            t = self.derived_variables['current_step']
-            dXt = self._bwd(t, dLdAt)
+        self.derived_variables['current_step'] -= 1
+        t = self.derived_variables['current_step']
+        dXt = self._bwd(t, dLdAt)
 
         return dXt
 
@@ -844,10 +823,10 @@ class LSTMCell(Layer):
         Gut = self.derived_variables['Gu'][t]
 
         Xt = self.X[t]
-        Zt = np.hstack([A_prev,Xt])
+        # Zt = np.hstack([A_prev,Xt])
 
-        dA_acc = self.derived_variables["dLdA_accumulator"]
-        dC_acc = self.derived_variables["dLdC_accumulator"]
+        dA_acc = self.derived_variables["dLdA_prev"]
+        dC_acc = self.derived_variables["dLdC_prev"]
 
         # Initialize accumulators
         if dA_acc is None:
@@ -858,38 +837,56 @@ class LSTMCell(Layer):
 
         # Gradient calculations
         # ---------------------------
-        dA = dLdAt + dA_acc
-        dC = dC_acc + dA * Got * self.act_fn.gradient(Ct)
+        # dA = dLdAt + dA_acc
+        # dC = dC_acc + dA * Got * self.act_fn.gradient(Ct)
+        dA = dLdAt
+        dC = dA * Got * self.act_fn.gradient(Ct)
 
         # Compute the input to the gate functions at timestamp t
-        _Gc = Zt @ self.Wc + self.bc
-        _Gf = Zt @ self.Wf + self.bf
-        _Go = Zt @ self.Wo + self.bo
-        _Gu = Zt @ self.Wu + self.bu
+        # _Gc = Zt @ self.Wc + self.bc
+        # _Gf = Zt @ self.Wf + self.bf
+        # _Go = Zt @ self.Wo + self.bo
+        # _Gu = Zt @ self.Wu + self.bu
+        gates = Xt @ self.W_ih + self.b_ih + A_prev @ self.W_hh + self.b_hh
+        ut, ft, cellt, ot= np.array_split(gates, 4, axis=1)
 
         # Compute gradients w.r.t. the input to each gate
-        dCct = dC * Gut * self.act_fn.gradient(_Gc)
-        dGft = dC * C_prev * self.gate_fn.gradient(_Gf)
-        dGot = dA * self.act_fn(Ct) * self.gate_fn.gradient(_Go)
-        dGut = dC * Cct * self.gate_fn.gradient(_Gu)
+        # dCct = dC * Gut * self.act_fn.gradient(_Gc)
+        # dGft = dC * C_prev * self.gate_fn.gradient(_Gf)
+        # dGot = dA * self.act_fn(Ct) * self.gate_fn.gradient(_Go)
+        # dGut = dC * Cct * self.gate_fn.gradient(_Gu)
 
-        dZ = dGft @ self.Wf.T + dGut @ self.Wu.T + dCct @ self.Wc.T + dGot @ self.Wo.T
+        dcellt = dC * Gut * self.act_fn.gradient(cellt)
+        dft = dC * C_prev * self.gate_fn.gradient(ft)
+        dot = dA * self.act_fn(Ct) * self.gate_fn.gradient(ot)
+        dut = dC * Cct * self.gate_fn.gradient(ut)
 
-        dXt = dZ[:, self.n_units:]
+        # dZ = dGft @ self.Wf.T + dGut @ self.Wu.T + dCct @ self.Wc.T + dGot @ self.Wo.T
+        # dXt = dZ[:, self.n_units:]
+        dgates = np.concatenate((dut, dft, dcellt, dot), axis=1)
+        assert dgates.shape == gates.shape
+        dXt = dgates @ self.W_ih.transpose()
 
-        self.dWc += Zt.T @ dCct
-        self.dWf += Zt.T @ dGft
-        self.dWo += Zt.T @ dGot
-        self.dWu += Zt.T @ dGut
-        self.dbc += dCct.sum(axis=0, keepdims = True)
-        self.dbf += dGft.sum(axis=0, keepdims = True)
-        self.dbo += dGot.sum(axis=0, keepdims = True)
-        self.dbu += dGut.sum(axis=0, keepdims = True)
+        # self.dWc += Zt.T @ dCct
+        # self.dWf += Zt.T @ dGft
+        # self.dWo += Zt.T @ dGot
+        # self.dWu += Zt.T @ dGut
+        # self.dbc += dCct.sum(axis=0, keepdims = True)
+        # self.dbf += dGft.sum(axis=0, keepdims = True)
+        # self.dbo += dGot.sum(axis=0, keepdims = True)
+        # self.dbu += dGut.sum(axis=0, keepdims = True)
+        self.dW_ih = self.dW_ih + Xt.T @ dgates
+        self.dW_hh = self.dW_hh + A_prev.T @ dgates
 
-        self.derived_variables['dLdA_accumulator'] = dZ[:,:self.n_units]
-        self.derived_variables['dLdC_accumulator'] = Gft * dC
+        self.db_ih = self.db_ih + dgates.sum(axis=0, keepdims=True)
+        self.db_hh = self.db_hh + dgates.sum(axis=0, keepdims=True)
 
-        return dXt
+        dLdA_prev = dgates @ self.W_hh.transpose()
+        self.derived_variables['dLdA_prev'] = dLdA_prev
+        Gft = self.gate_fn(ft)
+        self.derived_variables['dLdC_prev'] = Gft * dC
+
+        return dXt, dLdA_prev
 
     def update(self):
         if self.trainable:
