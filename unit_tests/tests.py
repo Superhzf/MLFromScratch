@@ -999,14 +999,14 @@ def test_LSTM_many2one(cases):
         gold_loss = torch.square(gold_hidden_grad[-1]).sum()/2.
         gold_loss.backward()
 
-#         # backprop
+        # backprop
         gold_dLdwi = gold.weight_ih.grad.detach().numpy()
         gold_dLdbi = gold.bias_ih.grad.detach().numpy()
         gold_dLdWh = gold.weight_hh.grad.detach().numpy()
         gold_dLdbh = gold.bias_hh.grad.detach().numpy()
         gold_dLdX = X_tensor.grad.detach().numpy()
 
-#         # we will do many to one backpropagation, considering the loss function the input is mine_value[:,:,-1]
+        # we will do many to one backpropagation, considering the loss function the input is mine_value[:,:,-1]
         dLdX = mine.backward_pass(mine_hidden[:,:,-1])
         dLdWi = mine.cell.dW_ih
         dLdbi = mine.cell.db_ih
@@ -1029,6 +1029,7 @@ def test_LSTM_many2one(cases):
             assert_almost_equal(mine.cell.derived_variables['dLdA_prev'][this_t],
                                 gold_hidden_grad[this_t].grad,
                                 decimal=decimal)
+            # compare dLdMemory_value
             assert_almost_equal(mine.cell.derived_variables['dLdC_prev'][this_t],
                                 gold_cell_grad[this_t+1].grad,
                                 decimal=decimal)

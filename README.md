@@ -27,9 +27,8 @@ efficient as possible
   * Dropout Layer
   * Fully Connected Layer
   * Embedding Layer
-  * RNN Layer: many-to-many
   * RNN Layer: many-to-one
-  * LSTM ayer
+  * LSTM ayer: many-to-one
 - [Loss Functions](https://github.com/Superhzf/MLFromScratch/blob/master/numpy_ml/deep_learning/loss_functions.py)
 
   * Cross Entropy
