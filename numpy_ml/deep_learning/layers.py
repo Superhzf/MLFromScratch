@@ -463,7 +463,7 @@ class many2oneRNN(Layer):
             dLdXt,dLdHidden_t = self.cell.backward_pass(dLdA)
             dLdA = dLdHidden_t
             dLdX.insert(0, dLdXt)
-        dLdX=np.stack(dLdX)
+        dLdX=np.dstack(dLdX)
         self.cell.update()
         return dLdX
 
@@ -662,7 +662,8 @@ class LSTMCell(Layer):
                  n_units,
                  input_shape,
                  act_fn = "tanh",
-                 gate_fn="sigmoid"):
+                 gate_fn="sigmoid",
+                 trainable=True):
 
         """
         A single step (one to one) of a long short-term memory (LSTM) RNN
@@ -704,7 +705,7 @@ class LSTMCell(Layer):
         self.input_shape = input_shape
         self.act_fn = activation_functions[act_fn]()
         self.gate_fn = activation_functions[gate_fn]()
-        self.trainable = True
+        self.trainable = trainable
 
     def initialize(self, optimizer):
         self.X = []
@@ -736,8 +737,8 @@ class LSTMCell(Layer):
             "Go": [],
             "Gu": [],
             "current_step": 0,
-            "dLdA_prev": None,
-            "dLdC_prev": None,
+            "dLdA_prev": [],
+            "dLdC_prev": [],
             "n_timesteps": 0,
         }
 
@@ -808,13 +809,11 @@ class LSTMCell(Layer):
         """
         self.derived_variables['current_step'] -= 1
         t = self.derived_variables['current_step']
-        dXt = self._bwd(t, dLdAt)
-
-        return dXt
+        return  self._bwd(t, dLdAt)
 
     def _bwd(self, t, dLdAt):
         A_prev = self.derived_variables['A'][t]
-        At = self.derived_variables['A'][t+1]
+        # At = self.derived_variables['A'][t+1]
         C_prev = self.derived_variables['C'][t]
         Ct = self.derived_variables['C'][t+1]
         Cct = self.derived_variables['Cc'][t]
@@ -823,58 +822,35 @@ class LSTMCell(Layer):
         Gut = self.derived_variables['Gu'][t]
 
         Xt = self.X[t]
-        # Zt = np.hstack([A_prev,Xt])
 
-        dA_acc = self.derived_variables["dLdA_prev"]
-        dC_acc = self.derived_variables["dLdC_prev"]
+        dLdA_prev_list = self.derived_variables["dLdA_prev"]
+        dLdC_prev_list = self.derived_variables["dLdC_prev"]
 
         # Initialize accumulators
-        if dA_acc is None:
-            dA_acc = np.zeros_like(At)
-
-        if dC_acc is None:
-            dC_acc = np.zeros_like(Ct)
-
-        # Gradient calculations
-        # ---------------------------
-        # dA = dLdAt + dA_acc
-        # dC = dC_acc + dA * Got * self.act_fn.gradient(Ct)
+        if len(dLdA_prev_list) == 0:
+            dLdA_prev_list.insert(0, dLdAt)
         dA = dLdAt
-        dC = dA * Got * self.act_fn.gradient(Ct)
 
-        # Compute the input to the gate functions at timestamp t
-        # _Gc = Zt @ self.Wc + self.bc
-        # _Gf = Zt @ self.Wf + self.bf
-        # _Go = Zt @ self.Wo + self.bo
-        # _Gu = Zt @ self.Wu + self.bu
+        if len(dLdC_prev_list) == 0:
+            dC = dA * Got * self.act_fn.gradient(Ct)
+            self.dLdC_prev = dC
+        else:
+            dC = dA * Got * self.act_fn.gradient(Ct) + self.dLdC_prev
+
+        dLdC_prev_list.insert(0, dC)
+
         gates = Xt @ self.W_ih + self.b_ih + A_prev @ self.W_hh + self.b_hh
         ut, ft, cellt, ot= np.array_split(gates, 4, axis=1)
-
-        # Compute gradients w.r.t. the input to each gate
-        # dCct = dC * Gut * self.act_fn.gradient(_Gc)
-        # dGft = dC * C_prev * self.gate_fn.gradient(_Gf)
-        # dGot = dA * self.act_fn(Ct) * self.gate_fn.gradient(_Go)
-        # dGut = dC * Cct * self.gate_fn.gradient(_Gu)
 
         dcellt = dC * Gut * self.act_fn.gradient(cellt)
         dft = dC * C_prev * self.gate_fn.gradient(ft)
         dot = dA * self.act_fn(Ct) * self.gate_fn.gradient(ot)
         dut = dC * Cct * self.gate_fn.gradient(ut)
 
-        # dZ = dGft @ self.Wf.T + dGut @ self.Wu.T + dCct @ self.Wc.T + dGot @ self.Wo.T
-        # dXt = dZ[:, self.n_units:]
         dgates = np.concatenate((dut, dft, dcellt, dot), axis=1)
         assert dgates.shape == gates.shape
         dXt = dgates @ self.W_ih.transpose()
 
-        # self.dWc += Zt.T @ dCct
-        # self.dWf += Zt.T @ dGft
-        # self.dWo += Zt.T @ dGot
-        # self.dWu += Zt.T @ dGut
-        # self.dbc += dCct.sum(axis=0, keepdims = True)
-        # self.dbf += dGft.sum(axis=0, keepdims = True)
-        # self.dbo += dGot.sum(axis=0, keepdims = True)
-        # self.dbu += dGut.sum(axis=0, keepdims = True)
         self.dW_ih = self.dW_ih + Xt.T @ dgates
         self.dW_hh = self.dW_hh + A_prev.T @ dgates
 
@@ -882,10 +858,8 @@ class LSTMCell(Layer):
         self.db_hh = self.db_hh + dgates.sum(axis=0, keepdims=True)
 
         dLdA_prev = dgates @ self.W_hh.transpose()
-        self.derived_variables['dLdA_prev'] = dLdA_prev
-        Gft = self.gate_fn(ft)
-        self.derived_variables['dLdC_prev'] = Gft * dC
-
+        self.derived_variables['dLdA_prev'].insert(0, dLdA_prev)
+        self.dLdC_prev = dC * Gft
         return dXt, dLdA_prev
 
     def update(self):
@@ -900,8 +874,8 @@ class LSTMCell(Layer):
             self.bo_opt.update(self.bo, self.dbo)
             self.bu_opt.update(self.bu, self.dbu)
 
-class LSTM(Layer):
-    def __init__(self,n_units, input_shape, bptt=True, act_fn='tanh', gate_fn='sigmoid'):
+class many2oneLSTM(Layer):
+    def __init__(self,n_units, input_shape, bptt=True, act_fn='tanh', gate_fn='sigmoid', trainable=True):
         """
         A single long short-term memory (LSTM) layer
 
@@ -928,16 +902,18 @@ class LSTM(Layer):
             raise Exception('The gate function name is not understood')
         self.act_fn = act_fn
         self.gate_fn = gate_fn
+        self.trainable = trainable
 
     def initialize(self, optimizer):
         self.cell = LSTMCell(
             n_units=self.n_units,
             input_shape=self.input_shape,
             act_fn=self.act_fn,
-            gate_fn=self.gate_fn)
+            gate_fn=self.gate_fn,
+            trainable=self.trainable)
         self.cell.initialize(optimizer)
 
-    def forward_pass(self,X, training=True):
+    def forward_pass(self,X):
         """
         Run a forward pass across all timesteps in the input.
 
@@ -954,24 +930,25 @@ class LSTM(Layer):
            across each of the n_t timesteps
         """
 
-        batch_size, n_t, n_in = X.shape
-        Y = np.zeros((batch_size, n_t, self.n_units))
-        for t in range(n_t):
-            yt, _ = self.cell.forward_pass(X[:, t, :])
-            Y[:, t, :] = yt
-        n_ex, n_t, n_units = Y.shape
+        n_ex, n_in, self.n_t = X.shape
+        H = [] # value of hidden state
+        C = [] # cell memory value
+        for t in range(self.n_t):
+            ht, ct = self.cell.forward_pass(X[:, :, t])
+            H.append(ht)
+            C.append(ct)
+        # n_ex, n_t, n_units = Y.shape
         # Y = Y.reshape((n_t, n_ex * n_units))
-        return Y
+        return np.dstack(H), np.dstack(C)
 
-    def backward_pass(self,dLdA):
+    def backward_pass(self,dLdAt):
         """
         Run a backward pass across all timesteps in the input
 
         Parameters
         --------------
-        dLdA: numpy.array of shape (n_ex, n_out, n_t)
-            The gradient of the loss w.r.t. the layer output for each of the
-            n_ex examples across all n_t timesteps
+        dLdA: numpy.array of shape (n_ex, n_out)
+            The gradient of the loss w.r.t. the final layer output
 
         Returns
         --------------
@@ -979,15 +956,11 @@ class LSTM(Layer):
             The value of the hidden state for each of the n_ex examples across
             each of the n_t examples
         """
-        assert self.cell.trainable, "Layer is frozen"
         dLdX = []
-        n_ex, n_t, n_out = dLdA.shape
         # print (dLdA.shape)
-        for t in reversed(range(n_t)):
-            if self.bptt:
-                dLdXt = self.cell.backward_pass(dLdA[:,t,:], t)
-            else:
-                dLdXt = self.cell.backward_pass(dLdA[:,t,:], None)
+        for t in reversed(range(self.n_t)):
+            dLdXt, dLdA_prev = self.cell.backward_pass(dLdAt)
+            dLdAt = dLdA_prev
             dLdX.insert(0,dLdXt)
         self.cell.update()
         dLdX = np.dstack(dLdX)
