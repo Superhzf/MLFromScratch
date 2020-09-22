@@ -8,7 +8,7 @@ from numpy.testing import assert_almost_equal
 import torch.nn as nn
 import torch
 from numpy_ml.deep_learning.activation_functions import Sigmoid, Softmax, ReLU, LeakyReLU, TanH
-from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization, RNNCell, many2oneRNN, LSTMCell
+from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization, RNNCell, many2oneRNN, LSTMCell, many2oneLSTM
 from numpy_ml.deep_learning.optimizers import StochasticGradientDescent, Adagrad, RMSprop, Adadelta, Adam
 
 
@@ -795,7 +795,6 @@ def test_RNN_many2one(cases):
         n_ex = np.random.randint(1, 100)
         n_in = np.random.randint(1, 100)
         n_out = np.random.randint(1, 100)
-        n_layer = np.random.randint(2,10)
         n_t = np.random.randint(1, 10)
         X = random_tensor((n_ex, n_in, n_t), standardize=True)
         X_tensor = torch.tensor(X, dtype=torch.float, requires_grad=True)
@@ -860,7 +859,7 @@ def test_RNN_many2one(cases):
 
         for this_t in range(n_t):
             # compare dLdX
-            assert_almost_equal(dLdX[this_t], gold_dLdX[:,:,this_t],decimal=decimal)
+            assert_almost_equal(dLdX[:,:,this_t], gold_dLdX[:,:,this_t],decimal=decimal)
             # compare dLdhidden_state
             assert_almost_equal(mine.cell.derived_variables['dLdA_accumulator'][this_t],
                                 gold_value[this_t].grad,
@@ -932,3 +931,107 @@ def test_LSTMCell(cases):
         assert_almost_equal(dLdX, gold_dLdX,decimal=decimal)
         i += 1
     print ("Successfully testing a single LSTM cell!")
+
+def test_LSTM_many2one(cases):
+
+    np.random.seed(12345)
+    N = int(cases)
+    decimal = 5
+    i = 1
+    while i < N + 1:
+        n_ex = np.random.randint(1, 100)
+        n_in = np.random.randint(1, 100)
+        n_out = np.random.randint(1, 100)
+        n_t = np.random.randint(1, 10)
+        X = random_tensor((n_ex, n_in, n_t), standardize=True)
+        X_tensor = torch.tensor(X, dtype=torch.float, requires_grad=True)
+
+        # initialize FC layer
+        gold = nn.LSTMCell(input_size=n_in, hidden_size=n_out, bias=True)
+        mine = many2oneLSTM(n_units = n_out,input_shape=(n_ex,n_in),trainable=False)
+        # Do not allow the weights to be updated
+        mine.initialize(None)
+
+        # Adjust parameters to make them share the same set of weights and bias
+        mine.cell.W_ih = gold.weight_ih.detach().numpy().transpose()
+        mine.cell.b_ih = gold.bias_ih.detach().numpy()[None,:]
+
+        mine.cell.W_hh = gold.weight_hh.detach().numpy().transpose()
+        mine.cell.b_hh = gold.bias_hh.detach().numpy()[None,:]
+
+        # forward prop
+        gold_hidden_val = [] # gold_hidden_val is used to compare the forward progress
+        gold_cell_val = []
+        gold_hidden_grad = [] # gold_hidden_grad is used to compare backward progress
+        gold_cell_grad = []
+
+        ht = torch.tensor(np.zeros((n_ex, n_out)), dtype=torch.float, requires_grad=True)
+        ht.retain_grad()
+
+        ct = torch.tensor(np.zeros((n_ex, n_out)), dtype=torch.float, requires_grad=True)
+        ct.retain_grad()
+
+        for this_t in range(n_t):
+            gold_hidden_grad += [ht]
+            gold_cell_grad += [ct]
+
+            gold_h, gold_c = gold(input=X_tensor[:,:,this_t],hx=(ht,ct))
+
+            gold_hidden_val.append(gold_h.detach().numpy())
+            gold_cell_val.append(gold_c.detach().numpy())
+
+            ht.retain_grad()
+            ct.retain_grad()
+            ht = gold_h
+            ct = gold_c
+
+        ht.retain_grad()
+        ct.retain_grad()
+        gold_hidden_grad += [ht]
+        gold_cell_grad += [ct]
+
+        gold_hidden_val = np.dstack(gold_hidden_val)
+        gold_cell_val = np.dstack(gold_cell_val)
+        mine_hidden, mine_cell = mine.forward_pass(X)
+
+
+        # loss
+        gold_loss = torch.square(gold_hidden_grad[-1]).sum()/2.
+        gold_loss.backward()
+
+#         # backprop
+        gold_dLdwi = gold.weight_ih.grad.detach().numpy()
+        gold_dLdbi = gold.bias_ih.grad.detach().numpy()
+        gold_dLdWh = gold.weight_hh.grad.detach().numpy()
+        gold_dLdbh = gold.bias_hh.grad.detach().numpy()
+        gold_dLdX = X_tensor.grad.detach().numpy()
+
+#         # we will do many to one backpropagation, considering the loss function the input is mine_value[:,:,-1]
+        dLdX = mine.backward_pass(mine_hidden[:,:,-1])
+        dLdWi = mine.cell.dW_ih
+        dLdbi = mine.cell.db_ih
+        dLdWh = mine.cell.dW_hh
+        dLdbh = mine.cell.db_hh
+
+        # compare forward
+        assert_almost_equal(mine_hidden,gold_hidden_val,decimal=decimal)
+        assert_almost_equal(mine_cell,gold_cell_val,decimal=decimal)
+        # compare backward weights
+        assert_almost_equal(dLdWi.transpose(), gold_dLdwi,decimal=decimal)
+        assert_almost_equal(dLdbi, gold_dLdbi[None,:],decimal=decimal)
+        assert_almost_equal(dLdWh.transpose(), gold_dLdWh,decimal=decimal)
+        assert_almost_equal(dLdbh, gold_dLdbh[None,:],decimal=decimal)
+
+        for this_t in range(n_t):
+            # compare dLdX
+            assert_almost_equal(dLdX[:,:,this_t], gold_dLdX[:,:,this_t],decimal=decimal)
+            # compare dLdhidden_state
+            assert_almost_equal(mine.cell.derived_variables['dLdA_prev'][this_t],
+                                gold_hidden_grad[this_t].grad,
+                                decimal=decimal)
+            assert_almost_equal(mine.cell.derived_variables['dLdC_prev'][this_t],
+                                gold_cell_grad[this_t+1].grad,
+                                decimal=decimal)
+
+        i += 1
+    print ("Successfully testing LSTM many2one layer!")
