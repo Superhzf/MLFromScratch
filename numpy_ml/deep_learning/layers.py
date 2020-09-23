@@ -875,7 +875,7 @@ class LSTMCell(Layer):
             self.bu_opt.update(self.bu, self.dbu)
 
 class many2oneLSTM(Layer):
-    def __init__(self,n_units, input_shape, bptt=True, act_fn='tanh', gate_fn='sigmoid', trainable=True):
+    def __init__(self,n_units, input_shape, act_fn='tanh', gate_fn='sigmoid', trainable=True):
         """
         A single long short-term memory (LSTM) layer
 
@@ -885,8 +885,6 @@ class many2oneLSTM(Layer):
             The dimension of a single hidden state / output on a given timestamp.
         input_shape: tuple
             n_in * n_units
-        bptt: bool
-            Use BPTT?
         act_fn: str
             The activation function for computing A[t]. Defacult is Tanh
         gate_fn: str
@@ -895,7 +893,7 @@ class many2oneLSTM(Layer):
         """
         self.n_units = n_units
         self.input_shape = input_shape
-        self.bptt = bptt
+        # self.bptt = bptt
         if act_fn not in good_act_fn_names:
             raise Exception('The activation function name is not understood')
         if gate_fn not in good_act_fn_names:
@@ -968,3 +966,93 @@ class many2oneLSTM(Layer):
 
     def output_shape(self):
         return (self.n_units, )
+
+class BidirectionalLSTM(Layer):
+    def __init__(self,
+                 n_units,
+                 input_shape,
+                 act_fn='tanh',
+                 gate_fn='sigmoid',
+                 trainable=True):
+        """
+        A single bidirectional long short-term memory (LSTM) many-to-one layer.
+        Parameters
+        ----------
+        n_units : int
+            The number of features
+        act_fn : str
+            The activation function for computing ``A[t]``.
+        gate_fn : str
+            The gate function for computing the update, forget, and output gates.
+        trainable : bool
+            Whether to update the weights
+        """
+        self.n_units = n_units
+        self.input_shape = input_shape
+        # self.bptt = bptt
+        if act_fn not in good_act_fn_names:
+            raise Exception('The activation function name is not understood')
+        if gate_fn not in good_act_fn_names:
+            raise Exception('The gate function name is not understood')
+        self.act_fn = act_fn
+        self.gate_fn = gate_fn
+        self.trainable = trainable
+
+    def parameters(self):
+        raise Exception("This function has not been implemented")
+
+    def initialize(self, optimizer):
+        self.cell_fwd = LSTMCell(
+            n_units=self.n_units,
+            input_shape=self.input_shape,
+            act_fn=self.act_fn,
+            gate_fn=self.gate_fn,
+            trainable=self.trainable)
+        self.cell_fwd.initialize(optimizer)
+
+        self.cell_bwd = LSTMCell(
+            n_units=self.n_units,
+            input_shape=self.input_shape,
+            act_fn=self.act_fn,
+            gate_fn=self.gate_fn,
+            trainable=self.trainable)
+        self.cell_bwd.initialize(optimizer)
+
+    def forward_pass(self, X):
+        H_fwd, H_bwd, C_fwd, C_bwd = [], [], [], []
+        n_ex, n_in, self.n_t = X.shape
+        for t in range(self.n_t):
+            # forward LSTM
+            ht_fwd, ct_fwd = self.cell_fwd.forward_pass(X[:, :, t])
+            H_fwd.append(ht_fwd)
+            C_fwd.append(ct_fwd)
+            # backward LSTM
+            ht_bwd, ct_bwd = self.cell_bwd.forward_pass(X[:, :, self.n_t-t-1])
+            H_bwd.insert(0, ht_bwd)
+            C_bwd.insert(0, ct_bwd)
+
+        return np.dstack(H_fwd), np.dstack(H_bwd), np.dstack(C_fwd), np.dstack(C_bwd)
+
+    def backward_pass(self, dLdA_fwd, dLdA_bwd):
+        dLdX_fwd, dLdX_bwd, dLdX = [], [], []
+
+        # forward direction
+        dLdAt = dLdA_fwd.copy()
+        for t in reversed(range(self.n_t)):
+            dLdXt_fwd, dLdA_prev_fwd = self.cell_fwd.backward_pass(dLdAt)
+            dLdAt = dLdA_prev_fwd
+            dLdX_fwd.insert(0,dLdXt_fwd)
+        self.cell_fwd.update()
+
+        # backward direction
+        dLdAt = dLdA_bwd.copy()
+        for t in range(self.n_t):
+            dLdXt_bwd, dLdA_prev_bwd = self.cell_bwd.backward_pass(dLdAt)
+            dLdAt = dLdA_prev_bwd
+            dLdX_bwd.append(dLdXt_bwd)
+        self.cell_bwd.update()
+
+        return np.dstack(dLdX_fwd),np.dstack(dLdX_bwd)
+
+    def output_shape(self):
+        raise Exception("This function has not been implemented")
