@@ -8,7 +8,8 @@ from numpy.testing import assert_almost_equal
 import torch.nn as nn
 import torch
 from numpy_ml.deep_learning.activation_functions import Sigmoid, Softmax, ReLU, LeakyReLU, TanH
-from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization, RNNCell, many2oneRNN, LSTMCell, many2oneLSTM
+from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization, RNNCell
+from numpy_ml.deep_learning.layers import BidirectionalLSTM, many2oneRNN, LSTMCell, many2oneLSTM
 from numpy_ml.deep_learning.optimizers import StochasticGradientDescent, Adagrad, RMSprop, Adadelta, Adam
 
 
@@ -1036,3 +1037,108 @@ def test_LSTM_many2one(cases):
 
         i += 1
     print ("Successfully testing LSTM many2one layer!")
+
+def test_LSTM_bidirection(cases):
+
+    np.random.seed(12345)
+    N = int(cases)
+    decimal = 5
+    i = 1
+    while i < N + 1:
+        n_ex = np.random.randint(1, 100)
+        n_in = np.random.randint(1, 100)
+        n_out = np.random.randint(1, 100)
+        n_t = np.random.randint(1, 10)
+        X = random_tensor((n_ex, n_in, n_t), standardize=True)
+        X_tensor = torch.tensor(X, dtype=torch.float, requires_grad=True).permute(2,0,1)
+        X_tensor.retain_grad()
+
+        # initialize FC layer
+        gold = nn.LSTM(input_size=n_in, hidden_size=n_out, bias=True, num_layers=1,bidirectional=True)
+        mine = BidirectionalLSTM(n_units = n_out,input_shape=(n_ex,n_in),trainable=False)
+        # Do not allow the weights to be updated
+        mine.initialize(None)
+
+        # Adjust parameters to make them share the same set of weights and bias
+        mine.cell_fwd.W_ih = gold.weight_ih_l0.detach().numpy().transpose()
+        mine.cell_fwd.b_ih = gold.bias_ih_l0.detach().numpy()[None,:]
+        mine.cell_fwd.W_hh = gold.weight_hh_l0.detach().numpy().transpose()
+        mine.cell_fwd.b_hh = gold.bias_hh_l0.detach().numpy()[None,:]
+
+        mine.cell_bwd.W_ih = gold.weight_ih_l0_reverse.detach().numpy().transpose()
+        mine.cell_bwd.b_ih = gold.bias_ih_l0_reverse.detach().numpy()[None,:]
+        mine.cell_bwd.W_hh = gold.weight_hh_l0_reverse.detach().numpy().transpose()
+        mine.cell_bwd.b_hh = gold.bias_hh_l0_reverse.detach().numpy()[None,:]
+
+
+        # forward prop
+        gold_output, (gold_h, gold_c) = gold(input=X_tensor)
+        # 2 is the number of direction
+        gold_output = gold_output.view(n_t, n_ex, 2, n_out)
+        # 1 is the number of layer, 2 is the number of directions
+        gold_h = gold_h.view(1, 2, n_ex, n_out)
+        gold_c = gold_c.view(1, 2, n_ex, n_out)
+
+
+        mine_H_fwd, mine_H_bwd, mine_C_fwd, mine_C_bwd = mine.forward_pass(X)
+
+        # loss, this loss function is desgined that both directions can be tested
+        # the loss function cannot solely come from the forward direction or the backward direction, otherwise
+        # PyTorch cannot calculate the gradients for the other direction.
+        gold_loss = torch.square(gold_output[-1,:,0,:]).sum()/2. + torch.square(gold_output[0,:,1,:]).sum()/2.
+        gold_loss.backward()
+
+        # backprop
+        gold_dLdwi_fwd = gold.weight_ih_l0.grad.detach().numpy()
+        gold_dLdbi_fwd = gold.bias_ih_l0.grad.detach().numpy()
+        gold_dLdWh_fwd = gold.weight_hh_l0.grad.detach().numpy()
+        gold_dLdbh_fwd = gold.bias_hh_l0.grad.detach().numpy()
+
+        gold_dLdwi_bwd = gold.weight_ih_l0_reverse.grad.detach().numpy()
+        gold_dLdbi_bwd = gold.bias_ih_l0_reverse.grad.detach().numpy()
+        gold_dLdWh_bwd = gold.weight_hh_l0_reverse.grad.detach().numpy()
+        gold_dLdbh_bwd = gold.bias_hh_l0_reverse.grad.detach().numpy()
+        gold_dLdX = X_tensor.grad.detach().numpy()
+
+
+        dLdX_fwd, dLdX_bwd = mine.backward_pass(mine_H_fwd[:,:,-1], mine_H_bwd[:,:,0])
+
+        dLdWi_fwd = mine.cell_fwd.dW_ih
+        dLdbi_fwd = mine.cell_fwd.db_ih
+        dLdWh_fwd = mine.cell_fwd.dW_hh
+        dLdbh_fwd = mine.cell_fwd.db_hh
+
+        dLdWi_bwd = mine.cell_bwd.dW_ih
+        dLdbi_bwd = mine.cell_bwd.db_ih
+        dLdWh_bwd = mine.cell_bwd.dW_hh
+        dLdbh_bwd = mine.cell_bwd.db_hh
+
+        # compare forward pass
+        for this_t in range(n_t):
+            # forward direction: hidden state
+            assert_almost_equal(mine_H_fwd[:, :, this_t], gold_output[this_t,:,0,:].detach().numpy(),decimal=decimal)
+            # backward direction: hidden state
+            assert_almost_equal(mine_H_bwd[: , :, this_t], gold_output[this_t,:,1,:].detach().numpy(),decimal=decimal)
+        # we only compare the cell value at the last timestep because PyTorch only returns the memory cell value
+        # of the last timestep.
+        assert_almost_equal(mine_C_fwd[:, :, -1], gold_c[0,0,:,:].detach().numpy(),decimal=decimal)
+        assert_almost_equal(mine_C_bwd[:, :, 0], gold_c[0,1,:,:].detach().numpy(),decimal=decimal)
+
+        # compare backward weights
+        assert_almost_equal(dLdWi_fwd.transpose(), gold_dLdwi_fwd,decimal=decimal)
+        assert_almost_equal(dLdbi_fwd, gold_dLdbi_fwd[None,:],decimal=decimal)
+        assert_almost_equal(dLdWh_fwd.transpose(), gold_dLdWh_fwd,decimal=decimal)
+        assert_almost_equal(dLdbh_fwd, gold_dLdbh_fwd[None,:],decimal=decimal)
+
+        assert_almost_equal(dLdWi_bwd.transpose(), gold_dLdwi_bwd,decimal=decimal)
+        assert_almost_equal(dLdbi_fwd, gold_dLdbi_fwd[None,:],decimal=decimal)
+        assert_almost_equal(dLdWh_fwd.transpose(), gold_dLdWh_fwd,decimal=decimal)
+        assert_almost_equal(dLdbh_fwd, gold_dLdbh_fwd[None,:],decimal=decimal)
+
+
+        for this_t in range(n_t):
+            # compare dLdX
+            assert_almost_equal(dLdX_fwd[:,:,this_t]+dLdX_bwd[:,:,this_t], gold_dLdX[this_t],decimal=decimal)
+
+        i += 1
+    print ("Successfully testing bidirectional LSTM layer!")
