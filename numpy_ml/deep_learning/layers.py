@@ -584,7 +584,7 @@ class many2manyRNN(Layer):
 
 
 class Embedding(Layer):
-    def __init__(self, n_out, vocab_size, n_in=None):
+    def __init__(self, n_out, vocab_size):
         """
         Parameters:
         ---------------------
@@ -599,7 +599,6 @@ class Embedding(Layer):
         """
         self.n_out = n_out
         self.vocab_size = vocab_size
-        self.n_in = n_in
         self.W = None
         self.trainable = True
 
@@ -619,7 +618,9 @@ class Embedding(Layer):
         Parameters:
         ------------------------------
         X: numpy array of shape (n_ex, n_in) represents n_ex examples and n_in
-        features. X is supposed to be an integer array.
+        features. X is supposed to be an integer array. It is recommended that
+        one embedding layer is only involved into one categorical variable, in
+        other words, n_in should be one.
 
         Returns:
         ------------------------------
@@ -628,11 +629,11 @@ class Embedding(Layer):
         """
         self.X = X
         Y = self.W[X]
-        if self.n_in is not None:
-            n_ex, n_in, n_out = Y.shape
-            Y = Y.reshape((n_ex, n_in * n_out))
-        # If the self.n_in is None, then the shape of Y meets the input requirement
-        # of LSTM/RNN
+        # if self.n_in is not None:
+        #     n_ex, n_in, n_out = Y.shape
+        #     Y = Y.reshape((n_ex, n_in * n_out))
+        # # If the self.n_in is None, then the shape of Y meets the input requirement
+        # # of LSTM/RNN
         return Y
 
     def backward_pass(self, accum_grad):
