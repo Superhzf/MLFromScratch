@@ -47,7 +47,6 @@ class Dense(Layer):
         self.trainable = True
         self.W = None
         self.b = None
-        self.epoch = 0
 
     def initialize(self,optimizer):
         # TODO: Kaiming initialization
@@ -56,8 +55,8 @@ class Dense(Layer):
         self.W = np.random.uniform(-limit,limit,(self.input_shape[1],self.n_units))
         self.b = np.zeros((1,self.n_units))
         # Weight optimizer
-        self.W_opt = copy.copy(optimizer)
-        self.b_opt = copy.copy(optimizer)
+        self.W_opt = copy.deepcopy(optimizer)
+        self.b_opt = copy.deepcopy(optimizer)
 
 
     def parameters(self):
@@ -78,9 +77,8 @@ class Dense(Layer):
         self.db = np.sum(accum_grad, axis=0, keepdims=True)
         if self.trainable:
             # Update the layer weights
-            self.W = self.W_opt.update(self.W, self.dw, self.epoch)
-            self.b = self.b_opt.update(self.b, self.db, self.epoch)
-            self.epoch += 1
+            self.W = self.W_opt.update(self.W, self.dw)
+            self.b = self.b_opt.update(self.b, self.db)
 
         # Return accumulated gradient for the next layer
         # Calculation is based on the weights used during the forward pass

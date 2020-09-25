@@ -17,9 +17,9 @@ class StochasticGradientDescent():
             self.scheduler.get_max_lr(self.learning_rate)
 
     # ref: https://cs231n.github.io/neural-networks-3/
-    def update(self,w,grad_wrt_w, epoch=0):
-        if self.scheduler is not None and epoch > 0:
-            self.learning_rate = self.scheduler(epoch)
+    def update(self,w,grad_wrt_w):
+        if self.scheduler is not None:
+            self.learning_rate = self.scheduler()
         if self.w_update is None:
             self.w_update = grad_wrt_w.copy()
         else:
@@ -52,9 +52,9 @@ class RMSprop():
         if scheduler is not None:
             self.scheduler.get_max_lr(self.learning_rate)
 
-    def update(self,w,grad_wrt_w, epoch=0):
-        if self.scheduler is not None and epoch > 0:
-            self.learning_rate = self.scheduler(epoch)
+    def update(self,w,grad_wrt_w):
+        if self.scheduler is not None:
+            self.learning_rate = self.scheduler()
         # If not initialized
         if self.Eg is None:
             self.Eg = np.zeros(np.shape(w))
@@ -82,9 +82,9 @@ class Adagrad():
         if scheduler is not None:
             self.scheduler.get_max_lr(self.learning_rate)
 
-    def update(self,w,grad_wrt_w, epoch=0):
-        if self.scheduler is not None and epoch > 0:
-            self.learning_rate = self.scheduler(epoch)
+    def update(self,w,grad_wrt_w):
+        if self.scheduler is not None:
+            self.learning_rate = self.scheduler()
         # If not initialized
         if self.G is None:
             self.G = np.zeros(np.shape(w))
@@ -110,9 +110,9 @@ class Adadelta():
         if scheduler is not None:
             self.scheduler.get_max_lr(self.learning_rate)
 
-    def update(self, w, grad_wrt_w, epoch=0):
-        if self.scheduler is not None and epoch > 0:
-            self.learning_rate = self.scheduler(epoch)
+    def update(self, w, grad_wrt_w):
+        if self.scheduler is not None:
+            self.learning_rate = self.scheduler()
         if self.w_updt is None:
             self.w_updt = np.zeros(np.shape(w))
             self.E_w_updt = np.zeros(np.shape(w))
@@ -148,9 +148,9 @@ class Adam():
         if scheduler is not None:
             self.scheduler.get_max_lr(self.learning_rate)
 
-    def update(self,w,grad_wrt_w, epoch=0):
-        if self.scheduler is not None and epoch > 0:
-            self.learning_rate = self.scheduler(epoch)
+    def update(self,w,grad_wrt_w):
+        if self.scheduler is not None:
+            self.learning_rate = self.scheduler()
         # if not initialized
         if self.m is None:
             self.m = np.zeros(np.shape(grad_wrt_w))
