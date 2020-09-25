@@ -11,6 +11,7 @@ from numpy_ml.deep_learning.activation_functions import Sigmoid, Softmax, ReLU, 
 from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization, RNNCell
 from numpy_ml.deep_learning.layers import BidirectionalLSTM, many2oneRNN, LSTMCell, many2oneLSTM
 from numpy_ml.deep_learning.optimizers import StochasticGradientDescent, Adagrad, RMSprop, Adadelta, Adam
+from numpy_ml.deep_learning.schedulers import CosineAnnealingLR
 
 
 def test_binary_cross_entropy(cases):
@@ -1142,3 +1143,81 @@ def test_LSTM_bidirection(cases):
 
         i += 1
     print ("Successfully testing bidirectional LSTM layer!")
+
+def test_cosine_annealing_scheduler(cases):
+    """
+    The idea is to do one epoch training and the compare the weights and bias. This test depends on
+    fully connected layers, and fully connected layer has been tested.
+    """
+
+    np.random.seed(12345)
+
+    N = int(cases)
+
+    decimal = 4
+    LR = 0.05
+    MOMENTUM = 0.9
+    MIN_LR = 0.01 # Minimum learning rate
+    T_MAX = 4 # Maximum number of iterations
+
+    i = 1
+    while i < N + 1:
+        n_ex = np.random.randint(1, 100)
+        n_in = np.random.randint(1, 100)
+        n_out = np.random.randint(1, 100)
+        epochs = 2
+        nesterov = np.random.choice(np.array([True,False]))
+        X = random_tensor((n_ex, n_in), standardize=True)
+        X_tensor = torch.tensor(X,dtype=torch.float, requires_grad=True)
+
+        # initialize FC layer
+        model = nn.Linear(in_features=n_in, out_features=n_out, bias=True)
+
+        mine = Dense(n_units = n_out, input_shape=(n_ex, n_in))
+
+        # initialize the SGD optimizer
+        gold_optimizer = torch.optim.SGD(model.parameters(),
+                                    lr=LR,
+                                    momentum=MOMENTUM,
+                                    nesterov=nesterov)
+        gold_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(gold_optimizer,
+                                                                    T_max=T_MAX,
+                                                                    eta_min=MIN_LR,
+                                                                    last_epoch=-1)
+        mine_scheduler = CosineAnnealingLR(min_lr=MIN_LR, t_max=T_MAX)
+        mine_optim = StochasticGradientDescent(learning_rate=LR,momentum=MOMENTUM,nesterov=nesterov, scheduler=mine_scheduler)
+
+        mine.trainable=True
+        mine.initialize(mine_optim)
+
+        mine.W = model.weight.detach().numpy().transpose().copy()
+        mine.b = model.bias.detach().numpy()[None,:].copy()
+
+        # make sure initial weights are the same
+        assert_almost_equal(mine.W, model.weight.detach().numpy().transpose(),decimal=decimal)
+        assert_almost_equal(mine.b, model.bias.detach().numpy()[None,:],decimal=decimal)
+
+
+        for this_epoch in range(epochs):
+            gold_optimizer.zero_grad()
+            # forward prop
+            model_value = model(X_tensor)
+            mine_value = mine.forward_pass(X)
+            model_loss = torch.square(model_value).sum()/2.
+            # backward prop
+            model_loss.backward()
+            gold_optimizer.step()
+            gold_scheduler.step()
+            gold_weight = model.weight.detach().numpy()
+            gold_bias = model.bias.detach().numpy()
+
+            _ = mine.backward_pass(mine_value)
+
+            mine_weight = mine.W
+            mine_bias = mine.b
+
+            assert_almost_equal(mine_weight, gold_weight.transpose(),decimal=decimal)
+            assert_almost_equal(mine_bias, gold_bias[None,:],decimal=decimal)
+
+        i += 1
+    print ("Successfully testing Cosine Annealing LR scheduler!")
