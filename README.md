@@ -42,6 +42,10 @@ efficient as possible
   * Adadelta
   * Adam
 
+- [Schedulers]()
+  * CosineAnnealingLR
+  * CosineAnnealingWarmRestarts
+
 ## Unsupervised Learning
 
 - [Generative Adversarial Network](https://github.com/Superhzf/MLFromScratch/blob/master/numpy_ml/unsupervised_learning/generative_adversarial_network.py)
