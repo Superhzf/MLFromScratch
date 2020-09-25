@@ -9,15 +9,15 @@ class Loss(object):
     def gradient(self,y_true,y_pred):
         pass
 
-class SquareLoss(Loss):
+class SquaredLoss(Loss):
     def __init__(self):
         pass
 
     def loss(self,y_true,y_pred):
-        return 0.5*np.power((y_true-y_pred),2)
+        return np.power((y_true-y_pred),2)
 
     def gradient(self,y_true,y_pred):
-        return -(y_true-y_pred)
+        return -2*(y_true-y_pred)
 
 # Why Cross Entropy loss instead of MSE for binary classification problems?
 # Answer: It is OK to use MSE but CE loss is better, the reason is that CE

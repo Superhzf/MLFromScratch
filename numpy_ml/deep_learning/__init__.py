@@ -1,2 +1,2 @@
 from .neural_network import NeuralNetwork
-from .loss_functions import SquareLoss, BinaryCrossEntropy, CrossEntropy
+from .loss_functions import SquaredLoss, BinaryCrossEntropy, CrossEntropy
