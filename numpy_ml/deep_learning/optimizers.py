@@ -7,14 +7,19 @@ import numpy as np
 # if the direction is wrong, momentum will keep us moving too far on the wrong
 # direction
 class StochasticGradientDescent():
-    def __init__(self,learning_rate = 0.01,momentum=0.9,nesterov=False):
+    def __init__(self,learning_rate = 0.01,momentum=0.9,nesterov=False, scheduler=None):
         self.learning_rate = learning_rate
         self.momentum = momentum
         self.w_update = None
         self.nesterov = nesterov
+        self.scheduler = scheduler
+        if scheduler is not None:
+            self.scheduler.get_max_lr(self.learning_rate)
 
     # ref: https://cs231n.github.io/neural-networks-3/
-    def update(self,w,grad_wrt_w):
+    def update(self,w,grad_wrt_w, epoch=0):
+        if self.scheduler is not None and epoch > 0:
+            self.learning_rate = self.scheduler(epoch)
         if self.w_update is None:
             self.w_update = grad_wrt_w.copy()
         else:
@@ -27,6 +32,9 @@ class StochasticGradientDescent():
             grad_wrt_w = self.w_update
         return w - self.learning_rate * grad_wrt_w
 
+    def curr_learning_rate(self):
+        return self.learning_rate
+
 # why RMSprop?
 # Answer: This solves the problem of adagrad, the learning rate is not becoming
 # smaller and smaller. The idea is the same, if the gradient is large, we want
@@ -35,19 +43,27 @@ class StochasticGradientDescent():
 # gradient is. It is pretty much like normalization.
 #
 class RMSprop():
-    def __init__(self,learning_rate = 0.01,rho = 0.9, eps=1e-8):
+    def __init__(self,learning_rate = 0.01,rho = 0.9, eps=1e-8, scheduler=None):
         self.learning_rate = learning_rate
         self.Eg = None # Running average of the square gradients at w
         self.eps = eps
         self.rho = rho
+        self.scheduler = scheduler
+        if scheduler is not None:
+            self.scheduler.get_max_lr(self.learning_rate)
 
-    def update(self,w,grad_wrt_w):
+    def update(self,w,grad_wrt_w, epoch=0):
+        if self.scheduler is not None and epoch > 0:
+            self.learning_rate = self.scheduler(epoch)
         # If not initialized
         if self.Eg is None:
             self.Eg = np.zeros(np.shape(w))
 
         self.Eg = self.rho*self.Eg + (1-self.rho)*np.power(grad_wrt_w,2)
         return w - self.learning_rate*grad_wrt_w/(np.sqrt(self.Eg)+self.eps)
+
+    def curr_learning_rate(self):
+        return self.learning_rate
 
 
 # why adagrad?
@@ -58,12 +74,17 @@ class RMSprop():
 # The downside of adagrad is that the learning rate becomes smaller and smaller
 # and finally could stop, this won't work for saddle points
 class Adagrad():
-    def __init__(self,learning_rate=0.01, eps=1e-10):
+    def __init__(self,learning_rate=0.01, eps=1e-10, scheduler=None):
         self.learning_rate = learning_rate
         self.G = None # sum of squares of the gradients
         self.eps = eps
+        self.scheduler = scheduler
+        if scheduler is not None:
+            self.scheduler.get_max_lr(self.learning_rate)
 
-    def update(self,w,grad_wrt_w):
+    def update(self,w,grad_wrt_w, epoch=0):
+        if self.scheduler is not None and epoch > 0:
+            self.learning_rate = self.scheduler(epoch)
         # If not initialized
         if self.G is None:
             self.G = np.zeros(np.shape(w))
@@ -74,16 +95,24 @@ class Adagrad():
         # and the step is relatively larger
         return w-self.learning_rate*grad_wrt_w/(np.sqrt(self.G)+self.eps)
 
+    def curr_learning_rate(self):
+        return self.learning_rate
+
 # The inspiration of adadelta is to avoid monotonically decreasing learning rate
 class Adadelta():
-    def __init__(self, rho=0.95, eps=1e-6):
+    def __init__(self, rho=0.95, eps=1e-6, scheduler=None):
         self.E_w_updt = None
         self.E_avg = None
         self.w_updt = None
         self.eps = eps
         self.rho = rho
+        self.scheduler = scheduler
+        if scheduler is not None:
+            self.scheduler.get_max_lr(self.learning_rate)
 
-    def update(self, w, grad_wrt_w):
+    def update(self, w, grad_wrt_w, epoch=0):
+        if self.scheduler is not None and epoch > 0:
+            self.learning_rate = self.scheduler(epoch)
         if self.w_updt is None:
             self.w_updt = np.zeros(np.shape(w))
             self.E_w_updt = np.zeros(np.shape(w))
@@ -100,10 +129,13 @@ class Adadelta():
         self.E_w_updt = self.rho * self.E_w_updt + (1 - self.rho) * np.power(self.w_updt, 2)
         return w - self.w_updt
 
+    def curr_learning_rate(self):
+        return self.learning_rate
+
 # Adam is the combination of SGD with momentum and RMSprop
 # Basically, it controls update and learning rate at the same time
 class Adam():
-    def __init__(self,learning_rate=0.001,b1=0.9,b2=0.999, eps=1e-8):
+    def __init__(self,learning_rate=0.001,b1=0.9,b2=0.999, eps=1e-8, scheduler=None):
         self.learning_rate = learning_rate
         self.eps = eps
         self.m = None
@@ -112,8 +144,13 @@ class Adam():
         self.b1 = b1
         self.b2 = b2
         self.step = 0
+        self.scheduler = scheduler
+        if scheduler is not None:
+            self.scheduler.get_max_lr(self.learning_rate)
 
-    def update(self,w,grad_wrt_w):
+    def update(self,w,grad_wrt_w, epoch=0):
+        if self.scheduler is not None and epoch > 0:
+            self.learning_rate = self.scheduler(epoch)
         # if not initialized
         if self.m is None:
             self.m = np.zeros(np.shape(grad_wrt_w))
@@ -130,3 +167,6 @@ class Adam():
         self.w_updt = self.learning_rate*m_hat/(np.sqrt(v_hat)+self.eps)
 
         return w - self.w_updt
+
+    def curr_learning_rate(self):
+        return self.learning_rate

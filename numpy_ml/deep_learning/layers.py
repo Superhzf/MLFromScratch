@@ -35,8 +35,10 @@ class Dense(Layer):
     -------------------
     n_units: int
         The number of neurons in the layer. It is also called n_out in other packages
-    input_shape: tuple
+    input_shape: (n_ex, n_in)
         The expected shape of the weight matrix. input_shape[1] is the the number of features.
+    epoch: int
+        This parameter indicates how many epochs have been finished
     """
     def __init__(self,n_units,input_shape=None):
         self.input_shape = input_shape
@@ -45,6 +47,7 @@ class Dense(Layer):
         self.trainable = True
         self.W = None
         self.b = None
+        self.epoch = 0
 
     def initialize(self,optimizer):
         # TODO: Kaiming initialization
@@ -55,6 +58,7 @@ class Dense(Layer):
         # Weight optimizer
         self.W_opt = copy.copy(optimizer)
         self.b_opt = copy.copy(optimizer)
+
 
     def parameters(self):
         # return the number of parameters in this layer
@@ -74,8 +78,9 @@ class Dense(Layer):
         self.db = np.sum(accum_grad, axis=0, keepdims=True)
         if self.trainable:
             # Update the layer weights
-            self.W = self.W_opt.update(self.W, self.dw)
-            self.b = self.b_opt.update(self.b, self.db)
+            self.W = self.W_opt.update(self.W, self.dw, self.epoch)
+            self.b = self.b_opt.update(self.b, self.db, self.epoch)
+            self.epoch += 1
 
         # Return accumulated gradient for the next layer
         # Calculation is based on the weights used during the forward pass
