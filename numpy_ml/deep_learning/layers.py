@@ -594,8 +594,6 @@ class Embedding(Layer):
             The total number of categories in the categorical variable (The total
             number of words in the vocabulary). All integer indices are expected
             to range between 0 and vocab_size - 1
-        n_in: int
-            The number of categorical variables
         """
         self.n_out = n_out
         self.vocab_size = vocab_size
@@ -624,7 +622,7 @@ class Embedding(Layer):
 
         Returns:
         ------------------------------
-        Y: numpy array of shape (n_ex, n_in*n_out) represents n_ex observations,
+        Y: numpy array of shape (n_ex, n_in, n_out) represents n_ex observations,
         n_in features and n_out dimensions.
         """
         self.X = X
