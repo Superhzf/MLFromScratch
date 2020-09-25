@@ -42,7 +42,7 @@ efficient as possible
   * Adadelta
   * Adam
 
-- [Schedulers]()
+- [Schedulers](https://github.com/Superhzf/MLFromScratch/blob/master/numpy_ml/deep_learning/schedulers.py)
   * CosineAnnealingLR
   * CosineAnnealingWarmRestarts
 
