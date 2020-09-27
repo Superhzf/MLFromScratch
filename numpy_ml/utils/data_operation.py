@@ -92,7 +92,7 @@ class DiscreteSampler():
         self.alias_table = alias
 
     def __call__(self, n_samples=1):
-        return self.sample(n_sampels)
+        return self.sample(n_samples)
 
     def sample(self, n_samples=1):
         """
@@ -110,7 +110,7 @@ class DiscreteSampler():
         """
         ixs = np.random.randint(0, self.N, n_samples)
         p = np.exp(self.prob_table[ixs]) if self.log else self.prob_table[ixs]
-        flips = np.random.binomal(1,p)
+        flips = np.random.binomial(1,p)
         samples = [ix if f else self.alias_table[ix] for ix, f in zip(ixs, flips)]
 
         if not self.with_replacement:

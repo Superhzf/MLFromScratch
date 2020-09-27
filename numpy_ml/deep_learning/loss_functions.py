@@ -1,6 +1,9 @@
 from __future__ import division
 import numpy as np
 from scipy.special import expit
+from .activation_functions import Sigmoid
+import math
+import copy
 
 class Loss(object):
     def loss(self,y_true,y_pred):
@@ -173,3 +176,229 @@ class VAELoss(Loss):
         dMean = t_mean / N
         dLogVar = (np.exp(t_log_var) - 1) / (2 * N)
         return dY_pred, dMean, dLogVar
+
+
+class NCELoss(Loss):
+    def __init__(self,
+                 n_classes,
+                 n_in,
+                 noise_sampler,
+                 num_negative_samples,
+                 subtract_log_label_prob=True,
+                 trainable=True):
+        """
+        Noise contrastive estimation (NCE) function. NCE is a candidate sampling
+        method often used to reduce the computational challenge of training a
+        softmax layer on problems with a large number of output classes. It proceeds
+        by training a logistic regression model to discriminate between samples
+        from true data distribution and samples from an artificial noise distribution.
+
+        Parameter:
+        ----------------
+        n_classes: int
+            The total number of output classes in the model.
+        n_in: int
+            The number of features of the input X. It is the embedding_dim for
+            word2vec model.
+        noise_sampler:
+            The negative sampler. Defines a distribution over all classes in the
+            dataset.
+        num_negative_samples: int
+            The number of negative samples to draw for each target.
+        subtract_log_label_prob: bool
+            Whether to subtract the log of the probability of each label under the
+            noise distribution from its respective logit. Set to false for negative
+            sampling, true for NCE.
+        """
+        self.n_in=n_in
+        self.trainable=trainable
+        self.n_classes=n_classes
+        self.noise_sampler=noise_sampler
+        self.num_negative_samples=num_negative_samples
+        self.subtract_log_label_prob = subtract_log_label_prob
+
+    def initialize(self, optimizer):
+        self.optimizer = optimizer
+        self.act_fn=Sigmoid()
+        self.X = []
+
+        limit = 1 / math.sqrt(self.n_in)
+        self.W = np.random.uniform(-limit,limit,(self.n_in,self.n_classes))
+        self.b = self.b = np.zeros((1,self.n_classes))
+
+        self.W_opt = copy.deepcopy(optimizer)
+        self.b_opt = copy.deepcopy(optimizer)
+
+        self.dW = np.zeros_like(self.W)
+        self.db = np.zeros_like(self.b)
+
+        self.y_pred = []
+        self.target = []
+        self.out_labels = []
+        self.target_logits = []
+        self.noise_samples = []
+        self.noise_logits = []
+
+    def loss(self, X, target, neg_samples=None):
+        """
+        Compute the NCE loss for a collection of inputs and associated targets.
+
+        Parameters:
+        ----------------------
+        X: numpy.array of shape (n_ex, n_c, n_in)
+            The layer input. A minibatch of n_ex observations, where each observation
+            has n_c features (characters) and each character has n_in output
+            features.
+        target: numpy.array of shape (n_ex,)
+            Integer indices (ID) of target classes for each example in the minibatch.
+        neg_sampels: numpy.array of shape (num_negative_samples,)
+            An optional array of negative samples to use during the loss calculation.
+            These will be used instead of samples draw from self.noise_sampler
+
+        Returns:
+        -----------------
+        loss: float
+            The NCE loss summed over the minibatch and samples.
+        y_pred: numpy.array of shape (n_ex, n_c):
+            The network predictions
+        """
+        loss, Z_target, Z_neg, y_pred, y_true, noise_samples=self._loss(X, target, neg_samples)
+
+        if self.trainable:
+            self.X.append(X)
+
+            self.y_pred.append(y_pred)
+            self.target.append(target)
+            self.out_labels.append(y_true)
+            self.target_logits.append(Z_target)
+            self.noise_samples.append(noise_samples)
+            self.noise_logits.append(Z_neg)
+
+        return loss, np.squeeze(y_pred[..., :1], -1)
+
+
+    def _loss(self, X, target, neg_samples):
+        """Actual calculation of NCE loss"""
+        assert len(X.shape)==3
+
+        if neg_samples is None:
+            neg_samples = self.noise_sampler(self.num_negative_samples)
+        assert len(neg_samples) == self.num_negative_samples
+
+        # neg_samples are the negative targets, negative sampels share the same
+        # inputs as positive samples.
+        p_neg_samples = self.noise_sampler.probs[neg_samples]
+        # target are the positive targets
+        p_target = np.atleast_2d(self.noise_sampler.probs[target])
+
+        # pair up positive samples and negative samples
+        pos_neg_samples = (neg_samples, p_target, p_neg_samples)
+
+        # compute the logit for negative samples and target
+        print ("target.shape",target.shape)
+        print ("self.W.shape",self.W.shape)
+        print ("self.W[:,target].shape",self.W[:,target].shape)
+        print ("X shape", X.shape)
+        Z_target = X @ self.W[:,target] + self.b[:,target]
+        Z_neg = X @ self.W[:,neg_samples] + self.b[:,neg_samples]
+
+        # subtract the log probability of each label under the noise dist
+        if self.subtract_log_label_prob:
+            Z_target = Z_target - np.log(p_target)
+            Z_neg = Z_neg - np.log(p_neg_samples)
+
+        pred_p_target = self.act_fn(Z_target)
+        pred_p_neg = self.act_fn(Z_neg)
+
+        y_pred = pred_p_target
+        if self.trainable:
+            # (n_ex, n_c, 1 + n_samples) (target is first column)
+            y_pred = np.concatenate((y_pred, pred_p_neg), axis=-1)
+
+        # we have only one positive samples
+        n_targets = 1
+        y_true = np.zeros_like(y_pred)
+        y_true[..., :n_targets] = 1
+
+        # binary cross entropy
+        eps = np.finfo(float).eps
+        np.clip(y_pred, eps, 1 - eps, y_pred)
+        loss = -np.sum(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
+        return loss, Z_target, Z_neg, y_pred, y_true, noise_samples
+
+    def grad(self):
+        dX = []
+        for idx, x in enumerate(self.X):
+            dx, dW, db = self._grad(x, idx)
+            dX.append(dx)
+
+            self.dW += dW
+            self.db += db
+
+        dX = dX[0] if len(self.X) == 1 else dX
+        if self.trainable:
+            self.W = self.W_opt.update(self.W, self.dW)
+            self.b = self.b_opt.update(self.b, self.db)
+
+        return dX
+
+    def _grad(self, X, idx):
+
+        y_pred = self.y_pred[idx]
+        target = self.target[idx]
+        y_true = self.out_labels[idx]
+        Z_neg = self.noise_logits[idx]
+        Z_target = self.target_logits[idx]
+        neg_samples = self.noise_samples[idx]
+
+        # the number of target classes per minibatch example
+        n_targets = 1
+
+        # is this necessary???
+        preds, classes = y_pred.flatten(), y_true.flatten()
+
+        dLdp = ((1 - y_true) / (1 - y_pred)) - (y_true / y_pred)
+        # is this necessary???
+        dLdp_real = dLdp_real.reshape(*y_pred.shape)
+
+        # partition the gradients into target and negative sample portions
+        dLdy_pred_target = dLdp_real[..., :n_targets]
+        dLdy_pred_neg = dLdp_real[..., n_targets:]
+
+        # compute gradients of the loss wrt the data and noise logits
+        dLdZ_target = dLdy_pred_target * self.act_fn.grad(Z_target)
+        dLdZ_neg = dLdy_pred_neg * self.act_fn.grad(Z_neg)
+
+        # compute weight gradients
+        db_neg = dLdZ_neg.sum(axis=(0, 1))
+        db_target = dLdZ_target.sum(axis=(1, 2))
+
+        dW_neg = (dLdZ_neg.transpose(0, 2, 1) @ X).sum(axis=0)
+        dW_target = (dLdZ_target.transpose(0, 2, 1) @ X).sum(axis=1)
+
+        # compute gradients w.r.t. the input X
+        dX_target = np.vstack([dLdZ_target[[ix]] @ W[[t]] for ix, t in enumerate(target)])
+        dX_neg = dLdZ_neg @ W[neg_samples]
+
+        hits = list(set(target).intersection(set(neg_samples)))
+        hit_ixs = [np.where(target == h)[0] for h in hits]
+
+        # adjust param gradients if there's an accidental hit
+        if len(hits) != 0:
+            hit_ixs = np.concatenate(hit_ixs)
+            target = np.delete(target, hit_ixs)
+            db_target = np.delete(db_target, hit_ixs)
+            dW_target = np.delete(dW_target, hit_ixs, 0)
+
+        dX = dX_target + dX_neg
+
+        db = np.zeros_like(b).flatten()
+        np.add.at(db, target, db_target)
+        np.add.at(db, neg_samples, db_neg)
+        db = db.reshape(*b.shape)
+
+        dW = np.zeros_like(W)
+        np.add.at(dW, target, dW_target)
+        np.add.at(dW, neg_samples, dW_neg)
+
+        return dX, dW, db
