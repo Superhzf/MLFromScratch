@@ -82,7 +82,13 @@ class DiscreteSampler():
         while len(small):
             prob[small.pop()] = 0 if log else 1
 
+        # prob_table is a dict, the key means the candidate, value is the probability
+        # to draw the candidate, 1 - probability is the probability to draw the
+        # alias candidate
         self.prob_table = prob
+        # alias_table is a dict, the key means shows the candidate, value means
+        # that if the probability of key is less than 1, then value is used to
+        # fill in the area that is less than 1.
         self.alias_table = alias
 
     def __call__(self, n_samples=1):
