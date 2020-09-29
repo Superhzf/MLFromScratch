@@ -235,12 +235,14 @@ class NCELoss(Loss):
         self.dW = np.zeros_like(self.W)
         self.db = np.zeros_like(self.b)
 
-        self.y_pred = []
-        self.target = []
-        self.out_labels = []
-        self.target_logits = []
-        self.noise_samples = []
-        self.noise_logits = []
+        self.derived_variables = {
+            "y_pred":[],
+            "target":[],
+            "out_labels":[],
+            "target_logits":[],
+            "noise_samples":[],
+            "noise_logits":[]
+        }
 
     def loss(self, X, target, neg_samples=None, train=True):
         """
@@ -273,12 +275,12 @@ class NCELoss(Loss):
         loss, Z_target, Z_neg, y_pred, y_true, noise_samples=self._loss(X, target, neg_samples, train)
 
         self.X.append(X)
-        self.y_pred.append(y_pred)
-        self.target.append(target)
-        self.out_labels.append(y_true)
-        self.target_logits.append(Z_target)
-        self.noise_samples.append(noise_samples)
-        self.noise_logits.append(Z_neg)
+        self.derived_variables['y_pred'].append(y_pred)
+        self.derived_variables['target'].append(target)
+        self.derived_variables['out_labels'].append(y_true)
+        self.derived_variables['target_logits'].append(Z_target)
+        self.derived_variables['noise_samples'].append(noise_samples)
+        self.derived_variables['noise_logits'].append(Z_neg)
 
         return loss, np.squeeze(y_pred[..., :1], -1)
 
@@ -348,16 +350,16 @@ class NCELoss(Loss):
             self.W = self.W_opt.update(self.W, self.dW)
             self.b = self.b_opt.update(self.b, self.db)
 
-        return dX
+        return np.stack(dX)
 
     def _gradient(self, X, idx):
 
-        y_pred = self.y_pred[idx]
-        target = self.target[idx]
-        y_true = self.out_labels[idx]
-        Z_neg = self.noise_logits[idx]
-        Z_target = self.target_logits[idx]
-        neg_samples = self.noise_samples[idx][0]
+        y_pred = self.derived_variables['y_pred'][idx]
+        target = self.derived_variables['target'][idx]
+        y_true = self.derived_variables['out_labels'][idx]
+        Z_neg = self.derived_variables['noise_logits'][idx]
+        Z_target = self.derived_variables['target_logits'][idx]
+        neg_samples = self.derived_variables['noise_samples'][idx][0]
 
         # the number of target classes per minibatch example
         n_targets = 1
