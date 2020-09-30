@@ -1359,90 +1359,90 @@ def test_cosine_annealing_scheduler(cases):
     print ("Successfully testing Cosine Annealing LR scheduler!")
 
 
-# def test_cosine_annealing_warm_restarts(cases):
-#     """
-#     The idea is to do one epoch training and the compare the weights and bias. This test depends on
-#     fully connected layers, and fully connected layer has been tested.
-#     """
-#
-#     np.random.seed(12345)
-#
-#     N = int(cases)
-#
-#     decimal = 4
-#     LR = 0.05
-#     MOMENTUM = 0.9
-#     MIN_LR = 0.01 # Minimum learning rate
-#     T_0 = 4 # The initial maximum number of iterations
-#     T_MULT = 2
-#
-#     i = 1
-#     while i < N + 1:
-#         n_ex = np.random.randint(1, 100)
-#         n_in = np.random.randint(1, 100)
-#         n_out = np.random.randint(1, 100)
-#         epochs = np.random.randint(T_0, T_0*T_MULT)
-#         nesterov = np.random.choice(np.array([True,False]))
-#         X = random_tensor((n_ex, n_in), standardize=True)
-#         X_tensor = torch.tensor(X,dtype=torch.float64, requires_grad=True)
-#
-#
-#         # initialize FC layer
-#         model = nn.Linear(in_features=n_in, out_features=n_out, bias=True).double()
-#
-#         mine = Dense(n_units = n_out, input_shape=(n_ex, n_in))
-#
-#         # initialize the SGD optimizer
-#         gold_optimizer = torch.optim.SGD(model.parameters(),
-#                                     lr=LR,
-#                                     momentum=MOMENTUM,
-#                                     nesterov=nesterov)
-#         gold_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(gold_optimizer,
-#                                                                                T_0=T_0,
-#                                                                                T_mult=T_MULT,
-#                                                                                eta_min=MIN_LR,
-#                                                                                last_epoch=-1)
-#         gold_loss = torch.nn.MSELoss(reduction='sum')
-#         mine_loss = SquaredLoss()
-#         mine_scheduler = CosineAnnealingWarmRestarts(min_lr=MIN_LR, t_0=T_0, t_mult=T_MULT)
-#         mine_optim = StochasticGradientDescent(learning_rate=LR,momentum=MOMENTUM,nesterov=nesterov, scheduler=mine_scheduler)
-#
-#         mine.trainable=True
-#         mine.initialize(mine_optim)
-#
-#         mine.W = model.weight.detach().numpy().transpose().copy()
-#         mine.b = model.bias.detach().numpy()[None,:].copy()
-#
-#         # generate the target variable
-#         Y = 5 * (X@mine.W.copy()+mine.b.copy()) + 10
-#         Y_tensor = torch.tensor(Y,dtype=torch.float64, requires_grad=True)
-#
-#         # make sure initial weights are the same
-#         assert_almost_equal(mine.W, model.weight.detach().numpy().transpose(),decimal=decimal)
-#         assert_almost_equal(mine.b, model.bias.detach().numpy()[None,:],decimal=decimal)
-#
-#
-#         for this_epoch in range(epochs):
-#             gold_optimizer.zero_grad()
-#             # forward prop
-#             model_value = model(X_tensor)
-#             mine_value = mine.forward_pass(X)
-#             mine_loss_value = mine_loss.loss(Y,mine_value)
-#             model_loss = gold_loss(model_value, Y_tensor)
-#             # backward prop
-#             model_loss.backward()
-#             gold_optimizer.step()
-#             gold_scheduler.step()
-#
-#             gold_weight = model.weight.detach().numpy()
-#             gold_bias = model.bias.detach().numpy()
-#
-#             _ = mine.backward_pass(-2*(Y-mine_value))
-#
-#             mine_weight = mine.W
-#             mine_bias = mine.b
-#
-#             assert_almost_equal(mine_weight, gold_weight.transpose(),decimal=decimal)
-#             assert_almost_equal(mine_bias, gold_bias[None,:],decimal=decimal)
-#         i += 1
-#     print ("Successfully testing Cosine Annealing Warm Restarts LR scheduler!")
+def test_cosine_annealing_warm_restarts(cases):
+    """
+    The idea is to do one epoch training and the compare the weights and bias. This test depends on
+    fully connected layers, and fully connected layer has been tested.
+    """
+
+    np.random.seed(12345)
+
+    N = int(cases)
+
+    decimal = 4
+    LR = 0.05
+    MOMENTUM = 0.9
+    MIN_LR = 0.01 # Minimum learning rate
+    T_0 = 4 # The initial maximum number of iterations
+    T_MULT = 2
+
+    i = 1
+    while i < N + 1:
+        n_ex = np.random.randint(1, 100)
+        n_in = np.random.randint(1, 100)
+        n_out = np.random.randint(1, 100)
+        epochs = np.random.randint(T_0, T_0*T_MULT)
+        nesterov = np.random.choice(np.array([True,False]))
+        X = random_tensor((n_ex, n_in), standardize=True)
+        X_tensor = torch.tensor(X,dtype=torch.float64, requires_grad=True)
+
+
+        # initialize FC layer
+        model = nn.Linear(in_features=n_in, out_features=n_out, bias=True).double()
+
+        mine = Dense(n_units = n_out, input_shape=(n_ex, n_in))
+
+        # initialize the SGD optimizer
+        gold_optimizer = torch.optim.SGD(model.parameters(),
+                                    lr=LR,
+                                    momentum=MOMENTUM,
+                                    nesterov=nesterov)
+        gold_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(gold_optimizer,
+                                                                               T_0=T_0,
+                                                                               T_mult=T_MULT,
+                                                                               eta_min=MIN_LR,
+                                                                               last_epoch=-1)
+        gold_loss = torch.nn.MSELoss(reduction='sum')
+        mine_loss = SquaredLoss()
+        mine_scheduler = CosineAnnealingWarmRestarts(min_lr=MIN_LR, t_0=T_0, t_mult=T_MULT)
+        mine_optim = StochasticGradientDescent(learning_rate=LR,momentum=MOMENTUM,nesterov=nesterov, scheduler=mine_scheduler)
+
+        mine.trainable=True
+        mine.initialize(mine_optim)
+
+        mine.W = model.weight.detach().numpy().transpose().copy()
+        mine.b = model.bias.detach().numpy()[None,:].copy()
+
+        # generate the target variable
+        Y = 5 * (X@mine.W.copy()+mine.b.copy()) + 10
+        Y_tensor = torch.tensor(Y,dtype=torch.float64, requires_grad=True)
+
+        # make sure initial weights are the same
+        assert_almost_equal(mine.W, model.weight.detach().numpy().transpose(),decimal=decimal)
+        assert_almost_equal(mine.b, model.bias.detach().numpy()[None,:],decimal=decimal)
+
+
+        for this_epoch in range(epochs):
+            gold_optimizer.zero_grad()
+            # forward prop
+            model_value = model(X_tensor)
+            mine_value = mine.forward_pass(X)
+            mine_loss_value = mine_loss.loss(Y,mine_value)
+            model_loss = gold_loss(model_value, Y_tensor)
+            # backward prop
+            model_loss.backward()
+            gold_optimizer.step()
+            gold_scheduler.step()
+
+            gold_weight = model.weight.detach().numpy()
+            gold_bias = model.bias.detach().numpy()
+
+            _ = mine.backward_pass(-2*(Y-mine_value))
+
+            mine_weight = mine.W
+            mine_bias = mine.b
+
+            assert_almost_equal(mine_weight, gold_weight.transpose(),decimal=decimal)
+            assert_almost_equal(mine_bias, gold_bias[None,:],decimal=decimal)
+        i += 1
+    print ("Successfully testing Cosine Annealing Warm Restarts LR scheduler!")
