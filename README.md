@@ -86,5 +86,7 @@ efficient as possible
 <p align="center">
     The result of unit test for different parts of deep learning
 </p>
-The warning message is due to the [bug](https://github.com/tensorflow/tensorflow/issues/31412) of Tensorflow
+
+The warning message is due to [the bug of Tensorflow](https://github.com/tensorflow/tensorflow/issues/31412)
+
 [unit test page](https://github.com/Superhzf/MLFromScratch/tree/master/unit_tests)
