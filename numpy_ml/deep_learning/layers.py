@@ -584,7 +584,7 @@ class many2manyRNN(Layer):
 
 
 class Embedding(Layer):
-    def __init__(self, n_out, vocab_size):
+    def __init__(self, n_out, vocab_size, trainable=True):
         """
         Parameters:
         ---------------------
@@ -598,7 +598,7 @@ class Embedding(Layer):
         self.n_out = n_out
         self.vocab_size = vocab_size
         self.W = None
-        self.trainable = True
+        self.trainable = trainable
 
     def initialize(self, optimizer):
         limit = 1
@@ -648,6 +648,7 @@ class Embedding(Layer):
 
         if self.trainable:
             self.W = self.W_opt.update(self.W, self.grad_W)
+            self.grad_W = np.zeros_like(self.W)
 
     def output_shape(self):
         if self.n_in is not None:

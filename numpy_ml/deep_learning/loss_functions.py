@@ -309,8 +309,6 @@ class NCELoss(Loss):
         # subtract the log probability of each label under the noise dist
         if self.subtract_log_label_prob:
             n, m = Z_target.shape[0], Z_neg.shape[0]
-            # Z_target = Z_target - np.log(p_target)
-            # Z_neg = Z_neg - np.log(p_neg_samples)
             Z_target[range(n), ...] -= np.log(p_target)
             Z_neg[range(m), ...] -= np.log(p_neg_samples)
 
@@ -349,6 +347,9 @@ class NCELoss(Loss):
         if self.trainable:
             self.W = self.W_opt.update(self.W, self.dW)
             self.b = self.b_opt.update(self.b, self.db)
+
+            self.dW = np.zeros_like(self.W)
+            self.db = np.zeros_like(self.b)
 
         return np.stack(dX)
 
