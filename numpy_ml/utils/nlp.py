@@ -1,5 +1,7 @@
 import numpy as np
 import re
+import os
+from collections import Counter
 
 _WORD_REGEX = re.compile(r"(?u)\b\w\w+\b")  # sklearn default
 # http://ir.dcs.gla.ac.uk/resources/linguistic_utils/stop_words
@@ -369,7 +371,7 @@ class Vocabulary:
             'corpus_fps': None,
             'lowercase': lowercase,
             'min_count': min_count,
-            'max_tokens': max_tokens,
+            'max_tokens': max_count,
             'filter_stopwords': filter_stopwords
         }
 
@@ -385,6 +387,9 @@ class Vocabulary:
     def n_words(self):
         """The total number of words in the corpus"""
         return sum(self.counts.values())
+
+    def list_all_tokens(self):
+        return list(self.token2idx.keys())
 
     def most_common(self, n=5):
         """Return the top `n` most common tokens in the corpus"""
@@ -411,9 +416,10 @@ class Vocabulary:
         filtered : List[str]
             The list of words filtered against the vocabulary.
         """
+        all_tokens = self.list_all_tokens()
         if unk:
-            return [w if w in self else '<unk>' for w in words]
-        return [w for w in words if w in words]
+            return [w if w in all_tokens else '<unk>' for w in words]
+        return [w for w in words if w in all_tokens]
 
     def words_to_indices(self, words):
         """
@@ -471,7 +477,7 @@ class Vocabulary:
             corpus_fps = [corpus_fps]
 
         for corpus_fp in corpus_fps:
-            assert os.isfile(corpus_fp), "{} does not exist".format(corpus_fp)
+            assert os.path.isfile(corpus_fp), "{} does not exist".format(corpus_fp)
 
         # tokens stores all the tokens, each token has two features, word and count
         tokens = []
@@ -482,7 +488,7 @@ class Vocabulary:
         min_count = H['min_count']
         lowercase = H['lowercase']
         max_tokens = H['max_tokens']
-        filter_stop = H['filter_stop']
+        filter_stop = H['filter_stopwords']
 
         H['encoding'] = encoding
         H['corpus_fps'] = corpus_fps
