@@ -29,11 +29,14 @@ efficient as possible
   * Embedding Layer
   * RNN Layer: many-to-one
   * LSTM ayer: many-to-one
+  * Bidirectional LSTM
 - [Loss Functions](https://github.com/Superhzf/MLFromScratch/blob/master/numpy_ml/deep_learning/loss_functions.py)
 
   * Cross Entropy
   * Loss for VAE
   * BinomialDeviance
+  * Noise Contrastive Estimation
+
 - [Optimizer](https://github.com/Superhzf/MLFromScratch/blob/master/numpy_ml/deep_learning/optimizers.py)
 
   * SGD with momentum
@@ -45,6 +48,9 @@ efficient as possible
 - [Schedulers](https://github.com/Superhzf/MLFromScratch/blob/master/numpy_ml/deep_learning/schedulers.py)
   * CosineAnnealingLR
   * CosineAnnealingWarmRestarts
+
+- Models
+  * [word2vec](https://github.com/Superhzf/MLFromScratch/blob/master/numpy_ml/deep_learning/models/word2vec.py)
 
 ## Unsupervised Learning
 
