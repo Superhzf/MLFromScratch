@@ -474,115 +474,6 @@ class many2oneRNN(Layer):
         assert 1==0, "This function has not been implemented"
 
 
-class many2manyRNN(Layer):
-    """
-    A vanilla fully-connected recurrent neural network layer.
-
-    Parameters:
-    --------------------------------------
-    n_units: int
-        The number of hidden states in a layer
-    activation: string
-        The name of the activation function which will be applied to the output
-    of each state.
-    bptt_trunc: int
-        Decides how many time steps the gradient should be propagated backwards
-    through states given the loss gradient for time step t
-    input_shape: tuple
-        n_units * n_in. Must be specified if it is the first layer in the network
-
-    """
-    def __init__(self,n_units, activation='tanh', bptt_trunc=5, input_shape=None):
-        self.input_shape=input_shape
-        self.n_units = n_units
-        self.activation = activation_functions[activation]()
-        self.trainable = True
-        self.bptt_trunc = bptt_trunc
-        self.W_p = None # Weight of the previous state
-        self.W_i = None # Weight of the input
-
-    def initialize(self,optimizer):
-        _,input_dim = self.input_shape
-        # Initialize the weights
-        limit = 1/math.sqrt(input_dim)
-        self.W_i = np.random.uniform(-limit,limit,(input_dim,self.n_units))
-        limit = 1/math.sqrt(self.n_units)
-        # TODO: This is not correct, the first dimension of self.W_o should be
-        # n_units. Even worse, self.W_o could be removed, it is just another
-        # dense layer which is not a must. It passed the test because input_dim
-        # == n_units in the test case
-        self.W_p = np.random.uniform(-limit,limit,(self.n_units,self.n_units))
-        # weight optimizers
-        self.W_i_opt = copy.copy(optimizer)
-        self.W_o_opt = copy.copy(optimizer)
-        self.W_p_opt = copy.copy(optimizer)
-
-    def parameters(self):
-        return np.prod(self.W_i.shape)+np.prod(self.W_o.shape)+np.prod(self.W_p.shape)
-
-    def forward_pass(self,X,training=True):
-
-        self.layer_input = X
-        # By default, X is a group of batchs
-        batch_size, timestamps, feature_size = self.layer_input.shape
-        # cache values for use in backprop
-        self.state_input = np.zeros((batch_size, timestamps, self.n_units))
-        self.states = np.zeros((batch_size, timestamps+1, self.n_units))
-        # TODO: This is not correct, the last dimension of self.outputs should
-        # be self.n_units
-        self.outputs = np.zeros((batch_size, timestamps, feature_size))
-
-        # Set last timestamps to zero for calculation of the state_input at time
-        # step zero
-        self.states[:, -1, :] = np.zeros((batch_size,self.n_units))
-
-        for t in range(timestamps):
-            # ref https://www.cs.toronto.edu/~tingwuwang/rnn_tutorial.pdf
-            # All input share self.W_i and self.W_p and self.W_o
-            self.state_input[:, t, :] = X[:, t, :].dot(self.W_i.T)+self.states[:, t-1, :].dot(self.W_p.T)
-            self.states[:, t, :] = self.activation(self.state_input[:, t, :])
-            # Here might need an activation for classification problems
-            self.outputs[:,t, :] = self.states[:,t, :].dot(self.W_o.T)
-
-        return self.outputs
-
-    def backward_pass(self,accum_grad):
-        _,timestamps,_ = accum_grad.shape
-
-        # Variables where we save the accumulated gradient w.r.t each parameter
-        grad_W_p = np.zeros_like(self.W_p)
-        grad_W_i = np.zeros_like(self.W_i)
-        grad_W_o = np.zeros_like(self.W_o)
-
-        # The gradient w.r.t the layer input
-        # will be passed on to the previous layer in the network
-        accum_grad_next = np.zeros_like(accum_grad)
-
-        # Back Propagation through time
-        for t in reversed(range(timestamps)):
-            grad_W_o += accum_grad[:,t].T.dot(self.states[:,t])
-            # Calculate the gradient w.r.t the state input
-            grad_wrt_state = accum_grad[:,t].dot(self.W_o)*self.activation.gradient(self.state_input[:,t])
-            # Calculate gradient w.r.t layer input
-            accum_grad_next[:,t] = grad_wrt_state.dot(self.W_i)
-            # Update gradient w.r.t W_i and W_p by backprop.
-            for t_ in reversed(np.arange(max(0,t-self.bptt_trunc),t+1)):
-                grad_W_i += grad_wrt_state.T.dot(self.layer_input[:,t_])
-                grad_W_p += grad_wrt_state.T.dot(self.states[:,t_-1])
-                # Calculate gradient w.r.t previous state
-                grad_wrt_state=grad_wrt_state.dot(self.W_p)*self.activation.gradient(self.state_input[:,t_-1])
-        # update weights
-        self.W_i = self.W_i_opt.update(self.W_i,grad_W_i)
-        self.W_o = self.W_o_opt.update(self.W_o,grad_W_o)
-        self.W_p = self.W_p_opt.update(self.W_p,grad_W_p)
-
-        return accum_grad_next
-
-    def output_shape(self):
-        # TODO: this seems to be not correct, it should be self.n_units
-        return self.input_shape
-
-
 class Embedding(Layer):
     def __init__(self, n_out, vocab_size, trainable=True):
         """
@@ -673,7 +564,7 @@ class LSTMCell(Layer):
 
         Notes:
         ----------------------
-        - X[t]: the input matrix at timestep x
+        - X[t]: the input matrix at timestep t
         - Z[t]: the input to each of the gates at timestep t
         - A[t]: the value of the hidden state at timestep t
         - Cc[t]: the value of the *candidate* cell/memory state at timestep t
@@ -877,6 +768,7 @@ class LSTMCell(Layer):
             self.bo_opt.update(self.bo, self.dbo)
             self.bu_opt.update(self.bu, self.dbu)
 
+
 class many2oneLSTM(Layer):
     def __init__(self,n_units, input_shape, act_fn='tanh', gate_fn='sigmoid', trainable=True):
         """
@@ -1059,3 +951,10 @@ class BidirectionalLSTM(Layer):
 
     def output_shape(self):
         raise Exception("This function has not been implemented")
+
+"""
+class DotProductionAttention(Layer):
+    def __init__(self, scale=True, dropout=0):
+        self.scale=scale
+        self.dropout=dropout
+"""
