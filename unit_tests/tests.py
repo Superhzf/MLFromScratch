@@ -1199,7 +1199,10 @@ def test_LSTM_bidirection(cases):
         mine.cell_bwd.b_hh = gold.bias_hh_l0_reverse.detach().numpy()[None,:]
 
 
-        # forward prop
+        # forward prop,
+        # I canfirmed that for each direction, gold_h is the last element
+        # of gold_output because gold_h is the hidden state at the last timestep
+        # while gold_output includes hidden state values of all timesteps.
         gold_output, (gold_h, gold_c) = gold(input=X_tensor)
         # 2 is the number of direction
         gold_output = gold_output.view(n_t, n_ex, 2, n_out)
