@@ -40,11 +40,11 @@ class Dense(Layer):
     epoch: int
         This parameter indicates how many epochs have been finished
     """
-    def __init__(self,n_units,input_shape=None):
+    def __init__(self,n_units,input_shape=None, trainable=True):
         self.input_shape = input_shape
         self.layer_input = None
         self.n_units = n_units
-        self.trainable = True
+        self.trainable = trainable
         self.W = None
         self.b = None
 
@@ -57,6 +57,9 @@ class Dense(Layer):
         # Weight optimizer
         self.W_opt = copy.deepcopy(optimizer)
         self.b_opt = copy.deepcopy(optimizer)
+
+        self.dw = np.zeros_like(self.W)
+        self.db = np.zeros_like(self.b)
 
 
     def parameters(self):
@@ -73,12 +76,15 @@ class Dense(Layer):
         W = self.W.copy()
 
         # Calculate gradient w.r.t layer weights
-        self.dw = self.layer_input.T.dot(accum_grad)
-        self.db = np.sum(accum_grad, axis=0, keepdims=True)
+        self.dw += self.layer_input.T.dot(accum_grad)
+        self.db += np.sum(accum_grad, axis=0, keepdims=True)
         if self.trainable:
             # Update the layer weights
             self.W = self.W_opt.update(self.W, self.dw)
             self.b = self.b_opt.update(self.b, self.db)
+
+            self.dw = np.zeros_like(self.W)
+            self.db = np.zeros_like(self.b)
 
         # Return accumulated gradient for the next layer
         # Calculation is based on the weights used during the forward pass
