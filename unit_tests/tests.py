@@ -348,7 +348,7 @@ def test_FullyConnected(cases):
 
         # initialize FC layer
         gold = nn.Linear(in_features=n_in, out_features=n_out, bias=True)
-        mine = Dense(n_units = n_out, input_shape=(n_in,n_in))
+        mine = Dense(n_units = n_out, input_shape=(n_ex,n_in))
         # Do not allow the weights to be updated
         mine.trainable=False
         mine.initialize(None)
@@ -1273,7 +1273,7 @@ def test_LSTM_bidirection(cases):
 
 def test_cosine_annealing_scheduler(cases):
     """
-    The idea is to do one epoch training and the compare the weights and bias. This test depends on
+    The idea is to do one epoch training and then compare the weights and bias. This test depends on
     fully connected layers, and fully connected layer has been tested.
     """
 
@@ -1361,7 +1361,7 @@ def test_cosine_annealing_scheduler(cases):
 
 def test_cosine_annealing_warm_restarts(cases):
     """
-    The idea is to do one epoch training and the compare the weights and bias. This test depends on
+    The idea is to do one epoch training and then compare the weights and bias. This test depends on
     fully connected layers, and fully connected layer has been tested.
     """
 
