@@ -1,7 +1,7 @@
 import sys
 sys.path.append('..')
 import numpy as np
-from .helpers import random_one_hot_matrix, random_stochastic_matrix,random_tensor, TFNCELoss
+from .helpers import random_one_hot_matrix, random_stochastic_matrix,random_tensor, TFNCELoss, PyTorch_LSTM_many2many
 from numpy_ml.deep_learning.loss_functions import BinaryCrossEntropy, SquaredLoss, NCELoss
 from numpy.testing import assert_almost_equal
 import torch.nn as nn
@@ -1273,6 +1273,98 @@ def test_LSTM_bidirection(cases):
 
         i += 1
     print ("Successfully testing bidirectional LSTM layer!")
+
+
+def test_LSTM_many2many(cases):
+    np.random.seed(12345)
+    N = int(cases)
+    decimal = 5
+    i = 1
+    gold_criterion=nn.MSELoss(reduction='sum')
+    mine_criterion = SquaredLoss()
+    while i < N + 1:
+        n_ex = np.random.randint(1, 100)
+        n_in = np.random.randint(1, 100)
+        n_out = np.random.randint(1, 100)
+        n_t = np.random.randint(1, 10)
+
+        # initialize input and target
+        X = random_tensor((n_ex, n_in, n_t), standardize=True)
+        X_tensor = torch.tensor(X, dtype=torch.float64, requires_grad=True).permute(2,0,1)
+        X_tensor.retain_grad()
+
+        target = random_tensor((n_t, n_ex, 1), standardize=True)
+        target_tensor=torch.tensor(target, dtype=torch.float64, requires_grad=True).double()
+
+        # initialize model
+        gold = PyTorch_LSTM_many2many(input_size=n_in, hidden_size=n_out)
+
+        # TODO: wrap up two layers into one model
+        mine_lstm = many2oneLSTM(n_units = n_out,input_shape=(n_ex, n_in),trainable=False)
+        mine_lstm.initialize(None)
+
+        mine_linear = Dense(n_units = 1, input_shape=(n_ex, n_out), trainable=False)
+        mine_linear.initialize(None)
+
+        # make sure both the gold and testing models share the same initial weights
+        mine_lstm.cell.W_hh = gold.lstm.weight_hh_l0.detach().numpy().transpose()
+        mine_lstm.cell.b_hh = gold.lstm.bias_hh_l0.detach().numpy()[None,:]
+
+        mine_lstm.cell.W_ih = gold.lstm.weight_ih_l0.detach().numpy().transpose()
+        mine_lstm.cell.b_ih = gold.lstm.bias_ih_l0.detach().numpy()[None,:]
+
+        mine_linear.W = gold.linear.weight.detach().numpy().transpose()
+        mine_linear.b = gold.linear.bias.detach().numpy()[None,:]
+
+        # forward
+        gold_prediction = gold(X_tensor)
+        gold_loss = gold_criterion(gold_prediction, target_tensor)
+
+        mine_lstm_hidden, mine_lstm_cell = mine_lstm.forward_pass(X)
+        mine_final_output = []
+        for this_t in range(n_t):
+            mine_this_output = mine_linear.forward_pass(mine_lstm_hidden[:,:,this_t])
+            mine_final_output.append(mine_this_output)
+        mine_final_output = np.stack(mine_final_output)
+        mine_loss = 0
+        for this_t in range(n_t):
+            mine_loss+=np.sum(mine_criterion.loss(target[this_t], mine_final_output[this_t]))
+
+        #backward
+        gold_loss.backward()
+        gold_dLdW_ih_lstm = gold.lstm.weight_ih_l0.grad.detach().numpy()
+        gold_dLdb_ih_lstm = gold.lstm.bias_ih_l0.grad.detach().numpy()
+        gold_dLdW_hh_lstm = gold.lstm.weight_hh_l0.grad.detach().numpy()
+        gold_dLdb_hh_lstm = gold.lstm.bias_hh_l0.grad.detach().numpy()
+        gold_dLdW_linear = gold.linear.weight.grad.detach().numpy()
+        gold_dLdb_linear = gold.linear.bias.grad.detach().numpy()
+        gold_dLdX = X_tensor.grad.detach().numpy()
+
+        mine_dLdX = np.zeros_like(X)
+        for this_t in reversed(range(n_t)):
+            mine_dLdlstm_hidden = mine_linear.backward_pass(-2*(target[this_t]-mine_final_output[this_t]))
+            this_mine_dLdX = mine_lstm.backward_pass(mine_dLdlstm_hidden)
+            last_dim = this_mine_dLdX.shape[2]
+            while last_dim < n_t:
+                this_mine_dLdX = np.insert(this_mine_dLdX, last_dim, 0, axis=2)
+                last_dim += 1
+            mine_dLdX += this_mine_dLdX
+
+        # compare forward
+        assert_almost_equal(mine_final_output, gold_prediction.detach().numpy(),decimal=decimal)
+        assert_almost_equal(mine_loss, gold_loss.detach().numpy(),decimal=decimal)
+        # compare backward
+        assert_almost_equal(mine_linear.dw, gold_dLdW_linear.transpose(),decimal=decimal)
+        assert_almost_equal(mine_linear.db, gold_dLdb_linear[None,...],decimal=decimal)
+        assert_almost_equal(mine_lstm.cell.dW_hh, gold_dLdW_hh_lstm.transpose(),decimal=decimal)
+        assert_almost_equal(mine_lstm.cell.db_ih, gold_dLdb_ih_lstm[None,...],decimal=decimal)
+        assert_almost_equal(mine_lstm.cell.db_hh, gold_dLdb_hh_lstm[None,...],decimal=decimal)
+
+        for this_t in range(n_t):
+            assert_almost_equal(mine_dLdX[:,:,this_t], gold_dLdX[this_t],decimal=decimal)
+
+        i += 1
+    print ("Successfully testing LSTM many to many function")
 
 def test_cosine_annealing_scheduler(cases):
     """

@@ -120,9 +120,9 @@ def TFNCELoss(X, target_word, L):
         "sampled_loss": _sampled_losses,
     }
 
-class LSTM_many2many(nn.Module):
+class PyTorch_LSTM_many2many(nn.Module):
     def __init__(self, input_size, hidden_size):
-        super(LSTM_many2many, self).__init__()
+        super(PyTorch_LSTM_many2many, self).__init__()
         self.lstm = nn.LSTM(input_size=input_size,
                             hidden_size=hidden_size,
                             bias=True,

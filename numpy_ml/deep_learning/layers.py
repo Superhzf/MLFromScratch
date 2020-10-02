@@ -857,6 +857,8 @@ class many2oneLSTM(Layer):
             each of the n_t examples
         """
         dLdX = []
+        # each time when calculating gradients, dLdA_prev and dLdC_prev have to
+        # be reset to be empty
         self.cell.derived_variables['dLdA_prev'] = []
         self.cell.derived_variables['dLdC_prev'] = []
         for t in reversed(range(self.n_t-self.curr_backward_t)):
