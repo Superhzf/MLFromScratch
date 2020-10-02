@@ -42,7 +42,7 @@ class Dense(Layer):
     """
     def __init__(self,n_units,input_shape=None, trainable=True):
         self.input_shape = input_shape
-        self.layer_input = None
+        self.layer_input = []
         self.n_units = n_units
         self.trainable = trainable
         self.W = None
@@ -67,16 +67,16 @@ class Dense(Layer):
         return np.prod(self.W.shape)+np.prod(self.b.shape)
 
     def forward_pass(self,X,training=True):
-        self.layer_input = X
+        self.layer_input.append(X)
         return X.dot(self.W)+self.b # Z = X*W + b
 
     def backward_pass(self,accum_grad):
         # accum_grad = dZ_curr
         # Save weights used during forward pass
         W = self.W.copy()
-
+        this_layer_input = self.layer_input.pop()
         # Calculate gradient w.r.t layer weights
-        self.dw += self.layer_input.T.dot(accum_grad)
+        self.dw += this_layer_input.T.dot(accum_grad)
         self.db += np.sum(accum_grad, axis=0, keepdims=True)
         if self.trainable:
             # Update the layer weights
