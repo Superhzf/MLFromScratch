@@ -1364,7 +1364,7 @@ def test_LSTM_many2many(cases):
             assert_almost_equal(mine_dLdX[:,:,this_t], gold_dLdX[this_t],decimal=decimal)
 
         i += 1
-    print ("Successfully testing LSTM many to many function")
+    print ("Successfully testing LSTM many to many function!")
 
 def test_cosine_annealing_scheduler(cases):
     """

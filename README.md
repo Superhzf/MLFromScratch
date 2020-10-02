@@ -51,6 +51,7 @@ efficient as possible
 
 - Models
   * [word2vec](https://github.com/Superhzf/MLFromScratch/blob/master/numpy_ml/deep_learning/models/word2vec.py)
+  * LSTM many to many
 
 ## Unsupervised Learning
 
