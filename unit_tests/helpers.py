@@ -119,3 +119,26 @@ def TFNCELoss(X, target_word, L):
         "out_labels": _sampled_labels,
         "sampled_loss": _sampled_losses,
     }
+
+class LSTM_many2many(nn.Module):
+    def __init__(self, input_size, hidden_size):
+        super(LSTM_many2many, self).__init__()
+        self.lstm = nn.LSTM(input_size=input_size,
+                            hidden_size=hidden_size,
+                            bias=True,
+                            num_layers=1,
+                            bidirectional=False).double()
+        # we will test a regression function, so no activation function is needed.
+        self.linear = nn.Linear(in_features=hidden_size,
+                                out_features=1,
+                                bias=True).double()
+
+    def forward(self, X):
+        final_output = []
+        # the shape of X is (seq_len, batch, input_size)
+        lstm_output, (lstem_h, lstm_c) = self.lstm(X)
+        # the shape of lstm_output is (seq_len, batch, hidden_size)
+        for this_lstm_output in lstm_output:
+            this_output = self.linear(this_lstm_output)
+            final_output.append(this_output)
+        return torch.stack(final_output)
