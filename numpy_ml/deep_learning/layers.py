@@ -334,7 +334,7 @@ class RNNCell(Layer):
         self.derived_variables={
             "A":[],
             "Z":[],
-            "n_timesteps":0,
+            "max_timesteps":0,
             "current_step":0,
             "dLdA_accumulator":[]
         }
@@ -348,7 +348,7 @@ class RNNCell(Layer):
         Xt: np.array of shape (n_ex, n_in), the input at timestemp t with n_ex observations
         and n_in features
         """
-        self.derived_variables['n_timesteps']+=1
+        self.derived_variables['max_timesteps']+=1
         self.derived_variables['current_step']+=1
 
         As=self.derived_variables["A"]
@@ -639,11 +639,11 @@ class LSTMCell(Layer):
             "current_step": 0,
             "dLdA_prev": [],
             "dLdC_prev": [],
-            "n_timesteps": 0,
+            "max_timesteps": 0,
         }
 
 
-    def forward_pass(self,Xt, training=True):
+    def forward_pass(self,Xt):
         """
         Compute the layer output for a single timestep
 
@@ -660,7 +660,7 @@ class LSTMCell(Layer):
             timestep t for each of the n_ex observations
         """
 
-        self.derived_variables['n_timesteps']+=1
+        self.derived_variables['max_timesteps']+=1
         self.derived_variables['current_step']+=1
 
         if len(self.derived_variables['A']) == 0:
@@ -811,6 +811,7 @@ class many2oneLSTM(Layer):
             gate_fn=self.gate_fn,
             trainable=self.trainable)
         self.cell.initialize(optimizer)
+        self.curr_backward_t = 0
 
     def forward_pass(self,X):
         """
@@ -856,13 +857,17 @@ class many2oneLSTM(Layer):
             each of the n_t examples
         """
         dLdX = []
-        # print (dLdA.shape)
-        for t in reversed(range(self.n_t)):
+        self.cell.derived_variables['dLdA_prev'] = []
+        self.cell.derived_variables['dLdC_prev'] = []
+        for t in reversed(range(self.n_t-self.curr_backward_t)):
             dLdXt, dLdA_prev = self.cell.backward_pass(dLdAt)
             dLdAt = dLdA_prev
             dLdX.insert(0,dLdXt)
         self.cell.update()
         dLdX = np.dstack(dLdX)
+        self.curr_backward_t += 1
+        self.cell.derived_variables['max_timesteps'] -= 1
+        self.cell.derived_variables['current_step'] = self.cell.derived_variables['max_timesteps']
         return dLdX
 
     def output_shape(self):
