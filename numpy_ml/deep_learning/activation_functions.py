@@ -36,6 +36,10 @@ class Sigmoid():
 # which is useless. For example, when the output is [1/10000, 1/20000, 1/30000]
 # or [10000, 20000, 30000]
 class Softmax():
+    """
+    This softmax function has to be used together with cross entropy loss for the
+    convenience of the gradients calculation.
+    """
     def __call__(self,x):
         exp_x = np.exp(x-np.max(x,axis=-1,keepdims=True))
         return exp_x/np.sum(exp_x,axis=-1,keepdims=True) # this implementation is more numerically stable
@@ -47,6 +51,38 @@ class Softmax():
         # at the same calculating the gradient of cross entropy loss w.r.t the
         # input of softmax layer is much easier.
         return np.ones_like(p)
+
+class FullSoftmax():
+    """
+    This softmax function can be used with anything else, the inspiration comes
+    from the transformer architecture.
+    """
+    def __call__(self,x):
+        """
+        Parameters:
+        ---------------
+        x: numpy.array of shape (n_ex, n_classes)
+            The input of softmax layer, usually the input is the prediction for
+            n_classes classes.
+        """
+        exp_x = np.exp(x-np.max(x,axis=-1,keepdims=True))
+        return exp_x/np.sum(exp_x,axis=-1,keepdims=True) # this implementation is more numerically stable
+
+    def gradient(self, x):
+        dX = []
+        p=self.__call__(x)
+        for this_obs in p:
+            # set up the shape of this_obs from (n_classes,) to be (1, n_classes)
+            this_obs = this_obs[None,...]
+            diag_value = this_obs*(1-this_obs)
+            diag = np.diagflat(diag_value)
+            off_diag = -1*(this_obs.transpose() @ this_obs)
+            np.fill_diagonal(off_diag,0)
+            dXi = this_obs @ (diag + off_diag)
+            dX.append(dXi)
+        return np.vstack(dX)
+
+
 
 # What is a dead ReLU problem? Why does it happen?
 # A: Dead ReLU means that the activations are the same (0 as it happens) and
