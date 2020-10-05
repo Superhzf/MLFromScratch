@@ -6,7 +6,7 @@ from numpy_ml.deep_learning.loss_functions import BinaryCrossEntropy, SquaredLos
 from numpy.testing import assert_almost_equal
 import torch.nn as nn
 import torch
-from numpy_ml.deep_learning.activation_functions import Sigmoid, Softmax, ReLU, LeakyReLU, TanH
+from numpy_ml.deep_learning.activation_functions import Sigmoid, Softmax, ReLU, LeakyReLU, TanH, FullSoftmax
 from numpy_ml.deep_learning.layers import Dense, Embedding, BatchNormalization, RNNCell
 from numpy_ml.deep_learning.layers import BidirectionalLSTM, many2oneRNN, LSTMCell, many2oneLSTM
 from numpy_ml.deep_learning.optimizers import StochasticGradientDescent, Adagrad, RMSprop, Adadelta, Adam
@@ -236,6 +236,40 @@ def test_softmax_activation(cases):
         i += 1
 
     print ('Successfully testing Softmax function (forward only)!')
+
+def test_full_softmax_activation(cases):
+
+    N = int(cases)
+    np.random.seed(12345)
+    DECIMAL=5
+    i = 0
+    while i < N:
+        n_ex = np.random.randint(1, 100)
+        n_dims = np.random.randint(1, 100)
+        z = random_tensor((n_ex, n_dims))
+        z_tensor = torch.tensor(z,requires_grad=True)
+        z_tensor.retain_grad()
+
+        mine = FullSoftmax()
+        gold = nn.Softmax(dim=1)
+
+        gold_value = gold(z_tensor)
+        gold_value.retain_grad()
+
+        loss_tensor = torch.square(gold_value).sum()/2.
+        loss_tensor.backward()
+
+        gold_grad = z_tensor.grad
+        mine_value = mine(z)
+        mine_grad = mine.gradient(z)
+
+        # compare forward
+        assert_almost_equal(mine_value, gold_value.detach().numpy(),decimal=DECIMAL)
+        # compare backward
+        assert_almost_equal(mine_grad, gold_grad, decimal=DECIMAL)
+        i += 1
+    print ('Successfully testing full softmax function!')
+
 
 def test_relu_activation(cases):
 
