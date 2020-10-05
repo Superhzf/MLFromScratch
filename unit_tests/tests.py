@@ -235,7 +235,7 @@ def test_softmax_activation(cases):
         assert_almost_equal(mine_value, gold_value.detach().numpy())
         i += 1
 
-    print ('Successfully testing Softmax function (forward only)!')
+    print ('Successfully testing softmax with cross entropy function!')
 
 def test_full_softmax_activation(cases):
 

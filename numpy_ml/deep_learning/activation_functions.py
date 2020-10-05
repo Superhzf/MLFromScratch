@@ -56,6 +56,8 @@ class FullSoftmax():
     """
     This softmax function can be used with anything else, the inspiration comes
     from the transformer architecture.
+
+    ref: https://stats.stackexchange.com/questions/267576/matrix-representation-of-softmax-derivatives-in-backpropagation
     """
     def __call__(self,x):
         """
