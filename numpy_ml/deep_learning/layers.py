@@ -1,7 +1,7 @@
 import copy
 import numpy as np
 import math
-from .activation_functions import ReLU, Sigmoid, Softmax, TanH, LeakyReLU
+from .activation_functions import ReLU, Sigmoid, Softmax, TanH, LeakyReLU, FullSoftmax
 
 class Layer(object):
     def set_input_shape(self,shape):
@@ -965,9 +965,131 @@ class BidirectionalLSTM(Layer):
     def output_shape(self):
         raise Exception("This function has not been implemented")
 
-"""
-class DotProductionAttention(Layer):
-    def __init__(self, scale=True, dropout=0):
-        self.scale=scale
-        self.dropout=dropout
-"""
+
+class DotProductAttention(Layer):
+    def __init__(self, emb_dim, d_k=None, d_v=None, scale=True, trainable=True):
+        """
+        Parameters:
+        ---------------
+        scale: bool
+            Whether to scale the key-query dot product by the square root of
+            the key/query vector dimensionality before applying the Softmax.
+            This is useful since the scale of dot product will otherwise increase
+            as the key/query dimensions grow.
+        """
+        self.scale = scale
+        self.emb_dim = emb_dim
+        if d_k is None:
+            self.d_k = emb_dim
+        else:
+            self.d_k = d_k
+        if d_v is None:
+            self.d_v = emb_dim
+        else:
+            self.d_v = d_v
+
+    def initialize(self, optimizer):
+        self.softmax=FullSoftmax()
+        self.X = []
+
+        if self.emb_dim == self.d_k and self.emb_dim == self.d_v:
+            limit = 1 / math.sqrt(self.emb_dim)
+            self.proj_weight = np.random.uniform(-limit,limit,(self.emb_dim, 3 * self.emb_dim))
+            self.qkv_same = True
+            self.scale = np.sqrt(self.emb_dim)
+        else:
+            limit_Q = 1 / math.sqrt(self.d_k)
+            self.Q = np.random.uniform(-limit_Q,limit_Q,(self.emb_dim, self.d_k))
+            self.K = np.random.uniform(-limit_Q,limit_Q,(self.emb_dim, self.d_k))
+            limit_V = 1 / math.sqrt(self.d_v)
+            self.V = np.random.uniform(-limit_V,limit_V,(self.emb_dim, self.d_v))
+            self.qkv_same = False
+            self.scale = np.sqrt(self.d_k)
+
+        self.attention_weights=[]
+
+    def forward_pass(self, Q, K, V):
+        """
+        Compute the attention-weighted output of a collection of keys, values,
+        and queries. In the most abstract sense,
+            - Q(Query): Query vectors ask questions
+            - K(Key): Key vectors advertise their relevancy to questions
+            - V(Value): value vectors give possible answers to questions
+        In words, keys and queries are combined via dot-product to produce a
+        score, which is then passed through a softmax to produce a weight on each
+        value vector in Values. We multiply each value vector
+        by its weight, and then take the elementwise sum of each weighted value
+        vector to get the d_v * output for the current example.
+
+        Parameters:
+        ---------------
+        Q: numpy.array of shape (n_ex, *, d_k)
+            A set of n_ex query vectors packed into a single matrix. Optional
+            middle dimensions can be used to specify, e.g., the number of parallel
+            attention heads.
+        K: numpy.array of shape (n_ex, *, d_k)
+            A set of n_ex key vectors packed into a single matrix. Optional
+            middle dimensions can be used to specify, e.g., the number of parallel
+            attention heads.
+        V: numpy.array of shape (n_ex, *, d_v)
+            A set of n_ex value vectors packed into a single matrix. Optional
+            middle dimensions can be used to specify, e.g., the number of parallel
+            attention heads.
+
+        Returns:
+        ----------------
+        Y: numpy.array of shape (n_ex, *, d_v)
+            The attention-weighted output values
+        """
+        if self.scale:
+            scale = 1/np.sqrt(Q.shape[-1])
+        else:
+            scale = 1
+        if self.qkv_same:
+            assert Q.shape == K.shape and Q.shape == V.shape
+            assert Q.shape[-1] == self.emb_dim
+            output = []
+            weights = []
+            t = Q.shape[0]
+            for this_t in range(t):
+                this_qkv = Q[this_t] @ self.proj_weight
+                this_q = this_qkv[:, : self.emb_dim]
+                this_k = this_qkv[:, self.emb_dim: 2*self.emb_dim]
+                this_v = this_qkv[:, 2*self.emb_dim:]
+                this_score = (this_q @ this_k.transpose())*self.scale
+                print ("this_score shape", this_score.shape)
+                this_weights = self.softmax(this_score)
+                weighted_values = this_weights @ this_v
+                output.append(weighted_values)
+                weights.append(this_weights)
+            return np.stack(output), np.stack(weights)
+
+        # scores = Q @ K.swapaxes(-2, -1) * scale
+        # weights = self.softmax.forward_pass(scores)
+        # Y = weights @ V
+        # self.X.append((Q, K, V))
+        # self.attention_weights.append(weights)
+        # return Y
+
+    def backward_pass(self, dLdA):
+        """
+        Backpropagation from layer outputs to inputs.
+
+        Parameters:
+        ----------------
+        dLdA: numpy.array of shape (n_ex, *, d_v)
+            The gradients of the loss w.r.t. the layer output Y
+
+        Returns:
+        ----------------
+        dQ: numpy.array of shape (n_ex, *, d_k)
+            The gradients of the loss w.r.t. the layer query matrix Q
+        dK: numpy.array of shape (n_ex, *, d_k)
+            The gradients of the loss w.r.t. the layer query matrix K
+        dV: numpy.array of shape (n_ex, *, d_k)
+            The gradients of the loss w.r.t. the layer query matrix V
+        """
+        dQ = []
+        dK = []
+        dV = []
+        weights = self.attention_weights
