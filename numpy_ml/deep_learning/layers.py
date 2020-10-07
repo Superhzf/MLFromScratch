@@ -970,6 +970,15 @@ class DotProductAttention(Layer):
     def __init__(self, emb_dim, d_k=None, d_v=None, trainable=True):
         """
         Parameters:
+
+        emb_dim: int
+            The number of embedding features of the input.
+        d_k: int
+            The number of features for the query vectors
+        d_v: int
+            The number of features for the value vectors
+        trainable: bool
+            Whether to update the weights in the backpropagation process
         ---------------
         """
         self.emb_dim = emb_dim
@@ -981,6 +990,7 @@ class DotProductAttention(Layer):
             self.d_v = emb_dim
         else:
             self.d_v = d_v
+        self.trainable=trainable
 
     def initialize(self, optimizer):
         self.softmax=FullSoftmax()
@@ -1015,6 +1025,10 @@ class DotProductAttention(Layer):
         value vector in Values. We multiply each value vector
         by its weight, and then take the elementwise sum of each weighted value
         vector to get the d_v * output for the current example.
+        ref:
+        https://towardsdatascience.com/illustrated-self-attention-2d627e33b20a
+        http://jalammar.github.io/illustrated-transformer/
+        https://lilianweng.github.io/lil-log/2018/06/24/attention-attention.html
 
         Parameters:
         ---------------
@@ -1078,25 +1092,15 @@ class DotProductAttention(Layer):
             return outputs, weights
 
 
-    def backward_pass(self, dLdA):
+    def backward_pass(self, dLdOutput):
         """
         Backpropagation from layer outputs to inputs.
 
         Parameters:
         ----------------
-        dLdA: numpy.array of shape (n_ex, *, d_v)
-            The gradients of the loss w.r.t. the layer output Y
-
-        Returns:
-        ----------------
-        dQ: numpy.array of shape (n_ex, *, d_k)
-            The gradients of the loss w.r.t. the layer query matrix Q
-        dK: numpy.array of shape (n_ex, *, d_k)
-            The gradients of the loss w.r.t. the layer query matrix K
-        dV: numpy.array of shape (n_ex, *, d_k)
-            The gradients of the loss w.r.t. the layer query matrix V
+        dLdOutput: numpy.array of shape (target_seq, n_ex, emb_dim)
+            The gradients of the loss w.r.t. the layer outputs
         """
         dQ = []
         dK = []
         dV = []
-        weights = self.attention_weights
