@@ -967,17 +967,11 @@ class BidirectionalLSTM(Layer):
 
 
 class DotProductAttention(Layer):
-    def __init__(self, emb_dim, d_k=None, d_v=None, scale=True, trainable=True):
+    def __init__(self, emb_dim, d_k=None, d_v=None, trainable=True):
         """
         Parameters:
         ---------------
-        scale: bool
-            Whether to scale the key-query dot product by the square root of
-            the key/query vector dimensionality before applying the Softmax.
-            This is useful since the scale of dot product will otherwise increase
-            as the key/query dimensions grow.
         """
-        self.scale = scale
         self.emb_dim = emb_dim
         if d_k is None:
             self.d_k = emb_dim
@@ -994,9 +988,10 @@ class DotProductAttention(Layer):
 
         if self.emb_dim == self.d_k and self.emb_dim == self.d_v:
             limit = 1 / math.sqrt(self.emb_dim)
-            self.proj_weight = np.random.uniform(-limit,limit,(self.emb_dim, 3 * self.emb_dim))
+            self.in_weight = np.random.uniform(-limit,limit,(self.emb_dim, 3 * self.emb_dim))
+            self.out_weight = np.random.uniform(-limit,limit,(self.emb_dim, self.emb_dim))
             self.qkv_same = True
-            self.scale = np.sqrt(self.emb_dim)
+            self.scale = 1/np.sqrt(self.emb_dim)
         else:
             limit_Q = 1 / math.sqrt(self.d_k)
             self.Q = np.random.uniform(-limit_Q,limit_Q,(self.emb_dim, self.d_k))
@@ -1004,7 +999,7 @@ class DotProductAttention(Layer):
             limit_V = 1 / math.sqrt(self.d_v)
             self.V = np.random.uniform(-limit_V,limit_V,(self.emb_dim, self.d_v))
             self.qkv_same = False
-            self.scale = np.sqrt(self.d_k)
+            self.scale = 1/np.sqrt(self.d_k)
 
         self.attention_weights=[]
 
@@ -1023,53 +1018,65 @@ class DotProductAttention(Layer):
 
         Parameters:
         ---------------
-        Q: numpy.array of shape (n_ex, *, d_k)
-            A set of n_ex query vectors packed into a single matrix. Optional
-            middle dimensions can be used to specify, e.g., the number of parallel
-            attention heads.
-        K: numpy.array of shape (n_ex, *, d_k)
-            A set of n_ex key vectors packed into a single matrix. Optional
-            middle dimensions can be used to specify, e.g., the number of parallel
-            attention heads.
-        V: numpy.array of shape (n_ex, *, d_v)
-            A set of n_ex value vectors packed into a single matrix. Optional
-            middle dimensions can be used to specify, e.g., the number of parallel
-            attention heads.
+        Q: numpy.array of shape (target_seq, n_ex, emb_dim)
+            A set of n_ex query vectors packed into a single matrix. Each query
+            has target_seq words. Each word has emb_dim features from the
+            embedding matrix.
+        K: numpy.array of shape (source_seq, n_ex, emb_dim)
+            A set of n_ex key vectors packed into a single matrix. Each key has
+            source_seq words. Each word has emb_dim features from the embedding
+            matrix.
+        V: numpy.array of shape (source_seq, n_ex, emb_dim)
+            A set of n_ex value vectors packed into a single matrix. Each key
+            has source_seq words. Each word has emb_dim features from the
+            embedding matrix.
 
         Returns:
         ----------------
-        Y: numpy.array of shape (n_ex, *, d_v)
+        Outputs: numpy.array of shape (target_seq, n_ex, emb_dim)
             The attention-weighted output values
+        weights: numpy.array of shape (n_ex, target_seq, source_seq)
+            For an observation, it shows the relevance of the source
+            words to the target words.
         """
-        if self.scale:
-            scale = 1/np.sqrt(Q.shape[-1])
-        else:
-            scale = 1
         if self.qkv_same:
             assert Q.shape == K.shape and Q.shape == V.shape
             assert Q.shape[-1] == self.emb_dim
-            output = []
+            outputs = []
             weights = []
-            t = Q.shape[0]
-            for this_t in range(t):
-                this_qkv = Q[this_t] @ self.proj_weight
-                this_q = this_qkv[:, : self.emb_dim]
-                this_k = this_qkv[:, self.emb_dim: 2*self.emb_dim]
-                this_v = this_qkv[:, 2*self.emb_dim:]
-                this_score = (this_q @ this_k.transpose())*self.scale
-                print ("this_score shape", this_score.shape)
-                this_weights = self.softmax(this_score)
-                weighted_values = this_weights @ this_v
-                output.append(weighted_values)
+            scores = []
+            qkv = Q @ self.in_weight
+            # target_seq/source_seq x batch_size x feature_size
+            q = qkv[:, :, : self.emb_dim]*self.scale
+            k = qkv[:, :, self.emb_dim: 2*self.emb_dim]
+            v = qkv[:, :, 2*self.emb_dim:]
+            # reshape to: batch_szie x target_seq/source_seq x feature_size
+            q = np.swapaxes(q, 0, 1)
+            k = np.swapaxes(k, 0, 1)
+            v = np.swapaxes(v, 0, 1)
+            # calculate score
+            for this_q, this_k in zip(q, k):
+                this_score = (this_q @ this_k.transpose())
+                scores.append(this_score)
+            scores = np.stack(scores)
+            source_len = scores.shape[-1]
+            for this_score in range(source_len):
+                this_weights = self.softmax(scores[:, this_score, :])
                 weights.append(this_weights)
-            return np.stack(output), np.stack(weights)
+            # target_seq x batch_size x source_seq
+            weights = np.stack(weights)
+            # batch_size x target_seq x source_seq
+            weights = np.swapaxes(weights, 0, 1)
+            for this_weight, this_v in zip(weights, v):
+                this_output = this_weight@this_v
+                outputs.append(this_output)
+            # batch_size x target_seq x emb_dim
+            outputs = np.stack(outputs)
+            # target_seq x batch_size x emb_dim
+            outputs = np.swapaxes(outputs, 0, 1)
+            outputs = outputs @ self.out_weight
+            return outputs, weights
 
-        # scores = Q @ K.swapaxes(-2, -1) * scale
-        # weights = self.softmax.forward_pass(scores)
-        # Y = weights @ V
-        # self.X.append((Q, K, V))
-        # self.attention_weights.append(weights)
-        # return Y
 
     def backward_pass(self, dLdA):
         """
