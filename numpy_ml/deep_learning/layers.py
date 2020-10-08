@@ -137,7 +137,8 @@ class BatchNormalization(Layer):
         if training and self.trainable:
             mean = np.mean(X,axis=0)
             var = np.var(X,axis=0)
-            self.running_mean = self.momentum * self.running_mean + (1-self.momentum)*mean # it is based on batch
+            # it is based on batch
+            self.running_mean = self.momentum * self.running_mean + (1-self.momentum)*mean
             self.running_var = self.momentum * self.running_var + (1-self.momentum)*var
         else:
             mean = self.running_mean
@@ -155,7 +156,9 @@ class BatchNormalization(Layer):
     def output_shape(self):
         return self.input_shape
 
-# reference: https://kratzert.github.io/2016/02/12/understanding-the-gradient-flow-through-the-batch-normalization-layer.html
+# reference:
+# https://kratzert.github.io/2016/02/12/understanding-
+# the-gradient-flow-through-the-batch-normalization-layer.html
     def backward_pass(self,accum_grad):
         # save parameters used during the forward pass
         gamma = self.gamma
@@ -1002,6 +1005,9 @@ class DotProductAttention(Layer):
             self.out_weight = np.random.uniform(-limit,limit,(self.emb_dim, self.emb_dim))
             self.qkv_same = True
             self.scale = 1/np.sqrt(self.emb_dim)
+
+            self.dLdout_weight = np.zeros_like(self.out_weight)
+            self.dLdin_weight = np.zeros_like(self.in_weight)
         else:
             limit_Q = 1 / math.sqrt(self.d_k)
             self.Q = np.random.uniform(-limit_Q,limit_Q,(self.emb_dim, self.d_k))
@@ -1011,7 +1017,6 @@ class DotProductAttention(Layer):
             self.qkv_same = False
             self.scale = 1/np.sqrt(self.d_k)
 
-        self.attention_weights=[]
 
     def forward_pass(self, Q, K, V):
         """
@@ -1056,7 +1061,7 @@ class DotProductAttention(Layer):
         if self.qkv_same:
             assert Q.shape == K.shape and Q.shape == V.shape
             assert Q.shape[-1] == self.emb_dim
-            outputs = []
+            self.outputs = []
             weights = []
             scores = []
             qkv = Q @ self.in_weight
@@ -1083,13 +1088,12 @@ class DotProductAttention(Layer):
             weights = np.swapaxes(weights, 0, 1)
             for this_weight, this_v in zip(weights, v):
                 this_output = this_weight@this_v
-                outputs.append(this_output)
+                self.outputs.append(this_output)
             # batch_size x target_seq x emb_dim
-            outputs = np.stack(outputs)
+            self.outputs = np.stack(self.outputs)
             # target_seq x batch_size x emb_dim
-            outputs = np.swapaxes(outputs, 0, 1)
-            outputs = outputs @ self.out_weight
-            return outputs, weights
+            self.outputs = np.swapaxes(self.outputs, 0, 1)
+            return self.outputs @ self.out_weight, weights
 
 
     def backward_pass(self, dLdOutput):
@@ -1101,6 +1105,5 @@ class DotProductAttention(Layer):
         dLdOutput: numpy.array of shape (target_seq, n_ex, emb_dim)
             The gradients of the loss w.r.t. the layer outputs
         """
-        dQ = []
-        dK = []
-        dV = []
+        this_dLdout_weight = np.swapaxes(self.outputs, 1, 2) @ dLdOutput
+        self.dLdout_weight += np.sum(this_dLdout_weight, axis=0)
