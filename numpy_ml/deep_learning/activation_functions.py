@@ -70,17 +70,17 @@ class FullSoftmax():
         exp_x = np.exp(x-np.max(x,axis=-1,keepdims=True))
         return exp_x/np.sum(exp_x,axis=-1,keepdims=True) # this implementation is more numerically stable
 
-    def gradient(self, x):
+    def gradient(self, x, dLdoutput):
         dX = []
         p=self.__call__(x)
-        for this_obs in p:
+        for this_obs, this_dLdoutput in zip(p, dLdoutput):
             # set up the shape of this_obs from (n_classes,) to be (1, n_classes)
             this_obs = this_obs[None,...]
             diag_value = this_obs*(1-this_obs)
             diag = np.diagflat(diag_value)
             off_diag = -1*(this_obs.transpose() @ this_obs)
             np.fill_diagonal(off_diag,0)
-            dXi = this_obs @ (diag + off_diag)
+            dXi = this_dLdoutput[None,...] @ (diag + off_diag)
             dX.append(dXi)
         return np.vstack(dX)
 

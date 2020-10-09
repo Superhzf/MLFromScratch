@@ -5,8 +5,6 @@ import torch.nn.functional as F
 from tensorflow.python.ops.nn_impl import _compute_sampled_logits
 from tensorflow.python.ops.nn_impl import sigmoid_cross_entropy_with_logits
 import tensorflow as tf
-# credits go to https://github.com/ddbourgin/numpy-ml/blob/master/numpy_ml/tests/nn_torch_models.py
-# I adjust the test and helper functions based on ddbourgin's work
 def random_one_hot_matrix(n_examples, n_classes):
     """Create a random one-hot matrix of shape (`n_examples`, `n_classes`)"""
     X = np.eye(n_classes)

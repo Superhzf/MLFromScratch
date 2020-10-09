@@ -261,7 +261,7 @@ def test_full_softmax_activation(cases):
 
         gold_grad = z_tensor.grad
         mine_value = mine(z)
-        mine_grad = mine.gradient(z)
+        mine_grad = mine.gradient(z, mine_value)
 
         # compare forward
         assert_almost_equal(mine_value, gold_value.detach().numpy(),decimal=DECIMAL)
