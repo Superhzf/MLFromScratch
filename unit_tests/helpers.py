@@ -140,3 +140,43 @@ class PyTorch_LSTM_many2many(nn.Module):
             this_output = self.linear(this_lstm_output)
             final_output.append(this_output)
         return torch.stack(final_output)
+
+class PytorchDotProductAttention(nn.Module):
+    def __init__(self,emb_dim, d_k=None, d_v=None):
+        super(PytorchDotProductAttention, self).__init__()
+        self.emb_dim = emb_dim
+        if d_k is None:
+            self.d_k = emb_dim
+        else:
+            self.d_k = d_k
+        if d_v is None:
+            self.d_v = emb_dim
+        else:
+            self.d_v = d_v
+
+        self.softmax = nn.Softmax(dim=1)
+        self.in_weight = nn.Linear(in_features=self.emb_dim, out_features=3*self.emb_dim, bias=False).double()
+        self.out_weight = nn.Linear(in_features=self.emb_dim, out_features=self.emb_dim, bias=False).double()
+        self.scale = 1/np.sqrt(self.emb_dim)
+
+    def forward(self, Q, K, V):
+        q,k,v = self.in_weight(Q).chunk(3, dim=-1)
+        q = q*self.scale
+        q = q.transpose(0, 1)
+        k = k.transpose(0, 1)
+        v = v.transpose(0, 1)
+
+        k = k.transpose(1, 2)
+        self.scores = torch.bmm(q, k)
+        self.scores.retain_grad()
+        target_len = self.scores.size(1)
+        weights = []
+        for this_target_len in range(target_len):
+            this_weights = self.softmax(self.scores[:, this_target_len, :])
+            weights.append(this_weights)
+        weights = torch.stack(weights)
+        self.weights = weights.transpose(0, 1)
+        self.weights.retain_grad()
+        outputs = torch.bmm(self.weights, v)
+        outputs = outputs.transpose(0, 1)
+        return self.out_weight(outputs), self.weights

@@ -997,7 +997,6 @@ class DotProductAttention(Layer):
 
     def initialize(self, optimizer):
         self.softmax=FullSoftmax()
-        self.X = []
 
         if self.emb_dim == self.d_k and self.emb_dim == self.d_v:
             limit = 1 / math.sqrt(self.emb_dim)
@@ -1061,39 +1060,33 @@ class DotProductAttention(Layer):
         if self.qkv_same:
             assert Q.shape == K.shape and Q.shape == V.shape
             assert Q.shape[-1] == self.emb_dim
-            self.outputs = []
-            weights = []
-            scores = []
-            qkv = Q @ self.in_weight
+            self.weights = []
+            self.X = Q
+            qkv = self.X @ self.in_weight
             # target_seq/source_seq x batch_size x feature_size
-            q = qkv[:, :, : self.emb_dim]*self.scale
-            k = qkv[:, :, self.emb_dim: 2*self.emb_dim]
-            v = qkv[:, :, 2*self.emb_dim:]
-            # reshape to: batch_szie x target_seq/source_seq x feature_size
-            q = np.swapaxes(q, 0, 1)
-            k = np.swapaxes(k, 0, 1)
-            v = np.swapaxes(v, 0, 1)
+            self.q = qkv[:, :, : self.emb_dim]*self.scale
+            self.k = qkv[:, :, self.emb_dim: 2*self.emb_dim]
+            self.v = qkv[:, :, 2*self.emb_dim:]
+            # swaped: batch_szie x target_seq/source_seq x feature_size
+            self.q = np.swapaxes(self.q, 0, 1)
+            self.k = np.swapaxes(self.k, 0, 1)
+            self.v = np.swapaxes(self.v, 0, 1)
             # calculate score
-            for this_q, this_k in zip(q, k):
-                this_score = (this_q @ this_k.transpose())
-                scores.append(this_score)
-            scores = np.stack(scores)
-            source_len = scores.shape[-1]
-            for this_score in range(source_len):
-                this_weights = self.softmax(scores[:, this_score, :])
-                weights.append(this_weights)
+            # swaped k:batch_szie x feature_size x source_seq
+            self.k = np.swapaxes(self.k, 1, 2)
+            # scores: batch_szie x target_seq x source_seq
+            self.scores = self.q @ self.k
+            target_len = self.scores.shape[1]
+            for this_target_len in range(target_len):
+                this_weights = self.softmax(self.scores[:, this_target_len, :])
+                self.weights.append(this_weights)
             # target_seq x batch_size x source_seq
-            weights = np.stack(weights)
-            # batch_size x target_seq x source_seq
-            weights = np.swapaxes(weights, 0, 1)
-            for this_weight, this_v in zip(weights, v):
-                this_output = this_weight@this_v
-                self.outputs.append(this_output)
-            # batch_size x target_seq x emb_dim
-            self.outputs = np.stack(self.outputs)
-            # target_seq x batch_size x emb_dim
+            self.weights = np.stack(self.weights)
+            # swaped: batch_size x target_seq x source_seq
+            self.weights = np.swapaxes(self.weights, 0, 1)
+            self.outputs = self.weights @ self.v
             self.outputs = np.swapaxes(self.outputs, 0, 1)
-            return self.outputs @ self.out_weight, weights
+            return self.outputs @ self.out_weight, self.weights, self.scores
 
 
     def backward_pass(self, dLdOutput):
@@ -1103,7 +1096,50 @@ class DotProductAttention(Layer):
         Parameters:
         ----------------
         dLdOutput: numpy.array of shape (target_seq, n_ex, emb_dim)
-            The gradients of the loss w.r.t. the layer outputs
+            The gradients of the loss w.r.t. the first layer outputs
         """
-        this_dLdout_weight = np.swapaxes(self.outputs, 1, 2) @ dLdOutput
-        self.dLdout_weight += np.sum(this_dLdout_weight, axis=0)
+        if self.qkv_same:
+            this_dLdout_weight = np.swapaxes(self.outputs, 1, 2) @ dLdOutput
+            self.dLdout_weight += np.sum(this_dLdout_weight, axis=0)
+            # dLdoutputs: target_seq x n_ex x emb_dim
+            dLdoutputs = dLdOutput @ self.out_weight.transpose()
+            # swaped dLdoutputs: n_ex x target_seq x emb_dim
+            swaped_dLdoutputs = np.swapaxes(dLdoutputs, 0, 1)
+            # self.weights: n_ex x target_seq x source_seq
+            # swaped_weights: n_ex x source_seq x target_seq
+            swaped_weights = np.swapaxes(self.weights, 1, 2)
+            dLdv =  swaped_weights @ swaped_dLdoutputs
+            # self.v: n_ex x source_seq x emb_dim
+            # swaped_v: n_ex x emb_dim x source_seq
+            swaped_v = np.swapaxes(self.v, 1, 2)
+            # dLdweights: n_ex x target_seq x source_seq
+            dLdweights = swaped_dLdoutputs @ swaped_v
+            # dLdscore
+            target_seq = self.scores.shape[1]
+            dweightdscore = []
+            for this_target_len in range(target_seq):
+                this_dweightdscore = self.softmax.gradient(self.scores[:, this_target_len, :],
+                                                           dLdweights[:,this_target_len,:])
+                dweightdscore.append(this_dweightdscore)
+            # target_seq x n_ex x source_seq
+            dweightdscore = np.stack(dweightdscore)
+            # swaped dweightdscore: n_ex x target_seq x source_seq
+            dLdscores = np.swapaxes(dweightdscore, 0, 1)
+            # print ("mine_dLdscores",dLdscores[0][0][0])
+            # dLdq: n_ex x target_seq x emb_dim
+            dLdq = dLdscores@np.swapaxes(self.k, 1, 2)
+            dLdq = dLdq * self.scale
+            # dLdk: n_ex x source_seq x emb_dim
+            dLdk = np.swapaxes(dLdscores, 1, 2)@self.q
+            # print ("dLdk shape", dLdk.shape)
+            # n_ex x target_seq/source_seq x 3emb_dim
+            dLdqkv = np.concatenate((dLdq, dLdk, dLdv), axis=2)
+            # swaped: n_ex x target_seq x emb_dim
+            X = np.swapaxes(self.X, 0, 1)
+            # swaped: n_ex x emb_dim x target_seq
+            X = np.swapaxes(X, 1, 2)
+            # before sum: n_ex x emb_dim x 3emb_dim
+            self.dLdin_weight += np.sum(X @ dLdqkv, axis=0)
+            dLdX = dLdqkv @ self.in_weight.transpose()
+            dLdX = np.swapaxes(dLdX, 0, 1)
+            return dLdX, dLdweights, dLdscores
