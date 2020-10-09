@@ -1007,6 +1007,9 @@ class DotProductAttention(Layer):
 
             self.dLdout_weight = np.zeros_like(self.out_weight)
             self.dLdin_weight = np.zeros_like(self.in_weight)
+
+            self.in_weight_opt = copy.deepcopy(optimizer)
+            self.out_weight_opt = copy.deepcopy(optimizer)
         else:
             limit_Q = 1 / math.sqrt(self.d_k)
             self.Q = np.random.uniform(-limit_Q,limit_Q,(self.emb_dim, self.d_k))
@@ -1142,4 +1145,13 @@ class DotProductAttention(Layer):
             self.dLdin_weight += np.sum(X @ dLdqkv, axis=0)
             dLdX = dLdqkv @ self.in_weight.transpose()
             dLdX = np.swapaxes(dLdX, 0, 1)
-            return dLdX, dLdweights, dLdscores
+
+            return dLdX
+    def update(self):
+        if self.trainable:
+            self.in_weight = self.in_weight_opt.update(self.in_weight,
+                                                       self.dLdin_weight)
+            self.out_weight = self.out_weight_opt.update(self.out_weight,
+                                                         self.dLdout_weight)
+            self.dLdin_weight = np.zeros_like(self.in_weight)
+            self.dLdout_weight = np.zeros_like(self.out_weight)
