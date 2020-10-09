@@ -13,3 +13,11 @@ In the current folder, run:
 ```
 pytest -s tests.py
 ```
+<p align="center">
+<img src="/images/unit_test.png">
+</p>
+<p align="center">
+    The result of unit test for different parts of deep learning
+</p>
+
+The warning message is due to [the bug of Tensorflow](https://github.com/tensorflow/tensorflow/issues/31412)
