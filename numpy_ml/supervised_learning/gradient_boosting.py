@@ -93,6 +93,8 @@ class GradientBoosting(object):
         for i in range(self.n_estimators):
             gradient = self.loss.negative_gradient(y,y_pred)
             # Each tree will fit the gradient instead of residual
+            # why negative gradient?
+            # https://datascience.stackexchange.com/a/56040
             self.tree_list[i].fit(X,gradient)
             # Update leaf values using line search
             # ref: https://stats.stackexchange.com/questions/330849/how-do-newton-raphson-updates-work-in-gradient-boosting
