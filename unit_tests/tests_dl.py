@@ -1400,6 +1400,11 @@ def test_LSTM_many2many(cases):
         i += 1
     print ("Successfully testing LSTM many to many function!")
 
+# embed_dim is the number of features
+# In self-attention, the dimension of q,k,v are supposed to be the same in PyTorch. Actually, only the dimension of
+# q and k have to be the same, v does not have to be equal. I don't understand why PyTorch requires the equality.
+# In decoder, they cannot be the same. Is it for the sake of simplicity?
+# add_zero_attn: https://github.com/pytorch/pytorch/issues/27461#issuecomment-656991245
 def test_single_head_attention(cases):
 
     np.random.seed(12345)

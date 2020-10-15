@@ -1,6 +1,6 @@
 import numpy as np
 from numpy_ml.utils import to_categorical
-from ..deep_learning.loss_functions import SquareLoss, BinomialDeviance
+from ..deep_learning.loss_functions import SquaredLoss, BinomialDeviance
 from .decision_tree import RegressionTree
 
 # reference: https://explained.ai/gradient-boosting/
