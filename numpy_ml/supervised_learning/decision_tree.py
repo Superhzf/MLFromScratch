@@ -2,6 +2,7 @@ import numpy as np
 from numpy_ml.utils import divide_on_feature
 from numpy_ml.utils import calculate_variance,calculate_entropy
 import random
+import warnings
 
 # This can work as either an interbal node or a decision node
 class Node():
@@ -93,6 +94,11 @@ class DecisionTree(object):
 
         if len(np.shape(y)) == 1:
             y = np.expand_dims(y,axis=1)
+
+        if len(set(y.flatten())) == 1:
+            print ("good")
+            self._leaf_idx = self._leaf_idx + 1
+            return Node(value=y[0],leaf_idx=self._leaf_idx)
 
         # Concatenate x and y
         Xy = np.concatenate((X,y),axis=1)
@@ -256,15 +262,15 @@ class ClassificationTree(DecisionTree):
         return info_gain
 
     def _majority_vote(self,y):
-        most_common = None
-        max_count = 0
-        for label in np.unique(y):
-            # Count number of occurances of samples with label
-            count = sum(y==label)
-            if count > max_count:
-                max_count = count
-                most_common = label
-        return most_common
+        values,counts = np.unique(y,return_counts=True)
+        most_freq = values[counts == counts.max()]
+        if len(most_freq) > 1:
+            warnings.warn("More than 1 class has the same number of \
+            frequency, the program would use the first one")
+            most_freq = most_freq[0]
+            return most_freq
+
+        return values[counts == counts.max()]
 
     def fit(self,X,y):
         self._impurity_calculation = self._calculate_information_gain
