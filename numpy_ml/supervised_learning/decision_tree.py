@@ -175,8 +175,7 @@ class DecisionTree(object):
         # Iterate subtree
         return self.apply(x,branch)
 
-
-    def predict_value(self,x,tree=None):
+    def predict_value(self,x,tree=None, prob = False):
         """
         Do a recursive search down the tree and make a prediction based on the
         value that we end up at
@@ -185,6 +184,12 @@ class DecisionTree(object):
             tree = self.root
         # If we are at the leaf node
         if tree.value is not None:
+            if isinstance(tree.value, np.ndarray):
+                # if np.ndarray means that it is a classification problem
+                if prob:
+                    return np.mean(tree.value)
+                else:
+                    return self._majority_vote(tree.value)
             return tree.value
         # Choose the feature that we will iterate
         feature_value = x[tree.feature_i]
@@ -197,12 +202,16 @@ class DecisionTree(object):
         elif feature_value == tree.threshold:
             branch = tree.true_branch
         # Iterate subtree
-        return self.predict_value(x,branch)
+        return self.predict_value(x,branch, prob)
 
     def predict(self, X):
-        """ Make prediction one by one and return the set of labels """
-        y_pred = np.array([self.predict_value(sample) for sample in X])
+        """ Make prediction one by one and return the set of labels"""
+        y_pred = np.array([self.predict_value(sample, None, False) for sample in X])
         return y_pred
+
+    def predict_prob(self, X):
+        """ Make prediction one by one and return the set of  probabilities"""
+        pass
 
     def print_tree(self, tree=None, indent=" "):
         """ Recursively print the decision tree """
@@ -222,6 +231,17 @@ class DecisionTree(object):
             # Print the false scenario
             print ("%sF->" % (indent), end="")
             self.print_tree(tree.false_branch, indent + indent)
+
+    def _majority_vote(self,y):
+        values,counts = np.unique(y,return_counts=True)
+        most_freq = values[counts == counts.max()]
+        if len(most_freq) > 1:
+            warnings.warn("More than 1 class has the same number of \
+            frequency, the first class would be used")
+            most_freq = most_freq[0]
+            return most_freq
+
+        return values[counts == counts.max()][0]
 
 
 class RegressionTree(DecisionTree):
@@ -261,20 +281,14 @@ class ClassificationTree(DecisionTree):
         info_gain = entropy_y-p_1*entropy_y1-(1-p_1)*entropy_y2
         return info_gain
 
-    def _majority_vote(self,y):
-        values,counts = np.unique(y,return_counts=True)
-        most_freq = values[counts == counts.max()]
-        if len(most_freq) > 1:
-            warnings.warn("More than 1 class has the same number of \
-            frequency, the program would use the first one")
-            most_freq = most_freq[0]
-            return most_freq
-
-        return values[counts == counts.max()]
+    def _calculate_probability(self, y):
+        v = np.bincount(y, minlength=self.n_classes) / len(y)
+        return v
 
     def fit(self,X,y):
         self._impurity_calculation = self._calculate_information_gain
-        self._leaf_value_calculation = self._majority_vote
+        self._leaf_value_calculation = self._calculate_probability
+        self.n_classes = len(set(y.flatten()))
         super(ClassificationTree,self).fit(X,y)
 
 # Q: What is boosters in XGBoost?
