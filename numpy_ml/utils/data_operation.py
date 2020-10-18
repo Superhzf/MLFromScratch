@@ -11,9 +11,9 @@ def calculate_entropy(y):
     """
     Calculate the entropy of label array y
     """
+    y = y.flatten().astype(int)
     hist = np.bincount(y)
     ps = hist / np.sum(hist)
-    print (ps)
     return -np.sum([p * np.log2(p) for p in ps if p > 0])
 
 class DiscreteSampler():
