@@ -11,14 +11,10 @@ def calculate_entropy(y):
     """
     Calculate the entropy of label array y
     """
-    unique_labels = np.unique(y)
-    entropy = 0
-    y_len = len(y)
-    for label in unique_labels:
-        p = sum(y == label)/y_len
-        entropy += -p*np.log2(p)
-
-    return entropy
+    hist = np.bincount(y)
+    ps = hist / np.sum(hist)
+    print (ps)
+    return -np.sum([p * np.log2(p) for p in ps if p > 0])
 
 class DiscreteSampler():
     def __init__(self, probs, log=False, with_replacement=True):
