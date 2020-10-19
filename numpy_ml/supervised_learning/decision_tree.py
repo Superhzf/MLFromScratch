@@ -3,6 +3,7 @@ from numpy_ml.utils import divide_on_feature
 from numpy_ml.utils import calculate_variance,calculate_entropy
 import random
 import warnings
+from sklearn.utils import shuffle
 
 # This can work as either an interbal node or a decision node
 class Node():
@@ -99,8 +100,9 @@ class DecisionTree(object):
             y = np.expand_dims(y,axis=1)
 
         if len(set(y.flatten())) == 1:
+            leaf_value = self._leaf_value_calculation(y)
             self._leaf_idx = self._leaf_idx + 1
-            return Node(value=y[0],leaf_idx=self._leaf_idx)
+            return Node(value=leaf_value,leaf_idx=self._leaf_idx)
 
         # Concatenate x and y
         Xy = np.concatenate((X,y),axis=1)
@@ -110,10 +112,14 @@ class DecisionTree(object):
 
         if self.max_features < 1:
             np.random.seed(self.random_state)
-            feature_list = np.random.choice(range(n_features),int(self.max_features*n_features))
+            feature_list = np.random.choice(range(n_features),
+                                            int(self.max_features*n_features),
+                                            replace=False)
             self.random_state = self.random_state + 222
         else:
-            feature_list = range(n_features)
+            np.random.seed(self.random_state)
+            feature_list = shuffle(range(n_features),
+                                   random_state=self.random_state)
 
         if n_samples >= self.min_samples_split and current_depth < self.max_depth:
             # Calculate the impurity for each feature
@@ -136,7 +142,6 @@ class DecisionTree(object):
 
                         # Calculate the impurity
                         impurity = self._impurity_calculation(y,y1,y2)
-
                         if impurity > best_impurity:
                             best_impurity = impurity
                             best_cretiria = {'feature_i': feature_i,'threshold':threshold}
@@ -146,6 +151,7 @@ class DecisionTree(object):
                                 "rightX": Xy2[:,:n_features], # X of right subtree
                                 "righty": Xy2[:,n_features:]
                             }
+
         if best_impurity > self.min_impurity:
             # Build subtrees for the right and left branches
             true_branch = self._build_tree(best_sets['leftX'],best_sets['lefty'],current_depth+1)
