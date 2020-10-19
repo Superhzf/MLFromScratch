@@ -222,8 +222,6 @@ def compare_trees(mine, gold):
     level = 0
     def test(mine, gold, level):
         if mine.value is None and gold.value is None:
-            print ("mine.feature_i", mine.feature_i)
-            print ("gold.feature_i", gold.feature_i)
             assert mine.feature_i == gold.feature_i,\
                    "Node feature at level {} are not equal".format(level)
             assert_almost_equal(mine.threshold,
