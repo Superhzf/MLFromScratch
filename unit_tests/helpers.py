@@ -1,3 +1,5 @@
+import sys
+sys.path.append('..')
 import torch.nn as nn
 import numpy as np
 import torch
@@ -5,6 +7,9 @@ import torch.nn.functional as F
 from tensorflow.python.ops.nn_impl import _compute_sampled_logits
 from tensorflow.python.ops.nn_impl import sigmoid_cross_entropy_with_logits
 import tensorflow as tf
+from numpy_ml.supervised_learning.decision_tree import Node
+from numpy.testing import assert_almost_equal
+
 def random_one_hot_matrix(n_examples, n_classes):
     """Create a random one-hot matrix of shape (`n_examples`, `n_classes`)"""
     X = np.eye(n_classes)
@@ -180,3 +185,64 @@ class PytorchDotProductAttention(nn.Module):
         outputs = torch.bmm(self.weights, v)
         outputs = outputs.transpose(0, 1)
         return self.out_weight(outputs), self.weights
+
+# understanding the decision tree structure
+# https://scikit-learn.org/stable/auto_examples/tree/plot_unveil_tree_structure.
+# html#sphx-glr-auto-examples-tree-plot-unveil-tree-structure-py
+def clone_tree(dtree):
+    children_left = dtree.tree_.children_left
+    children_right = dtree.tree_.children_right
+    feature = dtree.tree_.feature
+    threshold = dtree.tree_.threshold
+    values = dtree.tree_.value
+
+    leaf_idx = 0
+    def grow(node_id):
+        nonlocal leaf_idx
+        true_node = children_left[node_id]
+        false_node = children_right[node_id]
+        if true_node == false_node:
+            leaf_idx+=1
+            return Node(value=values[node_id].flatten()/np.sum(values[node_id]),
+                        leaf_idx=leaf_idx-1)
+        this_node = Node(feature_i=feature[node_id],threshold=threshold[node_id])
+        this_node.true_branch = grow(true_node)
+        this_node.false_branch = grow(false_node)
+        return this_node
+
+    node_id = 0
+    root = Node(feature_i=feature[node_id],threshold=threshold[node_id])
+    root.true_branch = grow(children_left[node_id])
+    root.false_branch = grow(children_right[node_id])
+    return root
+
+def compare_trees(mine, gold):
+    gold = clone_tree(gold)
+    mine =  mine.root
+    level = 0
+    def test(mine, gold, level):
+        if mine.value is None and gold.value is None:
+            print ("mine.feature_i", mine.feature_i)
+            print ("gold.feature_i", gold.feature_i)
+            assert mine.feature_i == gold.feature_i,\
+                   "Node feature at level {} are not equal".format(level)
+            assert_almost_equal(mine.threshold,
+                                gold.threshold,
+                                4,
+                                err_msg="Node threshold at level {} are not equal".format(level))
+            test(mine.true_branch, gold.true_branch, level+1)
+            test(mine.false_branch, gold.false_branch, level+1)
+        elif mine.value is not None and gold.value is not None:
+            assert_almost_equal(mine.value,
+                                gold.value,
+                                4,
+                                err_msg="Node value at level {} are not equal".format(level))
+            assert mine.leaf_idx == gold.leaf_idx,\
+                   "leaf index at level {} are not equal".format(level)
+            return
+        else:
+            level+=1
+            raise ValueError("Nodes at level {} are not equal".format(level))
+
+    test(mine, gold, level)
+    return True
