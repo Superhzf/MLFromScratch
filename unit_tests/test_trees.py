@@ -1,8 +1,10 @@
 # I cannot do unit test for tree-based algorithms for now because when there
 # are more than one best splits, the DecisionTree algorithms from sklearn
 # cannot return a deterministic variable.
-# For more details, please refer to this PR
+# For more details, please refer to this PR:
 # https://github.com/scikit-learn/scikit-learn/pull/12364
+# and this issue:
+# https://github.com/scikit-learn/scikit-learn/issues/12259
 # once this PR is ready, unit test can be done in a deterministic way. ^^
 
 # def test_DecisionTreeClassifier(N=1):
