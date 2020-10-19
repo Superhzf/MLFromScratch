@@ -7,7 +7,8 @@ import warnings
 # This can work as either an interbal node or a decision node
 class Node():
     """
-    Class that represents a decision node or leaf in the decision tree
+    Class that represents a decision node or leaf in the decision tree. When it
+    is a leaf node: value and
 
     Parameters:
     -----------------------------
@@ -24,6 +25,8 @@ class Node():
     false_branch: Node
         Next decision node for samples where features value does not meet the
         threshold
+    leaf_idx: int
+        It is available if it is a leaf node showing.
     """
     def __init__(self,feature_i=None,threshold=None,value=None,
                  true_branch=None,false_branch=None,leaf_idx=None):
@@ -88,7 +91,7 @@ class DecisionTree(object):
         y: numpy array
             Dependnet variables
         """
-        largest_impurity = 0
+        best_impurity = -np.inf
         best_cretiria = None # A dictionary stores feature index and threshold
         best_sets = None # Subsets of the data
 
@@ -96,13 +99,13 @@ class DecisionTree(object):
             y = np.expand_dims(y,axis=1)
 
         if len(set(y.flatten())) == 1:
-            print ("good")
             self._leaf_idx = self._leaf_idx + 1
             return Node(value=y[0],leaf_idx=self._leaf_idx)
 
         # Concatenate x and y
         Xy = np.concatenate((X,y),axis=1)
 
+        # this step will make integer float
         n_samples, n_features = np.shape(X)
 
         if self.max_features < 1:
@@ -112,16 +115,17 @@ class DecisionTree(object):
         else:
             feature_list = range(n_features)
 
-        if n_samples >= self.min_samples_split and current_depth <= self.max_depth:
+        if n_samples >= self.min_samples_split and current_depth < self.max_depth:
             # Calculate the impurity for each feature
             for feature_i in feature_list:
                 # All values of feature_i
-                feature_values = np.expand_dims(X[:,feature_i],axis=1)
-                unique_values = np.unique(feature_values)
+                feature_vals = X[:,feature_i]
+                levels = np.unique(feature_vals)
+                thresholds = (levels[:-1] + levels[1:]) / 2 if len(levels) > 1 else levels
 
                 # Iterate through all unique values of feature column i and
                 # calculate the impurity
-                for threshold in unique_values:
+                for threshold in thresholds:
                     # Divide X and y according to the feature value, if it is
                     # larger than threshold, then go left, otherwise, go right
                     Xy1,Xy2 = divide_on_feature(Xy,feature_i,threshold)
@@ -133,8 +137,8 @@ class DecisionTree(object):
                         # Calculate the impurity
                         impurity = self._impurity_calculation(y,y1,y2)
 
-                        if impurity > largest_impurity:
-                            largest_impurity = impurity
+                        if impurity > best_impurity:
+                            best_impurity = impurity
                             best_cretiria = {'feature_i': feature_i,'threshold':threshold}
                             best_sets = {
                                 "leftX": Xy1[:,:n_features], # X of left subtree
@@ -142,11 +146,17 @@ class DecisionTree(object):
                                 "rightX": Xy2[:,:n_features], # X of right subtree
                                 "righty": Xy2[:,n_features:]
                             }
-        if largest_impurity > self.min_impurity:
+        if best_impurity > self.min_impurity:
             # Build subtrees for the right and left branches
             true_branch = self._build_tree(best_sets['leftX'],best_sets['lefty'],current_depth+1)
             false_branch = self._build_tree(best_sets['rightX'],best_sets['righty'],current_depth+1)
             # This is an internal node
+            # print ("threshold",best_cretiria['threshold'])
+            # print ("feature_i", best_cretiria['feature_i'])
+            # print ('left samples len', len(best_sets['lefty']))
+            # print ('left samples per class', np.bincount(best_sets['lefty'].flatten().astype(int),minlength=3))
+            # print ('right samples', len(best_sets['righty']))
+            # print ('right samples per class', np.bincount(best_sets['righty'].flatten().astype(int),minlength=3))
             return Node(feature_i = best_cretiria['feature_i'],
                         threshold = best_cretiria['threshold'],
                         true_branch = true_branch,
@@ -197,7 +207,7 @@ class DecisionTree(object):
         branch = tree.false_branch
         if isinstance(feature_value,int) or isinstance(feature_value,np.float32)\
             or isinstance(feature_value, float):
-            if feature_value>=tree.threshold:
+            if feature_value<=tree.threshold:
                 branch = tree.true_branch
         elif feature_value == tree.threshold:
             branch = tree.true_branch
@@ -241,7 +251,7 @@ class DecisionTree(object):
             most_freq = most_freq[0]
             return most_freq
 
-        return values[counts == counts.max()][0]
+        return int(values[counts == counts.max()][0])
 
 
 class RegressionTree(DecisionTree):
@@ -282,6 +292,7 @@ class ClassificationTree(DecisionTree):
         return info_gain
 
     def _calculate_probability(self, y):
+        y = y.flatten().astype(int)
         v = np.bincount(y, minlength=self.n_classes) / len(y)
         return v
 
