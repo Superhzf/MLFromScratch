@@ -11,7 +11,7 @@ The test tool is [PyTest](https://docs.pytest.org/en/stable/).
 Usage:
 In the current folder, run:
 ```
-pytest -s tests.py
+pytest -s tests_dl.py
 ```
 <p align="center">
 <img src="/images/unit_test.png">
