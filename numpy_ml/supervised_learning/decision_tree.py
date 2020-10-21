@@ -321,15 +321,19 @@ class ClassificationTree(DecisionTree):
 # ref: https://www.avato-consulting.com/?p=28903&lang=en
 # The third booster is DART: it is the dropout version in tree models. The reason
 # that DART is introduced is that the first tree of GBDT will have the biggest impact
-# to the final prediction and the following trees will only have a small impact.
-# There are
-# two main differences between DART and GBDT boosters. The first one is that
-# when building a new tree at iteration t, we will have t - 1 trees if it is
-# GBDT boosters, the tth tree will be build based on the gradient of the previous
-# t - 1 trees. However, DART will only consider a random subset of the t - 1 trees
-# The second difference is in the inference stage. GBDT just adds up all the
-# trees with a shrinkage factor learning rate. However, DART will scale trees by
-# a factor k/(k+1) where k is the number of randomly dropped trees.
+# to the final prediction and the following trees will only have a small impact,
+# more details will be discused below.
+# There are two main differences between DART and GBDT boosters.
+# The first one is that when building a new tree at iteration t,
+# we will have t - 1 trees if it is GBDT boosters, the tth tree will be build
+# based on the negative gradient of the previous t - 1 trees. However, DART will only
+# consider a random subset of the t - 1 trees which means that the prediction of
+# the first tree will be ignored. The second difference is in the
+# inference stage. Gbtree just adds up all the trees with a shrinkage factor
+# learning rate. However, DART will scale trees by a factor
+# ref: https://xgboost.readthedocs.io/en/latest/tutorials/dart.html
+# In "DART: Dropouts meet Multiple Additive Regression Trees": "The second place
+# at which DART diverges from MART"
 class XGBoostRegressionTree(DecisionTree):
     """
     Regression tree for XGBoost
