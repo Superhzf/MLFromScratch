@@ -311,8 +311,8 @@ class ClassificationTree(DecisionTree):
 # Q: What is boosters in XGBoost?
 # A: My understanding is that booster is the type of weak learners. gblinear booster
 # makes xgboost pretty much like a lasso regresson. (ref: https://github.com/dmlc/xgboost/issues/332)
-# The advantage of GBDT booster is that it can handle non-linearity, it is a huge
-# advantage if relations and interactions are unknown. The disadvantage of gbdt
+# The advantage of gbtree booster is that it can handle non-linearity, it is a huge
+# advantage if relations and interactions are unknown. The disadvantage of gbtree
 # booster is that it cannnot extrapolate or intertrapolate. If the training data
 # has covered the full range of unseen data, then gbdt is a good choice.
 # The advantage of gblinear is that it can extrapolate. The disvantage is that
