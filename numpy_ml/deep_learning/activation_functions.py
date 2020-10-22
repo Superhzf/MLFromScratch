@@ -32,9 +32,9 @@ class Sigmoid():
 
 # Q: Why the regular definition of softmax is numerically unstable?
 # A: When the output of the layer right before the last one is extremely large
-# extremely small (absolute value), exp(output) would be inf or 1/(len(output))
+# or extremely small (absolute value), exp(output) would be close to inf or 1
 # which is useless. For example, when the output is [1/10000, 1/20000, 1/30000]
-# or [10000, 20000, 30000]
+# or [10000, 20000, 30000], the result is close to inf and 1.
 class Softmax():
     """
     This softmax function has to be used together with cross entropy loss for the
@@ -89,9 +89,9 @@ class FullSoftmax():
 # What is a dead ReLU problem? Why does it happen?
 # A: Dead ReLU means that the activations are the same (0 as it happens) and
 # it will never recover because the gradient of 0 is always 0, it means it takes
-# no role in discriminating inputs. Probably this is arrived at by learning a
+# no role in discriminating inputs. Probably this is arrived by learning a
 # large negative bias term for its weights. Besides, if the learning rate is large
-# then the updated weights could less than 0 and dead.
+# then the updated weights could be less than 0 and dead.
 
 # ReLU can help gradients vanishing problem in regular deep neural networks caused
 # by sigmoid/tanh

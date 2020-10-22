@@ -12,7 +12,10 @@ from ..utils import to_categorical
 # GOSS excludes a significant proportion of data instances with small gradients,
 # and only use the rest to estimate the gain.
 # EFB bundles mutually exclusive features (i.e. they rarely take  nonzero values
-# simutaneously) to reduce the number of features.
+# simutaneously) to reduce the number of features. For example, if I have 3 variables,
+# v1, v2, and v3, they cannot be 0 at the same time, after combination we have
+# only one variable v4, if v4 is not zero, it means only one of v1, v2, and v3
+# is not zero 
 class LogisticLoss():
     def __init__(self):
         sigmoid = Sigmoid()
