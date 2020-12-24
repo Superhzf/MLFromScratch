@@ -1,6 +1,6 @@
 import numpy as np
 
-def discrete_mutual_info_score(labels_a, labels_b):
+def discrete_mutual_info_score(label_a: np.ndarray, label_b: np.ndarray) -> float:
     """
     To calculate the mutual information between discrete distributions.
     Ref: https://en.wikipedia.org/wiki/Mutual_information
