@@ -2,10 +2,19 @@ import numpy as np
 
 def discrete_mutual_info_score(labels_a: np.ndarray, labels_b: np.ndarray) -> float:
     """
-    To calculate the mutual information between discrete distributions.
+    To calculate the mutual information between discrete distributions. It is
+    used to measure how much knowing one of the two variables reduces uncertainty
+    about the other.
+    
     Ref: https://en.wikipedia.org/wiki/Mutual_information
 
-
+    Parameters:
+    ------------------
+    labels_a: np.ndarray
+        One of the two discrete distributions.
+    labels_b: np.ndarray
+        One of the two discrete distributions. The order of labels_a and labels_b
+        does not matter.
     """
     assert len(labels_a) == len(labels_b), "The length of label_a and that of label_b is supposed to be the same"
     unique_a = set(labels_a)
