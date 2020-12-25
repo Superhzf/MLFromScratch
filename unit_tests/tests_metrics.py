@@ -5,7 +5,7 @@ from sklearn.metrics import mutual_info_score
 from numpy_ml.metrics.clustering.mutual_information import discrete_mutual_info_score
 from numpy.testing import assert_almost_equal
 
-def test_discrete_mutual_info_score(cases):
+def test_discrete_mutual_info_score(cases: str) -> None:
     seed = 123456
     cases = int(cases)
     i = 1

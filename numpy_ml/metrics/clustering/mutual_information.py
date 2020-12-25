@@ -1,9 +1,10 @@
 import numpy as np
 
-def discrete_mutual_info_score(label_a: np.ndarray, label_b: np.ndarray) -> float:
+def discrete_mutual_info_score(labels_a: np.ndarray, labels_b: np.ndarray) -> float:
     """
     To calculate the mutual information between discrete distributions.
     Ref: https://en.wikipedia.org/wiki/Mutual_information
+
 
     """
     assert len(labels_a) == len(labels_b), "The length of label_a and that of label_b is supposed to be the same"
