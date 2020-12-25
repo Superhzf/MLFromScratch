@@ -32,11 +32,11 @@ def discrete_mutual_info(labels_a: np.ndarray, labels_b: np.ndarray) -> float:
         for this_b in unique_b:
             dist_a = labels_a == this_a
             dist_b = labels_b == this_b
-            jnt_dist_ab = np.sum(dist_a & dist_b)*1.0/N
+            jnt_dist_ab = np.sum(dist_a & dist_b)/N
             if jnt_dist_ab == 0:
                 continue
-            dist_a = dist_a.sum()*1.0/N
-            dist_b = dist_b.sum()*1.0/N
+            dist_a = dist_a.sum()/N
+            dist_b = dist_b.sum()/N
             MI += jnt_dist_ab*np.log(jnt_dist_ab/(dist_a*dist_b))
     return MI
 
