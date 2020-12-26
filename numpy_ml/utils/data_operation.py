@@ -7,14 +7,24 @@ def calculate_variance(X):
     return np.var(X,axis=0)
 
 
-def calculate_entropy(y):
+def calculate_entropy(y, base=2):
     """
     Calculate the entropy of label array y
+
+    Parameters:
+    ------------------------
+    y: np.array
+        The numpy which is used to calculate ectropy
+    base: int/str
+        The base of the logrithm, it could be 2 or e
     """
     y = y.flatten().astype(int)
     hist = np.bincount(y)
     ps = hist / np.sum(hist)
-    return -np.sum([p * np.log2(p) for p in ps if p > 0])
+    if base == 2:
+        return -np.sum([p * np.log2(p) for p in ps if p > 0])
+    else:
+        return -np.sum([p * np.log(p) for p in ps if p > 0])
 
 class DiscreteSampler():
     def __init__(self, probs, log=False, with_replacement=True):
