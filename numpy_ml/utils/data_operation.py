@@ -1,4 +1,5 @@
 import numpy as np
+from math import log
 
 def calculate_variance(X):
     """
@@ -19,12 +20,17 @@ def calculate_entropy(y, base=2):
         The base of the logrithm, it could be 2 or e
     """
     y = y.flatten().astype(int)
-    hist = np.bincount(y)
-    ps = hist / np.sum(hist)
+    if len(y) == 0:
+        return 1.0
+    label_idx = np.unique(y, return_inverse=True)[1]
+    pi = np.bincount(label_idx).astype(np.float64)
+    pi = pi[pi > 0]
+    pi_sum = np.sum(pi)
+
     if base == 2:
-        return -np.sum([p * np.log2(p) for p in ps if p > 0])
+        return -np.sum((pi / pi_sum) * (np.log2(pi) - np.log2(pi_sum)))
     else:
-        return -np.sum([p * np.log(p) for p in ps if p > 0])
+        return -np.sum((pi / pi_sum) * (np.log(pi) - log(pi_sum)))
 
 class DiscreteSampler():
     def __init__(self, probs, log=False, with_replacement=True):
