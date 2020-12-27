@@ -39,7 +39,7 @@ class GMM(object):
         if self.seed:
             np.random.seed(self.seed)
 
-        def _initialize_parameters(self):
+        def _initialize_parameters(self) -> None:
             self.pi = np.random.rand(self.C)
             self.pi = self.pi/self.pi.sum()
 
@@ -57,10 +57,10 @@ class GMM(object):
             self.best_sigma = None
             self.best_elbo = -np.inf
 
-        def likelihood_lower_bound(self):
+        def likelihood_lower_bound(self) -> float:
             """Calculate the ELBO under the current GMM parameters"""
             eps = np.finfo(float).eps
-            elbo = 0
+            elbo = 0.0
 
             for i in range(sef.N):
                 x_i = self.X[i]
@@ -108,8 +108,52 @@ class GMM(object):
                 self._E_step()
                 self._M_step()
 
-        def _E_step(self):
+        def _E_step(self) -> None:
+            eps = np.finfo(float).eps
             for i in range(self.N):
                 x_i = self.X[i, :]
 
-                denom_vals = []
+                denom = []
+                for this_c in range(self.C):
+                    pi_c = self.pi[this_c]
+                    mu_c = self.mu[this_c, :]
+                    sigma_c = self.sigma[this_c, :, :]
+
+                    log_pi_c = np.log(pi_c+eps)
+                    log_p_x_i = log_gaussian_pdf(x_i, mu_c, sigma_c)
+                    denom.append(log_pi_c+log_p_x_i)
+
+            # logsumexp: logF1, logF2, logF3, ... -> log(F1 + F2 + F3 + ...)
+            log_denom = logsumexp(denom)
+            q_i = np.exp([num - log_denom for num in denom])
+            assert_allclose(np.sum(q_i), 1)
+
+            self.Q[i, :] = q_i
+
+        def _M_step(self) -> None:
+            # total weights over all observations for each Gaussian distribution
+            total_weights = np.sum(self.Q, axis=0)
+
+            # update priors
+            self.pi = np.sum(self.Q, axis=0)/self.N
+
+            # update Gaussian distribution means
+            mu_numer = [np.dot(self.Q[:, this_c], X) for this_c in range(C)]
+            for idx, (this_mu_numer, this_weights) in enumerate(zip(mu_numer, total_weights)):
+                self.mu[idx,:] = this_mu_numer/this_weights
+
+            # update Gaussian distribution covariance
+            for this_c in range(self.C):
+                mu_c = self.mu[this_c,:]
+                weight_c = total_weights[this_c]
+
+                this_sigma = np.zeros((self.d, self.d))
+                for i in range(self.N):
+                    weight_ic =self.Q[i, this_c]
+                    xi = self.X[i,:]
+                    this_sigma += weight_ic * np.outer(xi-mu_c, xi-mu_c)
+
+                this_sigma = this_sigma/weight_c if weight_c>0 else this_sigma
+                self.sigma[c, :, :] = this_sigma
+
+            assert_allclose(np.sum(self.pi), 1)
