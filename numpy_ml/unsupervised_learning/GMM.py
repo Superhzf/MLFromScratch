@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.testing import assert_allclose
 
 class GMM(object):
     def __init__(self, C:int=3, seed:int=None) -> None:
@@ -44,7 +45,7 @@ class GMM(object):
             self.pi = self.pi/self.pi.sum()
 
             self.Q = np.zeros([self.N, self.C])
-            # Initialize mu by randomly select C values for each dimension
+            # Initialize mu by randomly select C values from each dimension
             self.mu = np.zeros([self.C, self.d])
             for this_dim in range(self.d):
                 this_mu = np.random.choice(self.X[:,this_dim],self.C)
@@ -157,3 +158,6 @@ class GMM(object):
                 self.sigma[c, :, :] = this_sigma
 
             assert_allclose(np.sum(self.pi), 1)
+
+def log_gaussian_pdf(x_i: np.ndarray, mu: float, sigma: float) -> float:
+    pass
