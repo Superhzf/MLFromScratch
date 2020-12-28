@@ -5,6 +5,8 @@ class GMM(object):
     def __init__(self,
                  C: int=3,
                  seed: int=None,
+                 max_iter: int = 100,
+                 tol: float = 1e-3,
                  weights_init: np.ndarray=None,
                  means_init: np.ndarray=None,
                  precisions_init: np.ndarray=None) -> None:
@@ -20,6 +22,13 @@ class GMM(object):
             The number of mixture components in the GMM.
         seed: int
             Seed for the random number generator.
+        max_iter: int
+            The maximum number of  EM updates to perform before terminating
+            training.
+        tol: float
+            The convergence tolerance. The training will be terminated if
+            the difference of the lower bound betweet two iterations is
+            less than tol.
         weights_init: np.ndarray
             The user-provided initial weights. If None, weights are
             initialized in the _initialize_parameters() function.
@@ -54,15 +63,17 @@ class GMM(object):
         self.N = N
         self.d = None
         self.seed = seed
+        self.max_iter = max_iter
+        self.tol = tol
         self.weights_init = weights_init
         self.means_init = means_init
         self.precisions_init = precisions_init
         self.is_converged = None
 
-        if self.seed:
-            np.random.seed(self.seed)
-
         def _initialize_parameters(self) -> None:
+            if self.seed:
+                np.random.seed(self.seed)
+            # initialize weights
             if self.weights_init is None:
                 self.pi = np.random.rand(self.C)
                 self.pi = self.pi/self.pi.sum()
@@ -82,10 +93,10 @@ class GMM(object):
 
             # Diag covariance matrices
             if self.precisions_init is None:
-                self.sigma = np.array([np.identity(d) for _ in range(C)])
+                self.inverse_sigma = np.array([np.identity(d) for _ in range(C)])
             else:
                 self.inverse_sigma = self.precisions_init
-                self.sigma = np.zeros(self.inverse_sigma.shape)
+            self.sigma = np.zeros(self.inverse_sigma.shape)
 
             self.best_pi = None
             self.best_mu = None
@@ -112,7 +123,7 @@ class GMM(object):
                     elbo += (z_c * (log_pi_c + log_p_x_i - log_z_c))
             return elbo
 
-        def fit(self, X: np.ndarray, max_iter:int=100, tol:float=1e-3) -> bool:
+        def fit(self, X: np.ndarray) -> None:
             """
             Fit the parameters of the GMM on the training set
 
@@ -120,19 +131,6 @@ class GMM(object):
             ---------------
             X: numpy.array of shape (N, d)
                 The training set with N observations and d variables.
-            max_iter: int
-                The maximum number of  EM updates to perform before terminating
-                training.
-            tol: float
-                The convergence tolerance. The training will be terminated if
-                the difference of the lower bound betweet two iterations is
-                less than tol.
-
-            Returns:
-            ---------------
-            converged: bool
-                True: the model is converged.
-                False: the model is not converged.
             """
             self.X = X
             self.N = X.shape[0]
@@ -141,7 +139,7 @@ class GMM(object):
             self._initialize_parameters()
             prev_elbo = -np.inf
 
-            for _ in range(max_iter):
+            for _ in range(self.max_iter):
                 self._E_step()
                 try:
                     self._M_step()
@@ -151,7 +149,7 @@ class GMM(object):
                     return
                 this_elbo = self.likelihood_lower_bound()
 
-                is_converged = np.abs(this_elbo - prev_elbo) <= tol
+                is_converged = np.abs(this_elbo - prev_elbo) <= self.tol
                 if is_converged:
                     self.is_converged = True
                     return
