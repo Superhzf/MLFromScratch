@@ -23,7 +23,6 @@ def test_GMM(cases: str) -> None:
         max_iter = 100
         tol = 1e-3
 
-
         # initialize weights
         weights_init = np.random.rand(n_clsuters)
         weights_init = weights_init/weights_init.sum()
@@ -53,7 +52,7 @@ def test_GMM(cases: str) -> None:
                        weights_init=weights_init,
                        means_init=means_init,
                        precisions_init=precisions_init)
-        broken_gold = False
+
         try:
             gmm_gold.fit(X)
         except Exception as e:
