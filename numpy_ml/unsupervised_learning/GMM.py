@@ -204,7 +204,7 @@ class GMM(object):
 
         assert_allclose(np.sum(self.pi), 1)
 
-def log_gaussian_pdf(x_i: np.ndarray, mu: float, inverse_sigma: float) -> float:
+def log_gaussian_pdf(x_i: np.ndarray, mu: np.ndarray, inverse_sigma: np.ndarray) -> float:
     """
     Compute log N(x_i | mu, sigma)
     """
@@ -219,7 +219,7 @@ def log_gaussian_pdf(x_i: np.ndarray, mu: float, inverse_sigma: float) -> float:
     c = np.dot(x_i - mu, y)
     return -0.5 * (ab + c)
 
-def logsumexp(log_probs, axis=None) -> float:
+def logsumexp(log_probs: list, axis: int=None) -> float:
     """
     lnF1, lnF2, lnF3, ... -> ln(F1 + F2 + F3 + ...)
     """
