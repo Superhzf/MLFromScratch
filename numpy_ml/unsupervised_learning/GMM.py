@@ -5,8 +5,8 @@ from numpy.testing import assert_allclose
 WARNING:
 
 This implementation does not strictly follow the reference paper due to the
-problem of the sklearn implementation. The problem lies in the calculation of
-ELBO. For more details, please refer to
+problem of the sklearn implementation, and I want to pass the unit test.
+The problem lies in the calculation of ELBO. For more details, please refer to
 https://github.com/scikit-learn/scikit-learn/issues/14419
 
 Once the implementation of sklearn is fixed, I will come back and refactor my
