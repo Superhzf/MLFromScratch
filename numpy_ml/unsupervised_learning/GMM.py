@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.testing import assert_allclose
+import scipy
 
 class GMM(object):
     def __init__(self,
@@ -100,29 +101,11 @@ class GMM(object):
             self.inverse_sigma = self.precisions_init
         self.sigma = np.zeros(self.inverse_sigma.shape)
 
+        self.n_iter_=0
         self.best_pi = None
         self.best_mu = None
         self.best_sigma = None
         self.best_elbo = -np.inf
-
-    def likelihood_lower_bound(self) -> float:
-        """Calculate the ELBO under the current GMM parameters"""
-        elbo = 0.0
-
-        for i in range(self.N):
-            x_i = self.X[i]
-
-            for this_c in range(self.C):
-                pi_c = self.pi[this_c]
-                z_c = self.Q[i, this_c]
-                mu_c = self.mu[this_c, :]
-                inverse_sigma_c = self.inverse_sigma[this_c, :, :]
-
-                log_pi_c = np.log(pi_c + self.eps)
-                log_p_x_i = log_gaussian_pdf(x_i, mu_c, inverse_sigma_c)
-                log_z_c = np.log(z_c + self.eps)
-                elbo += (z_c * (log_pi_c + log_p_x_i - log_z_c))
-        return elbo
 
     def fit(self, X: np.ndarray) -> None:
         """
@@ -140,15 +123,10 @@ class GMM(object):
         self._initialize_parameters()
         prev_elbo = -np.inf
 
-        for _ in range(self.max_iter):
-            self._E_step()
-            try:
-                self._M_step()
-            except np.linalg.LinAlgError:
-                print ('Cannot calculatet the inverse of the covariance matrix')
-                self.is_converged = False
-                return
-            this_elbo = self.likelihood_lower_bound()
+        for round in range(self.max_iter):
+            self.n_iter_+=1
+            this_elbo = self._E_step()
+            self._M_step()
 
             is_converged = np.abs(this_elbo - prev_elbo) <= self.tol
             if is_converged:
@@ -164,31 +142,28 @@ class GMM(object):
         return
 
     def _E_step(self) -> float:
-        # elbo = 0
+        log_denom_list = []
         for i in range(self.N):
             x_i = self.X[i, :]
 
             denom = []
             for this_c in range(self.C):
-                # z_c = self.Q[i, this_c]
-                # log_z_c = np.log(z_c + self.eps)
-
                 pi_c = self.pi[this_c]
                 mu_c = self.mu[this_c, :]
                 inverse_sigma_c = self.inverse_sigma[this_c, :, :]
 
-                log_pi_c = np.log(pi_c)
+                log_pi_c = np.log(pi_c+self.eps)
                 log_p_x_i = log_gaussian_pdf(x_i, mu_c, inverse_sigma_c)
                 denom.append(log_pi_c+log_p_x_i)
-                # elbo += (z_c * (log_pi_c + log_p_x_i - log_z_c))
 
             # logsumexp: lnF1, lnF2, lnF3, ... -> ln(F1 + F2 + F3 + ...)
             log_denom = logsumexp(denom)
+            log_denom_list.append(log_denom)
             q_i = np.exp([num - log_denom for num in denom])
             assert_allclose(np.sum(q_i), 1)
 
             self.Q[i, :] = q_i
-        # return elbo
+        return np.mean(log_denom_list)
 
     def _M_step(self) -> None:
         # total weights over all observations for each Gaussian distribution
