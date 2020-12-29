@@ -78,7 +78,7 @@ class GMM(object):
         self.weights_init = weights_init
         self.means_init = means_init
         self.precisions_init = precisions_init
-        self.is_converged = None
+        self.is_converged = False
         # https://github.com/scikit-learn/scikit-learn/blob/6b4f82433dc2f219dbff-
         # 7fe8fa42c10b72379be6/sklearn/mixture/_gaussian_mixture.py#L278
         self.eps = 10 * np.finfo(float).eps
@@ -148,7 +148,6 @@ class GMM(object):
                 self.best_mu = self.mu
                 self.best_pi = self.pi
                 self.best_sigma = self.sigma
-        self.is_converged = True
         return
 
     def _E_step(self) -> float:
