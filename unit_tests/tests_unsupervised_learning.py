@@ -7,6 +7,10 @@ from numpy.testing import assert_almost_equal
 from .helpers import random_tensor
 
 def test_GMM(cases: str) -> None:
+    """
+    Please note that the test is conducted if and only if there are no singular
+    matrices problems.
+    """
     np.random.seed(12346)
     cases = int(cases)
     i = 1

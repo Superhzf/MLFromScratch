@@ -1,7 +1,17 @@
 import numpy as np
 from numpy.testing import assert_allclose
-import scipy
 
+"""
+WARNING:
+
+This implementation does not strictly follow the reference paper due to the
+problem of the sklearn implementation. The problem lies in the calculation of
+ELBO. For more details, please refer to
+https://github.com/scikit-learn/scikit-learn/issues/14419
+
+Once the implementation of sklearn is fixed, I will come back and refactor my
+implementation.
+"""
 class GMM(object):
     def __init__(self,
                  C: int=3,
