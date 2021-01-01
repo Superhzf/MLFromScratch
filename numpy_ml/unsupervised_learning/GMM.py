@@ -12,7 +12,7 @@ https://github.com/scikit-learn/scikit-learn/issues/14419
 Once the implementation of sklearn is fixed, I will come back and refactor my
 implementation.
 """
-class GMM(object):
+class GMM:
     def __init__(self,
                  C: int=3,
                  seed: int=None,
