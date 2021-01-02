@@ -14,7 +14,8 @@ class DiscreteHMM:
         Parameters:
         -----------------------
         hidden_states: int
-            The number of unique hidden states.
+            The number of unique hidden states. It is the only required input
+            parameter.
         symbols: int
             The number of unique observation types.
         A: numpy.ndarray of shape (N, N)
@@ -96,9 +97,17 @@ class DiscreteHMM:
         "The number of columns of the emission matrix should equal to the \
         number of observation types"
 
-        # self.pi
+        # check self.pi
         assert np.allclose(self.pi.sum(), 1.0),"The prior probability of \
         hiddens should equal 1"
 
+        # check the input X
+        assert np.min(self.X) == 0
+        assert self.max(self.X) + 1 <= self.symbols
+
     def fit(self, X, hidden_state_types):
-        pass
+        self.X = X
+
+        self._initialize()
+        sellf._parameter_check()
+        
