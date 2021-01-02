@@ -7,7 +7,8 @@ class DiscreteHMM:
                  A:np.ndarray=None,
                  B:np.ndarray=None,
                  pi:np.ndarray=None,
-                 seed: int=None)->None:
+                 seed: int=None,
+                 tol: float=1e-3)->None:
         """
         A Hidden Markov Model with multinomial discrete emission distributions.
 
@@ -28,6 +29,9 @@ class DiscreteHMM:
             The prior probability of hidden states.
         seed: int
             The seed used to randomly generate A and B is not provided.
+        tol: float
+            The tolerance value. If the difference in log likelihood between
+            two epochs is less than this value, terminate training.
 
         Attributes:
         -----------------------
@@ -79,7 +83,8 @@ class DiscreteHMM:
 
         # Initialize self.pi
         if self.pi is None:
-            self.pi = np.random.dirichlet(np.ones(self.hidden_states),size=1)
+            self.pi = np.ones(self.hidden_states)
+            self.pi = self.pi/self.hidden_states
 
     def _parameter_check(self) -> None:
         # check self.hidden_states and self.A
@@ -105,8 +110,9 @@ class DiscreteHMM:
         assert np.min(self.X) == 0
         assert self.max(self.X) + 1 <= self.symbols
 
-    def fit(self, X, hidden_state_types):
+    def fit(self, X):
         self.X = X
+        self.I = len(self.X)
 
         self._initialize()
         sellf._parameter_check()
