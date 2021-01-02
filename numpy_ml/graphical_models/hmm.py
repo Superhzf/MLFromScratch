@@ -12,6 +12,8 @@ class DiscreteHMM:
         """
         A Hidden Markov Model with multinomial discrete emission distributions.
 
+        Ref: http://cs229.stanford.edu/section/cs229-hmm.pdf
+
         Parameters:
         -----------------------
         hidden_states: int
@@ -115,5 +117,5 @@ class DiscreteHMM:
         self.I = len(self.X)
 
         self._initialize()
-        sellf._parameter_check()
+        self._parameter_check()
         
