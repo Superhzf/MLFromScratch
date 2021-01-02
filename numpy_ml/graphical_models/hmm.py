@@ -7,8 +7,9 @@ class DiscreteHMM:
                  A:np.ndarray=None,
                  B:np.ndarray=None,
                  pi:np.ndarray=None,
-                 seed: int=None,
-                 tol: float=1e-3)->None:
+                 seed:int=None,
+                 tol:float=1e-3,
+                 max_iter:int=100)->None:
         """
         A Hidden Markov Model with multinomial discrete emission distributions.
 
@@ -34,6 +35,8 @@ class DiscreteHMM:
         tol: float
             The tolerance value. If the difference in log likelihood between
             two epochs is less than this value, terminate training.
+        max_iter: int
+            The maximum number of iterations to estimate A and B.
 
         Attributes:
         -----------------------
@@ -50,6 +53,8 @@ class DiscreteHMM:
             However, here this observation should be encoded as [0,0,1,2].
         I: int
             The number of observations.
+        n_iter:
+            The number
         """
         self.hidden_states = hidden_states
         self.symbols = symbols
@@ -58,6 +63,8 @@ class DiscreteHMM:
         self.B = B
         self.pi = pi
         self.seed = seed
+        self.max_iter = max_iter
+        self.n_iter = 0
 
     def _initialize(self) -> None:
         "Initialize parameters and do parameter check"
@@ -112,10 +119,50 @@ class DiscreteHMM:
         assert np.min(self.X) == 0
         assert self.max(self.X) + 1 <= self.symbols
 
-    def fit(self, X):
+    def fit(self, X: list) -> None:
         self.X = X
         self.I = len(self.X)
 
         self._initialize()
         self._parameter_check()
-        
+
+    def likelihood(self, x: np.ndarray) -> float:
+        """
+        Given A, B, pi, and a set of observations, compute the probability of
+        observations.
+
+        The likelhood is calculated via the forward algorithm.
+
+        Parameters:
+        ----------------
+        x: numpy.ndarray of shape (T, ).
+            A single set of observations. Note that T is not the same for
+            different observations.
+
+        Returns:
+        ---------------
+        likelihood: float
+            The likelihood of the observation.
+        """
+        forward = self._forward(x)
+
+    def _forward(self, x) -> np.ndarray:
+        """
+        Parameters:
+        ----------------
+        x: numpy.ndarray of shape (T, ).
+            A single set of observations. Note that T is not the same for
+            different observations.
+        """
+        T = x.shape[0]
+        alpha_it = np.zeros((self.hidden_states, T))
+        # initialization
+        alpha_it[:,0] = self.pi * self.B[:,x[0]]
+
+        for this_t in range(1, T):
+            this_obs = x[this_t]
+            for this_state_prev in range(self.hidden_states):
+                for this_state_next in range(self.hidden_states):
+                    alpha_it[this_state, this_t] = self.A[this_t-1, this_t] * \
+                                                   self.B[this_t, this_obs] * \
+                                                   alpha_it[this_state]
