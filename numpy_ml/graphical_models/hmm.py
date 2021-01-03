@@ -141,8 +141,6 @@ class DiscreteHMM:
         #         self.is_converged = True
         #         break
 
-
-
     def log_likelihood(self, x: np.ndarray) -> float:
         """
         Given A, B, pi, and a set of observations, compute the probability of
@@ -193,6 +191,40 @@ class DiscreteHMM:
 
         return alpha_it
 
+    def _backward(self, x) -> np.ndarray:
+        """
+        Given A, B and pi, compute beta[i, t] = P(X_t+1,...,X_T|Z_t=si).
+
+        The motivation to compute this probability is to asnwer the question: what
+        is the probability at any certain time k that the hidden state is Zt given
+        the sequence of observations, which is P(Zt|X).
+
+        Forward: P(Zt, X[1:t])
+        Backward: P(X[t+1:T]|Zt)
+
+        P(Zt|X) = P(Zt, X)/P(X) = P(X[t+1:T]|Zk)*P(Zt, X[1:t])/P(X)
+
+        Parameters:
+        ----------------
+        x: numpy.ndarray of shape (T, ).
+            A single set of observations. Note that T is not the same for
+            different observations.
+
+        Returns: np.arary of shape (hidden_states, T)
+        """
+        T = len(x)
+        beta = np.zeros(T, self.hidden_states)
+        # Explicitly set up beta[T-1, :] = log1 = 0
+        beta[T-1, :] = np.zeros(self.hidden_states)
+
+        for this_t in reversed(range(T-1)):
+            this_obs = x[this_t]
+            for this_s_prev in range(self.hidden_states):
+                for this_s_next in range(self.hidden_states):
+                    beta[this_t, this_s_prev] = beta[this_t+1, this_s_next]+\
+                                                np.log(self.B[this_s_next, this_obs])+\
+                                                np.log(self.A[this_s_prev, this_s_next])
+        return beta
 
 
 def logsumexp(log_probs, axis=None):
