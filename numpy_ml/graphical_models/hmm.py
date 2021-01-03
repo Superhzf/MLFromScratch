@@ -160,16 +160,53 @@ class DiscreteHMM:
             The likelihood of the observation.
         """
         alpha_it = self._forward(x)
-        likelihood = logsumexp(alpha_it[:,-1])
-        return likelihood
+        log_likelihood = logsumexp(alpha_it[:,-1])
+        return log_likelihood
 
-    def _forward(self, x) -> np.ndarray:
+    def posterior(self, x: np.ndarray) -> np.ndarray:
+        """
+        Compute the posteriors. P(Zt|X).
+
+        Forward: P(Zt, X[1:t])
+        Backward: P(X[t+1:T]|Zt)
+
+        P(Zt|X) = P(Zt, X)/P(X) = P(X[t+1:T]|Zt)*P(Zt, X[1:t])/P(X)
+
+        Parameters:
+        ----------------
+        x: numpy.ndarray of shape (T, ).
+            A single set of observations. T is the sequence length. Note that T
+            is not the same for different observations.
+
+        Return:
+        posteriors: numpy.ndarray of shape (T, hidden_states)
+            posteriors[t, i] gives P(Zt=si|X)
+        """
+        T = len(x)
+        posteriors = np.zeros((T, self.hidden_states))
+        forward = self._forward(x)
+        backward = self._backward(x)
+        for this_t in range(T):
+            for this_s in range(self.hidden_states):
+                this_posterior = forward[this_s, this_t] + backward[this_t, this_s]
+                normalizer = self.log_likelihood(x)
+                this_posterior = this_posterior - normalizer
+                posteriors[this_t, this_s] = np.exp(this_posterior)
+        return posteriors
+
+
+    def _forward(self, x:np.ndarray) -> np.ndarray:
         """
         Parameters:
         ----------------
         x: numpy.ndarray of shape (T, ).
             A single set of observations. Note that T is not the same for
             different observations.
+
+        Return:
+        ---------------
+        alpha_it: numpy.ndarray of shape (hidden_states, T)
+            alpha_it[i,t] gives logP(Zt=Si, X[1:t])
         """
         T = x.shape[0]
         alpha_it = np.zeros((self.hidden_states, T))
@@ -202,7 +239,7 @@ class DiscreteHMM:
         Forward: P(Zt, X[1:t])
         Backward: P(X[t+1:T]|Zt)
 
-        P(Zt|X) = P(Zt, X)/P(X) = P(X[t+1:T]|Zk)*P(Zt, X[1:t])/P(X)
+        P(Zt|X) = P(Zt, X)/P(X) = P(X[t+1:T]|Zt)*P(Zt, X[1:t])/P(X)
 
         Parameters:
         ----------------
@@ -210,10 +247,13 @@ class DiscreteHMM:
             A single set of observations. Note that T is not the same for
             different observations.
 
-        Returns: np.arary of shape (hidden_states, T)
+        Returns:
+        ----------------
+        beta: numpy.arary of shape (T, hidden_states)
+            beta[t, i] gives logP(X[t+1:T]|Zt=Si)
         """
         T = len(x)
-        beta = np.zeros(T, self.hidden_states)
+        beta = np.zeros((T, self.hidden_states))
         # Explicitly set up beta[T-1, :] = log1 = 0
         beta[T-1, :] = np.zeros(self.hidden_states)
 
