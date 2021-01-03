@@ -54,7 +54,10 @@ class DiscreteHMM:
         I: int
             The number of observations.
         n_iter:
-            The number
+            The number of rounds used to estimate A, B and pi.
+        is_converged: bool
+            It indicates whether the model is converged when estimating A, B and
+            pi.
         """
         self.hidden_states = hidden_states
         self.symbols = symbols
@@ -63,8 +66,10 @@ class DiscreteHMM:
         self.B = B
         self.pi = pi
         self.seed = seed
+        self.tol = tol
         self.max_iter = max_iter
         self.n_iter = 0
+        self.is_converged=False
 
     def _initialize(self) -> None:
         "Initialize parameters and do parameter check"
@@ -125,10 +130,18 @@ class DiscreteHMM:
 
         self._initialize()
         self._parameter_check()
-        likelihood_list = []
+        prev_log_ll = 0
         for this_x in X:
-            likelihood_list.append(likelihood(this_x))
-        return likelihood_list
+            log_ll_prev+=log_likelihood(this_x)
+
+        # for _ in range(self.max_iter):
+        #     self.n_iter+=1
+        #     this_log_ll =
+        #     if abs(this_log_ll - prev_log_ll) <= self.tol:
+        #         self.is_converged = True
+        #         break
+
+
 
     def log_likelihood(self, x: np.ndarray) -> float:
         """
@@ -163,18 +176,24 @@ class DiscreteHMM:
         T = x.shape[0]
         alpha_it = np.zeros((self.hidden_states, T))
         # initialization
-        alpha_it[:,0] = np.log(self.pi) * np.log(self.B[:,x[0]])
+        with np.errstate(divide="ignore"):
+            alpha_it[:,0] = np.log(self.pi) + np.log(self.B[:,x[0]])
 
+        work_buffer = np.zeros(self.hidden_states)
         for this_t in range(1, T):
             this_obs = x[this_t]
-            # for Zt
             for this_state in range(self.hidden_states):
-                # for Zt-1
                 for this_state_prev in range(self.hidden_states):
-                    alpha_it[this_state, this_t] = logsumexp(np.log(self.B[this_state, this_obs]) + \
-                                                   np.log(self.A[this_state_prev, this_state]) + \
-                                                   alpha_it[this_state_prev, this_t-1])
+                    with np.errstate(divide="ignore"):
+                        work_buffer[this_state_prev]=np.log(self.A[this_state_prev, this_state]) + \
+                                                     alpha_it[this_state_prev, this_t-1]
+                with np.errstate(divide="ignore"):
+                    alpha_it[this_state, this_t]=logsumexp(work_buffer) + \
+                                                np.log(self.B[this_state, this_obs])
+
         return alpha_it
+
+
 
 def logsumexp(log_probs, axis=None):
     """
