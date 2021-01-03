@@ -87,7 +87,7 @@ class DiscreteHMM:
             self.B = []
             for _ in range(self.hidden_states):
                 this_B = np.random.dirichlet(np.ones(self.symbols),size=1)
-                self.B.append(self.this_B)
+                self.B.append(this_B)
             self.B = np.array(self.B)
 
         # Initialize self.pi
@@ -97,17 +97,17 @@ class DiscreteHMM:
 
     def _parameter_check(self) -> None:
         # check self.hidden_states and self.A
-        assert self.hidden_states == self.A.shape[0],
+        assert self.hidden_states == self.A.shape[0],\
         "The input number of hidden states does not equal to the shape of A."
-        assert self.A.shape[0] == self.A.shape[1],
+        assert self.A.shape[0] == self.A.shape[1],\
         "The number of columns and rows for A should be the same"
-        assert np.allclose(self.A.sum(axis=1), np.ones(1, self.hidden_states)),
+        assert np.allclose(self.A.sum(axis=1), np.ones(1, self.hidden_states)),\
         "The sum of the transmission matrix along any axis should be 1."
 
         # check self.symbols and self.B
-        assert np.allclose(self.B.sum(axis=1), np.ones(1, self.hidden_states)),
+        assert np.allclose(self.B.sum(axis=1), np.ones(1, self.hidden_states)),\
         "The sum of the emission matrix for each state should be 1."
-        assert np.B.shape[1] == self.symbols,
+        assert np.B.shape[1] == self.symbols,\
         "The number of columns of the emission matrix should equal to the \
         number of observation types"
 
@@ -125,8 +125,12 @@ class DiscreteHMM:
 
         self._initialize()
         self._parameter_check()
+        likelihood_list = []
+        for this_x in X:
+            likelihood_list.append(likelihood(this_x))
+        return likelihood_list
 
-    def likelihood(self, x: np.ndarray) -> float:
+    def log_likelihood(self, x: np.ndarray) -> float:
         """
         Given A, B, pi, and a set of observations, compute the probability of
         observations.
@@ -144,7 +148,9 @@ class DiscreteHMM:
         likelihood: float
             The likelihood of the observation.
         """
-        forward = self._forward(x)
+        alpha_it = self._forward(x)
+        likelihood = logsumexp(alpha_it[:,-1])
+        return likelihood
 
     def _forward(self, x) -> np.ndarray:
         """
@@ -157,12 +163,25 @@ class DiscreteHMM:
         T = x.shape[0]
         alpha_it = np.zeros((self.hidden_states, T))
         # initialization
-        alpha_it[:,0] = self.pi * self.B[:,x[0]]
+        alpha_it[:,0] = np.log(self.pi) * np.log(self.B[:,x[0]])
 
         for this_t in range(1, T):
             this_obs = x[this_t]
-            for this_state_prev in range(self.hidden_states):
-                for this_state_next in range(self.hidden_states):
-                    alpha_it[this_state, this_t] = self.A[this_t-1, this_t] * \
-                                                   self.B[this_t, this_obs] * \
-                                                   alpha_it[this_state]
+            # for Zt
+            for this_state in range(self.hidden_states):
+                # for Zt-1
+                for this_state_prev in range(self.hidden_states):
+                    alpha_it[this_state, this_t] = logsumexp(np.log(self.B[this_state, this_obs]) + \
+                                                   np.log(self.A[this_state_prev, this_state]) + \
+                                                   alpha_it[this_state_prev, this_t-1])
+        return alpha_it
+
+def logsumexp(log_probs, axis=None):
+    """
+    Redefine scipy.special.logsumexp
+    see: http://bayesjumping.net/log-sum-exp-trick/
+    """
+    _max = np.max(log_probs)
+    ds = log_probs - _max
+    exp_sum = np.exp(ds).sum(axis=axis)
+    return _max + np.log(exp_sum)
