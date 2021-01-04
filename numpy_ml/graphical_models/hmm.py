@@ -230,7 +230,7 @@ class DiscreteHMM:
 
     def _backward(self, x) -> np.ndarray:
         """
-        Given A, B and pi, compute beta[i, t] = P(X_t+1,...,X_T|Z_t=si).
+        Given A, B and pi, compute beta[i, t] = logP(X_t+1,...,X_T|Z_t=si).
 
         The motivation to compute this probability is to asnwer the question: what
         is the probability at any certain time k that the hidden state is Zt given
@@ -240,6 +240,8 @@ class DiscreteHMM:
         Backward: P(X[t+1:T]|Zt)
 
         P(Zt|X) = P(Zt, X)/P(X) = P(X[t+1:T]|Zt)*P(Zt, X[1:t])/P(X)
+
+        Instead of the direct probability, log-probability is computed here.
 
         Parameters:
         ----------------
@@ -255,15 +257,19 @@ class DiscreteHMM:
         T = len(x)
         beta = np.zeros((T, self.hidden_states))
         # Explicitly set up beta[T-1, :] = log1 = 0
-        beta[T-1, :] = np.zeros(self.hidden_states)
+        beta[-1, :] = np.zeros(self.hidden_states)
 
+        work_buffer = np.zeros(self.hidden_states)
         for this_t in reversed(range(T-1)):
-            this_obs = x[this_t]
+            next_obs = x[this_t+1]
             for this_s_prev in range(self.hidden_states):
                 for this_s_next in range(self.hidden_states):
-                    beta[this_t, this_s_prev] = beta[this_t+1, this_s_next]+\
-                                                np.log(self.B[this_s_next, this_obs])+\
-                                                np.log(self.A[this_s_prev, this_s_next])
+                    with np.errstate(divide="ignore"):
+                        work_buffer[this_s_next] = beta[this_t+1, this_s_next]+\
+                                                   np.log(self.B[this_s_next, next_obs])+\
+                                                   np.log(self.A[this_s_prev, this_s_next])
+                with np.errstate(divide="ignore"):
+                    beta[this_t, this_s_prev] = logsumexp(work_buffer)
         return beta
 
 
