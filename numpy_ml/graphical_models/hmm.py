@@ -165,7 +165,7 @@ class DiscreteHMM:
 
     def posterior(self, x: np.ndarray) -> np.ndarray:
         """
-        Compute the posteriors. P(Zt|X).
+        Compute the posteriors. P(Zt|X) (not the log one.).
 
         Forward: P(Zt, X[1:t])
         Backward: P(X[t+1:T]|Zt)
