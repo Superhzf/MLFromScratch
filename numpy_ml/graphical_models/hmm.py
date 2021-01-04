@@ -125,6 +125,16 @@ class DiscreteHMM:
         assert self.max(self.X) + 1 <= self.symbols
 
     def fit(self, X: list) -> None:
+        """
+        Estimate parameters A, B, and pi given observations X. Note that different
+        observations in X could have different lengths.
+
+        Parameters:
+        ---------------------
+        X: list of length I.
+            Observations used to estimate A, B and pi. Please refer to the comments
+            under the class definition for more details.
+        """
         self.X = X
         self.I = len(self.X)
 
