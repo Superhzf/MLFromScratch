@@ -79,7 +79,7 @@ class DiscreteHMM:
         if self.A is None:
             self.A = []
             for _ in range(self.hidden_states):
-                this_A = np.random.dirichlet(np.ones(self.hidden_states),size=1)
+                this_A = np.random.dirichlet(np.ones(self.hidden_states),size=1)[0]
                 self.A.append(this_A)
             self.A = np.array(self.A)
 
@@ -91,7 +91,7 @@ class DiscreteHMM:
         if self.B is None:
             self.B = []
             for _ in range(self.hidden_states):
-                this_B = np.random.dirichlet(np.ones(self.symbols),size=1)
+                this_B = np.random.dirichlet(np.ones(self.symbols),size=1)[0]
                 self.B.append(this_B)
             self.B = np.array(self.B)
 
@@ -106,13 +106,13 @@ class DiscreteHMM:
         "The input number of hidden states does not equal to the shape of A."
         assert self.A.shape[0] == self.A.shape[1],\
         "The number of columns and rows for A should be the same"
-        assert np.allclose(self.A.sum(axis=1), np.ones(1, self.hidden_states)),\
+        assert np.allclose(self.A.sum(axis=1), np.ones((1, self.hidden_states))),\
         "The sum of the transmission matrix along any axis should be 1."
 
         # check self.symbols and self.B
-        assert np.allclose(self.B.sum(axis=1), np.ones(1, self.hidden_states)),\
+        assert np.allclose(self.B.sum(axis=1), np.ones((1, self.hidden_states))),\
         "The sum of the emission matrix for each state should be 1."
-        assert np.B.shape[1] == self.symbols,\
+        assert self.B.shape[1] == self.symbols,\
         "The number of columns of the emission matrix should equal to the \
         number of observation types"
 
@@ -122,7 +122,7 @@ class DiscreteHMM:
 
         # check the input X
         assert np.min(self.X) == 0
-        assert self.max(self.X) + 1 <= self.symbols
+        assert np.max(self.X) + 1 <= self.symbols
 
     def fit(self, X: list) -> None:
         """
@@ -140,16 +140,88 @@ class DiscreteHMM:
 
         self._initialize()
         self._parameter_check()
-        prev_log_ll = 0
+        log_ll_prev = 0
         for this_x in X:
-            log_ll_prev+=log_likelihood(this_x)
+            log_ll_prev+=self.log_likelihood(this_x)
 
-        # for _ in range(self.max_iter):
-        #     self.n_iter+=1
-        #     this_log_ll =
+        for _ in range(self.max_iter):
+            log_ll_next = 0
+            self.n_iter+=1
+            log_gamma_A, log_norm_A, log_gamma_B, log_norm_B = self._Estep()
+            for this_s_prev in range(self.hidden_states):
+                for this_s_next in range(self.hidden_states):
+                    self.A[this_s_prev, this_s_next]=log_gamma_A[this_s_prev, this_s_next]\
+                                                - log_norm_A[this_s_prev]
+            for this_s_next in range(self.hidden_states):
+                for this_symbol in range(self.symbols):
+                    self.B[this_s_next, this_symbol] = log_gamma_B[this_s_next, this_symbol]\
+                                                - log_norm_B[this_s_next]
+            for this_x in X:
+                log_ll_next+=self.log_likelihood(this_x)
+            if abs(log_ll_next-log_ll_prev)<=self.tol:
+                self.is_converged=True
+                return
+            else:
+                log_ll_prev = log_ll_next
+        return
+
+
         #     if abs(this_log_ll - prev_log_ll) <= self.tol:
         #         self.is_converged = True
         #         break
+    def _Estep(self) -> None:
+        """
+        Run a singl E step for the Baum-Welch algorithm.
+        """
+        log_gamma_A = np.zeros((self.hidden_states, self.hidden_states))
+        log_norm_A = np.zeros(self.hidden_states)
+        log_gamma_B = np.zeros((self.hidden_states, self.symbols))
+        log_norm_B = np.zeros(self.hidden_states)
+        for idx, this_x in enumerate(self.X):
+            T = len(this_x)
+            buffer_gamma_A = np.zeros(T-1)
+            buffer_norm_B = np.zeros(T-1)
+            buffer_gamma_B_t = []
+            buffer_gamma_B_s = np.zeros(self.hidden_states)
+            this_log_alpha = self._forward(this_x)
+            this_log_beta = self._backward(this_x)
+
+            for this_s_prev in range(self.hidden_states):
+                for this_s_next in range(self.hidden_states):
+                    for this_t in range(T-1):
+                        obs = this_x[this_t+1]
+                        buffer_gamma_A[this_t] = this_log_alpha[this_s_prev, this_t]+\
+                                            self.B[this_s_next, obs]+\
+                                            this_log_beta[this_t+1, this_s_next]
+                    log_gamma_A[this_s_prev, this_s_next]+=(logsumexp(buffer_gamma_A)+\
+                                            self.A[this_s_prev, this_s_next])
+
+                log_norm_A[this_s_prev] += logsumexp(log_gamma_A[this_s_prev,:])
+
+            for this_symbol in range(self.symbols):
+                for this_s_next in range(self.hidden_states):
+                    for this_s_prev in range(self.hidden_states):
+                        for this_t in range(T-1):
+                            obs = this_x[this_t+1]
+                            alpha_B_beta = this_log_alpha[this_s_prev, this_t]+\
+                                            self.B[this_s_next, obs]+\
+                                            this_log_beta[this_t+1, this_s_next]
+                            buffer_norm_B[this_t] = alpha_B_beta
+                            if obs == this_symbol:
+                                buffer_gamma_B_t.append(alpha_B_beta)
+
+                        buffer_gamma_B_t=np.array(buffer_gamma_B_t)
+                        if len(buffer_gamma_B_t) != 0:
+                            buffer_gamma_B_s[this_s_prev] = logsumexp(buffer_gamma_B_t)
+                        else:
+                            buffer_gamma_B_s[this_s_prev] = -np.inf
+                        buffer_gamma_B_t = []
+                    log_norm_B[this_s_next] += logsumexp(buffer_norm_B)
+                    log_gamma_B[this_s_next, this_symbol] += logsumexp(buffer_gamma_B_s)
+
+            return log_gamma_A, log_norm_A, log_gamma_B, log_norm_B
+
+
 
     def log_likelihood(self, x: np.ndarray) -> float:
         """
@@ -204,7 +276,7 @@ class DiscreteHMM:
                 posteriors[this_t, this_s] = np.exp(this_posterior)
         return posteriors
 
-    def decode(self, x: np.ndarray) -> np.ndarray:
+    def decode(self, x: np.ndarray) -> [float, np.ndarray]:
         """
         Given A, B, pi and the input x, compute the most probable sequence of
         latent states via Viterbi algorithm and its log probability.
