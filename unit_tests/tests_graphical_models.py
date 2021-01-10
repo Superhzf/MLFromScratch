@@ -138,4 +138,72 @@ def test_DiscreteHMM_decode(cases: str) -> None:
         i+=1
     print('Successfully testing the function of computing decodes!')
 
-        
+
+def test_DiscreteHMM_decode(cases: str) -> None:
+    np.random.seed(12346)
+    cases = int(cases)
+    i = 1
+    N_decimal = 4
+    max_iter = 100
+    tol=1e-3
+    while i < cases:
+        n_samples = np.random.randint(10, 50)
+        hidden_states = np.random.randint(3, 6)
+        # symbols is the number of unqiue observation types.
+        symbols = np.random.randint(4, 9)
+        X = []
+        lengths = []
+        for _ in range(n_samples):
+            # the actual length is seq_length + 1
+            seq_length = symbols
+            this_x = np.random.choice(range(symbols), size=seq_length, replace=False)
+            X.append(this_x)
+            lengths.append(seq_length)
+
+        A = np.full((hidden_states, hidden_states),1/hidden_states)
+
+        B = []
+        for _ in range(hidden_states):
+            this_B = np.random.dirichlet(np.ones(symbols),size=1)[0]
+            B.append(this_B)
+        B = np.array(B)
+
+        pi = np.ones(hidden_states)
+        pi = pi/hidden_states
+
+
+        hmm_gold = MultinomialHMM(n_components=hidden_states,
+                                  startprob_prior=1,
+                                  transmat_prior=1,
+                                  init_params='',
+                                  n_iter=max_iter,
+                                  tol=tol)
+        hmm_gold.transmat_ = A
+        hmm_gold.emissionprob_ = B
+        hmm_gold.startprob_ = pi
+
+        X_gold = np.concatenate(X).reshape((-1,1))
+        hmm_gold.fit(X_gold, lengths)
+
+        gold_A = hmm_gold.transmat_
+        gold_B = hmm_gold.emissionprob_
+        gold_pi = hmm_gold.startprob_
+
+        hmm_mine = DiscreteHMM(hidden_states=hidden_states,
+                               symbols=symbols,
+                               A=A,
+                               B=B,
+                               pi=pi,
+                               tol=tol,
+                               max_iter=max_iter)
+        hmm_mine.fit(X)
+        mine_A = hmm_mine.A
+        mine_B = hmm_mine.B
+        mine_pi = hmm_mine.pi
+        assert_almost_equal(mine_pi, gold_pi, decimal=N_decimal)
+        assert_almost_equal(mine_A, gold_A, decimal=N_decimal)
+        assert_almost_equal(mine_B, gold_B, decimal=N_decimal)
+        i+=1
+
+    print('Successfully testing the function of estimating parameters!')
+    
