@@ -77,11 +77,12 @@ class DiscreteHMM:
             np.random.seed(self.seed)
         # Initialize self.A
         if self.A is None:
-            self.A = []
-            for _ in range(self.hidden_states):
-                this_A = np.random.dirichlet(np.ones(self.hidden_states),size=1)[0]
-                self.A.append(this_A)
-            self.A = np.array(self.A)
+            self.A = np.full((self.hidden_states, self.hidden_states),1/self.hidden_states)
+            # self.A = []
+            # for _ in range(self.hidden_states):
+            #     this_A = np.random.dirichlet(np.ones(self.hidden_states),size=1)[0]
+            #     self.A.append(this_A)
+            # self.A = np.array(self.A)
 
         # Initialize self.symbols
         if self.symbols is None:
@@ -140,86 +141,102 @@ class DiscreteHMM:
 
         self._initialize()
         self._parameter_check()
-        log_ll_prev = 0
-        for this_x in X:
-            log_ll_prev+=self.log_likelihood(this_x)
+        log_ll_monitor = np.zeros(2)
 
         for _ in range(self.max_iter):
-            log_ll_next = 0
             self.n_iter+=1
-            log_gamma_A, log_norm_A, log_gamma_B, log_norm_B = self._Estep()
-            for this_s_prev in range(self.hidden_states):
-                for this_s_next in range(self.hidden_states):
-                    self.A[this_s_prev, this_s_next]=log_gamma_A[this_s_prev, this_s_next]\
-                                                / log_norm_A[this_s_prev]
-            for this_s_next in range(self.hidden_states):
-                for this_symbol in range(self.symbols):
-                    self.B[this_s_next, this_symbol] = log_gamma_B[this_s_next, this_symbol]\
-                                                / log_norm_B[this_s_next]
+            this_log_ll = 0
+            gamma, xi, phi = self._Estep()
+            #There is no specific reason why this_log_ll is calculated between
+            # Estep and Mstep, I do this in order to pass the unit test with
+            # hmmlearn
             for this_x in X:
-                log_ll_next+=self.log_likelihood(this_x)
-            if abs(log_ll_next-log_ll_prev)<=self.tol:
+                this_log_ll+=self.log_likelihood(this_x)
+
+            self.A, self.B, self.pi = self._Mstep(gamma, xi, phi)
+            log_ll_monitor[0] = log_ll_monitor[1]
+            log_ll_monitor[1] = this_log_ll
+            if log_ll_monitor[1]*log_ll_monitor[0] !=0 and \
+                        log_ll_monitor[1]-log_ll_monitor[0]<self.tol:
                 self.is_converged=True
                 break
-            else:
-                log_ll_prev = log_ll_next
         return
 
     def _Estep(self) -> None:
         """
         Run a singl E step for the Baum-Welch algorithm.
         """
-        log_gamma_A = np.zeros((self.hidden_states, self.hidden_states))
-        log_norm_A = np.zeros(self.hidden_states)
-        log_gamma_B = np.zeros((self.hidden_states, self.symbols))
-        log_norm_B = np.zeros(self.hidden_states)
-        for idx, this_x in enumerate(self.X):
-            T = len(this_x)
-            buffer_gamma_A = np.zeros(T-1)
-            buffer_norm_B_t = np.zeros(T-1)
-            buffer_norm_B_s = np.zeros(self.hidden_states)
-            buffer_gamma_B_t = []
-            buffer_gamma_B_s = np.zeros(self.hidden_states)
-            this_log_alpha = self._forward(this_x)
-            this_log_beta = self._backward(this_x)
+        gamma = []
+        xi = []
+        pi = np.zeros((self.I, self.hidden_states))
+        for idx, x in enumerate(self.X):
+            alpha_it = self._forward(x)
+            beta = self._backward(x)
+            T = len(x)
+            this_gamma = np.zeros((self.hidden_states, T))
+            this_xi = np.zeros((self.hidden_states, self.hidden_states, T-1))
+            xi_buffer = np.zeros(self.hidden_states)
+            this_phi = np.zeros(self.hidden_states)
 
             for this_s_prev in range(self.hidden_states):
-                for this_s_next in range(self.hidden_states):
-                    for this_t in range(T-1):
-                        obs = this_x[this_t+1]
-                        buffer_gamma_A[this_t] = this_log_alpha[this_s_prev, this_t]+\
-                                            np.log(self.B[this_s_next, obs])+\
-                                            this_log_beta[this_t+1, this_s_next]
-                    log_gamma_A[this_s_prev, this_s_next]+=np.exp(logsumexp(buffer_gamma_A)+\
-                                            np.log(self.A[this_s_prev, this_s_next]))
+                this_gamma[this_s_prev, T-1] = alpha_it[this_s_prev,T-1]+\
+                                                    beta[T-1, this_s_prev]
+            this_gamma[:, T-1] = this_gamma[:, T-1] - logsumexp(this_gamma[:, T-1])
 
-                log_norm_A[this_s_prev] += np.exp(logsumexp(log_gamma_A[this_s_prev,:]))
+            for this_t in range(T-1):
+                obs = x[this_t+1]
+                for s_prev in range(self.hidden_states):
+                    this_gamma[s_prev, this_t] = alpha_it[s_prev,this_t]+\
+                                                        beta[this_t, s_prev]
+                    for s_next in range(self.hidden_states):
+                        this_xi[s_prev, s_next, this_t]=alpha_it[s_prev, this_t]+\
+                                                        np.log(self.A[s_prev, s_next])+\
+                                                        beta[this_t+1, s_next]+\
+                                                        np.log(self.B[s_next, obs])
+                    xi_buffer[s_prev]=logsumexp(this_xi[s_prev,:, this_t])
 
-            for this_symbol in range(self.symbols):
-                for this_s_next in range(self.hidden_states):
-                    for this_s_prev in range(self.hidden_states):
-                        for this_t in range(T-1):
-                            obs = this_x[this_t+1]
-                            alpha_B_beta = this_log_alpha[this_s_prev, this_t]+\
-                                            np.log(self.B[this_s_next, obs])+\
-                                            this_log_beta[this_t+1, this_s_next]
-                            buffer_norm_B_t[this_t] = alpha_B_beta
-                            if obs == this_symbol:
-                                buffer_gamma_B_t.append(alpha_B_beta)
+                this_gamma[:, this_t] = this_gamma[:, this_t] - logsumexp(this_gamma[:, this_t])
 
-                        buffer_gamma_B_t=np.array(buffer_gamma_B_t)
-                        if len(buffer_gamma_B_t) != 0:
-                            buffer_gamma_B_s[this_s_prev] = logsumexp(buffer_gamma_B_t)+\
-                                        np.log(self.A[this_s_prev, this_s_next])
-                        buffer_gamma_B_t = []
-                        buffer_norm_B_s[this_s_prev]=logsumexp(buffer_norm_B_t)\
-                                    + np.log(self.A[this_s_prev, this_s_next])
-                    log_gamma_B[this_s_next, this_symbol] += np.exp(logsumexp(buffer_gamma_B_s))
-                    log_norm_B[this_s_next] += np.exp(logsumexp(buffer_norm_B_s))
+                this_xi[:, :, this_t] = this_xi[:, :, this_t] - logsumexp(xi_buffer)
 
-        return log_gamma_A, log_norm_A, log_gamma_B, log_norm_B
+            gamma.append(this_gamma)
+            xi.append(this_xi)
 
+            pi[idx]=this_gamma[:,0]
+        return gamma, xi, pi
 
+    def _Mstep(self, gamma: list, xi: list, pi: np.ndarray) -> [np.ndarray, np.ndarray, np.ndarray]:
+        new_A = np.zeros((self.hidden_states, self.hidden_states))
+        new_B = np.zeros((self.hidden_states, self.symbols))
+        new_pi = np.zeros(self.hidden_states)
+
+        count_gamma = np.zeros((self.I, self.hidden_states, self.symbols))
+        count_xi = np.zeros((self.I, self.hidden_states, self.hidden_states))
+
+        for idx, x in enumerate(self.X):
+            for s_prev in range(self.hidden_states):
+                for vk in range(self.symbols):
+                    if (x != vk).all():
+                        count_gamma[idx, s_prev, vk] = -np.inf
+                    else:
+                        count_gamma[idx, s_prev, vk] = logsumexp(gamma[idx][s_prev, x==vk])
+                for s_next in range(self.hidden_states):
+                    count_xi[idx, s_prev, s_next] = logsumexp(xi[idx][s_prev, s_next, :])
+        new_pi = logsumexp(pi,axis=0)-np.log(self.I)
+        np.testing.assert_almost_equal(np.exp(new_pi).sum(), 1)
+
+        for s_prev in range(self.hidden_states):
+            for vk in range(self.symbols):
+                new_B[s_prev, vk] = logsumexp(count_gamma[:, s_prev, vk]) - \
+                                            logsumexp(count_gamma[:, s_prev, :])
+
+            for s_next in range(self.hidden_states):
+                new_A[s_prev, s_next] = logsumexp(count_xi[:, s_prev, s_next]) -\
+                                        logsumexp(count_xi[:, s_prev, :])
+
+            np.testing.assert_almost_equal(np.exp(new_A[s_prev, :]).sum(), 1)
+            np.testing.assert_almost_equal(np.exp(new_B[s_prev, :]).sum(), 1)
+        return np.exp(new_A), np.exp(new_B), np.exp(new_pi)
 
     def log_likelihood(self, x: np.ndarray) -> float:
         """
