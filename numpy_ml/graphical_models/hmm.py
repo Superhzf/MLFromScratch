@@ -151,24 +151,20 @@ class DiscreteHMM:
             for this_s_prev in range(self.hidden_states):
                 for this_s_next in range(self.hidden_states):
                     self.A[this_s_prev, this_s_next]=log_gamma_A[this_s_prev, this_s_next]\
-                                                - log_norm_A[this_s_prev]
+                                                / log_norm_A[this_s_prev]
             for this_s_next in range(self.hidden_states):
                 for this_symbol in range(self.symbols):
                     self.B[this_s_next, this_symbol] = log_gamma_B[this_s_next, this_symbol]\
-                                                - log_norm_B[this_s_next]
+                                                / log_norm_B[this_s_next]
             for this_x in X:
                 log_ll_next+=self.log_likelihood(this_x)
             if abs(log_ll_next-log_ll_prev)<=self.tol:
                 self.is_converged=True
-                return
+                break
             else:
                 log_ll_prev = log_ll_next
         return
 
-
-        #     if abs(this_log_ll - prev_log_ll) <= self.tol:
-        #         self.is_converged = True
-        #         break
     def _Estep(self) -> None:
         """
         Run a singl E step for the Baum-Welch algorithm.
@@ -180,7 +176,8 @@ class DiscreteHMM:
         for idx, this_x in enumerate(self.X):
             T = len(this_x)
             buffer_gamma_A = np.zeros(T-1)
-            buffer_norm_B = np.zeros(T-1)
+            buffer_norm_B_t = np.zeros(T-1)
+            buffer_norm_B_s = np.zeros(self.hidden_states)
             buffer_gamma_B_t = []
             buffer_gamma_B_s = np.zeros(self.hidden_states)
             this_log_alpha = self._forward(this_x)
@@ -191,12 +188,12 @@ class DiscreteHMM:
                     for this_t in range(T-1):
                         obs = this_x[this_t+1]
                         buffer_gamma_A[this_t] = this_log_alpha[this_s_prev, this_t]+\
-                                            self.B[this_s_next, obs]+\
+                                            np.log(self.B[this_s_next, obs])+\
                                             this_log_beta[this_t+1, this_s_next]
-                    log_gamma_A[this_s_prev, this_s_next]+=(logsumexp(buffer_gamma_A)+\
-                                            self.A[this_s_prev, this_s_next])
+                    log_gamma_A[this_s_prev, this_s_next]+=np.exp(logsumexp(buffer_gamma_A)+\
+                                            np.log(self.A[this_s_prev, this_s_next]))
 
-                log_norm_A[this_s_prev] += logsumexp(log_gamma_A[this_s_prev,:])
+                log_norm_A[this_s_prev] += np.exp(logsumexp(log_gamma_A[this_s_prev,:]))
 
             for this_symbol in range(self.symbols):
                 for this_s_next in range(self.hidden_states):
@@ -204,22 +201,23 @@ class DiscreteHMM:
                         for this_t in range(T-1):
                             obs = this_x[this_t+1]
                             alpha_B_beta = this_log_alpha[this_s_prev, this_t]+\
-                                            self.B[this_s_next, obs]+\
+                                            np.log(self.B[this_s_next, obs])+\
                                             this_log_beta[this_t+1, this_s_next]
-                            buffer_norm_B[this_t] = alpha_B_beta
+                            buffer_norm_B_t[this_t] = alpha_B_beta
                             if obs == this_symbol:
                                 buffer_gamma_B_t.append(alpha_B_beta)
 
                         buffer_gamma_B_t=np.array(buffer_gamma_B_t)
                         if len(buffer_gamma_B_t) != 0:
-                            buffer_gamma_B_s[this_s_prev] = logsumexp(buffer_gamma_B_t)
-                        else:
-                            buffer_gamma_B_s[this_s_prev] = -np.inf
+                            buffer_gamma_B_s[this_s_prev] = logsumexp(buffer_gamma_B_t)+\
+                                        np.log(self.A[this_s_prev, this_s_next])
                         buffer_gamma_B_t = []
-                    log_norm_B[this_s_next] += logsumexp(buffer_norm_B)
-                    log_gamma_B[this_s_next, this_symbol] += logsumexp(buffer_gamma_B_s)
+                        buffer_norm_B_s[this_s_prev]=logsumexp(buffer_norm_B_t)\
+                                    + np.log(self.A[this_s_prev, this_s_next])
+                    log_gamma_B[this_s_next, this_symbol] += np.exp(logsumexp(buffer_gamma_B_s))
+                    log_norm_B[this_s_next] += np.exp(logsumexp(buffer_norm_B_s))
 
-            return log_gamma_A, log_norm_A, log_gamma_B, log_norm_B
+        return log_gamma_A, log_norm_A, log_gamma_B, log_norm_B
 
 
 
