@@ -1,5 +1,11 @@
 import numpy as np
 
+
+"""
+WARNING:
+
+The formula for updating Aij and Bij in the cs229 notes is not correct.
+"""
 class DiscreteHMM:
     def __init__(self,
                  hidden_states:int=1,
@@ -14,6 +20,7 @@ class DiscreteHMM:
         A Hidden Markov Model with multinomial discrete emission distributions.
 
         Ref: http://cs229.stanford.edu/section/cs229-hmm.pdf
+        https://en.wikipedia.org/wiki/Baum%E2%80%93Welch_algorithm
 
         Parameters:
         -----------------------
