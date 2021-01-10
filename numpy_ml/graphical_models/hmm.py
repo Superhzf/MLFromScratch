@@ -134,8 +134,9 @@ class DiscreteHMM:
 
     def fit(self, X: list) -> None:
         """
-        Estimate parameters A, B, and pi given observations X. Note that different
-        observations in X could have different lengths.
+        Estimate parameters A, B, and pi given observations X via Baum Welch
+        algorithm. Note that different observations in X could have different
+        lengths.
 
         Parameters:
         ---------------------
