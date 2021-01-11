@@ -68,7 +68,6 @@ class DiscreteHMM:
         """
         self.hidden_states = hidden_states
         self.symbols = symbols
-        self.eps = np.finfo(float).eps
         self.A = A
         self.B = B
         self.pi = pi
