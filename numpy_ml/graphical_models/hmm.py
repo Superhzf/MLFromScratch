@@ -84,11 +84,6 @@ class DiscreteHMM:
         # Initialize self.A
         if self.A is None:
             self.A = np.full((self.hidden_states, self.hidden_states),1/self.hidden_states)
-            # self.A = []
-            # for _ in range(self.hidden_states):
-            #     this_A = np.random.dirichlet(np.ones(self.hidden_states),size=1)[0]
-            #     self.A.append(this_A)
-            # self.A = np.array(self.A)
 
         # Initialize self.symbols
         if self.symbols is None:
