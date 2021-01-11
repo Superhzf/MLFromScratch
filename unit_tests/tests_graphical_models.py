@@ -47,7 +47,7 @@ def test_DiscreteHMM_forward(cases: str) -> None:
         assert_almost_equal(mine_log_prob, gold_log_prob, decimal=N_decimal)
 
         i+=1
-    print ("Successfully testing the forward algorithm in Discrete HMM!")
+    print ("Successfully testing the forward algorithm in discrete HMM!")
 
 def test_DiscreteHMM_posteriors(cases: str) -> None:
     np.random.seed(12346)
@@ -89,7 +89,7 @@ def test_DiscreteHMM_posteriors(cases: str) -> None:
         assert_almost_equal(mine_posteriors, gold_posteriors, decimal=N_decimal)
         i+=1
 
-    print('Successfully testing the posterior function in HMM!')
+    print('Successfully testing the posterior function in discrete HMM!')
 
 def test_DiscreteHMM_decode(cases: str) -> None:
     np.random.seed(12346)
@@ -136,7 +136,7 @@ def test_DiscreteHMM_decode(cases: str) -> None:
         assert_almost_equal(mine_logprob, gold_logprob, decimal=N_decimal)
         assert_almost_equal(mine_state_sequence, gold_state_sequence, decimal=N_decimal)
         i+=1
-    print('Successfully testing the function of computing decodes!')
+    print('Successfully testing the function of computing decodes in discrete HMM!')
 
 
 def test_DiscreteHMM_fit(cases: str) -> None:
@@ -205,4 +205,4 @@ def test_DiscreteHMM_fit(cases: str) -> None:
         assert_almost_equal(mine_B, gold_B, decimal=N_decimal)
         i+=1
 
-    print('Successfully testing the function of estimating parameters!')
+    print('Successfully testing the function of estimating parameters in discrete HMM!')
