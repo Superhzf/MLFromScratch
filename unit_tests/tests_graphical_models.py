@@ -139,7 +139,7 @@ def test_DiscreteHMM_decode(cases: str) -> None:
     print('Successfully testing the function of computing decodes!')
 
 
-def test_DiscreteHMM_decode(cases: str) -> None:
+def test_DiscreteHMM_fit(cases: str) -> None:
     np.random.seed(12346)
     cases = int(cases)
     i = 1
@@ -206,4 +206,3 @@ def test_DiscreteHMM_decode(cases: str) -> None:
         i+=1
 
     print('Successfully testing the function of estimating parameters!')
-    
