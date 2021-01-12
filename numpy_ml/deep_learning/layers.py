@@ -1128,13 +1128,11 @@ class DotProductAttention(Layer):
             dweightdscore = np.stack(dweightdscore)
             # swaped dweightdscore: n_ex x target_seq x source_seq
             dLdscores = np.swapaxes(dweightdscore, 0, 1)
-            # print ("mine_dLdscores",dLdscores[0][0][0])
             # dLdq: n_ex x target_seq x emb_dim
             dLdq = dLdscores@np.swapaxes(self.k, 1, 2)
             dLdq = dLdq * self.scale
             # dLdk: n_ex x source_seq x emb_dim
             dLdk = np.swapaxes(dLdscores, 1, 2)@self.q
-            # print ("dLdk shape", dLdk.shape)
             # n_ex x target_seq/source_seq x 3emb_dim
             dLdqkv = np.concatenate((dLdq, dLdk, dLdv), axis=2)
             # swaped: n_ex x target_seq x emb_dim
