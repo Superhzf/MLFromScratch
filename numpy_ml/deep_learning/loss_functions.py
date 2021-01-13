@@ -107,6 +107,10 @@ class VAELoss(Loss):
 
         VAELoss = cross_entropy(y, y_hat) + KL(q||p), p is a unit Gaussian distribution
         (0, 1) and q = q(Z|X) follows a Gaussian distribution N(mean(X), std(X))
+
+        KL(q||p) is a regularization term enforcing the latent distributions
+        to be close to the standard normal distribution. In that case, the VAE
+        model would be able to generate new cases.
         """
         pass
 
