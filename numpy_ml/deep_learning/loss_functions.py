@@ -105,8 +105,8 @@ class VAELoss(Loss):
         """
         The variational lower bound for a variational autoencoder
 
-        VAELoss = cross_entropy(y, y_hat) + KL(q||p), p is a unit Gaussian distributiom
-        and q = q(Z|X) follows a Gaussian distribution N(mean(X), std(X))
+        VAELoss = cross_entropy(y, y_hat) + KL(q||p), p is a unit Gaussian distribution
+        (0, 1) and q = q(Z|X) follows a Gaussian distribution N(mean(X), std(X))
         """
         pass
 
