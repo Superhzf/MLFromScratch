@@ -383,7 +383,7 @@ class DiscreteHMM:
         Given A, B and pi, compute beta[i, t] = logP(X_t+1,...,X_T|Z_t=si).
 
         The motivation to compute this probability is to asnwer the question: what
-        is the probability at any certain time k that the hidden state is Zt given
+        is the probability at any certain time t that the hidden state is Zt given
         the sequence of observations, which is P(Zt|X).
 
         Forward: P(Zt, X[1:t])
@@ -542,6 +542,37 @@ class GaussHMM:
         log_likelihood = logsumexp(alpha_it[:,-1])
         return log_likelihood
 
+    def posterior(self, x: np.ndarray) -> np.ndarray:
+        """
+        Compute the posteriors. P(Zt|X) (not the log one.).
+
+        Forward: P(Zt, X[1:t])
+        Backward: P(X[t+1:T]|Zt)
+
+        P(Zt|X) = P(Zt, X)/P(X) = P(X[t+1:T]|Zt)*P(Zt, X[1:t])/P(X)
+
+        Parameters:
+        ----------------
+        x: numpy.ndarray of shape (T, n_features).
+            A single set of observations. T is the sequence length. Note that T
+            is not the same for different observations.
+
+        Return:
+        posteriors: numpy.ndarray of shape (T, hidden_states)
+            posteriors[t, i] gives P(Zt=si|X)
+        """
+        T = len(x)
+        posteriors = np.zeros((T, self.hidden_states))
+        forward = self._forward(x)
+        backward = self._backward(x)
+        for this_t in range(T):
+            for this_s in range(self.hidden_states):
+                this_posterior = forward[this_s, this_t] + backward[this_t, this_s]
+                normalizer = self.log_likelihood(x)
+                this_posterior = this_posterior - normalizer
+                posteriors[this_t, this_s] = np.exp(this_posterior)
+        return posteriors
+
     def _forward(self, x:np.ndarray) -> np.ndarray:
         """
         Parameters:
@@ -579,6 +610,42 @@ class GaussHMM:
                                                         self.covar[this_state,:,:])
 
         return alpha_it
+
+    def _backward(self, x:np.array)->np.array:
+        """
+        Given A, means, covar and pi, compute beta[i, t] = logP(X_t+1,...,X_T|Z_t=si).
+
+        Parameters:
+        ----------------
+        x: numpy.ndarray of shape (T, n_features).
+            A single set of observations. Note that T is not the same for
+            different observations.
+
+        Returns:
+        ----------------
+        beta: numpy.arary of shape (T, hidden_states)
+            beta[t, i] gives logP(X[t+1:T]|Zt=Si)
+        """
+        T = len(x)
+        beta = np.zeros((T, self.hidden_states))
+        # Explicitly set up beta[T-1, :] = log1 = 0
+        beta[-1, :] = np.zeros(self.hidden_states)
+
+        work_buffer = np.zeros(self.hidden_states)
+        for this_t in reversed(range(T-1)):
+            next_obs = x[this_t+1]
+            for this_s_prev in range(self.hidden_states):
+                for this_s_next in range(self.hidden_states):
+                    with np.errstate(divide="ignore"):
+                        work_buffer[this_s_next] = beta[this_t+1, this_s_next]+\
+                                                   log_gaussian_pdf(next_obs,
+                                                           self.means[this_s_next],
+                                                           self.covar[this_s_next,:,:])+\
+                                                   np.log(self.A[this_s_prev, this_s_next])
+                with np.errstate(divide="ignore"):
+                    beta[this_t, this_s_prev] = logsumexp(work_buffer)
+        return beta
+
 
 def logsumexp(log_probs, axis=None):
     """
