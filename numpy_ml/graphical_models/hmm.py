@@ -520,6 +520,13 @@ class GaussHMM:
             self.pi = np.ones(self.hidden_states)
             self.pi = self.pi/self.hidden_states
 
+    def fit(self,X):
+        """
+        TODO: I don't think it is meaningful to do this right now, because it
+        is just a matter of time. I will skip this part.
+        """
+        pass
+
     def log_likelihood(self, x: np.ndarray) -> float:
         """
         Given A, means, covar, pi, and a set of observations, compute the probability of
