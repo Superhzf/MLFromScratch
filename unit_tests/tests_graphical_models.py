@@ -312,3 +312,63 @@ def test_GaussHMM_posterior(cases: str) -> None:
         i+=1
 
     print('Successfully testing the function of computing posteriors in Gaussian HMM!')
+
+
+def test_GaussHMM_decode(cases: str) -> None:
+    np.random.seed(12346)
+    cases = int(cases)
+    i = 1
+    N_decimal = 4
+    max_iter = 100
+    tol=1e-3
+    while i < cases:
+        n_samples = np.random.randint(10, 50)
+        hidden_states = np.random.randint(3, 6)
+        n_features = np.random.randint(4, 9)
+        X = []
+        lengths = []
+        for _ in range(n_samples):
+            seq_length = np.random.randint(4, 9)
+            this_x = np.random.rand(seq_length,n_features)
+
+            X.append(this_x)
+            lengths.append(seq_length)
+
+        hmm_gold = GaussianHMM(n_components=hidden_states,
+                               covariance_type='full',
+                               algorithm='viterbi',
+                               n_iter=max_iter,
+                               tol=tol)
+
+        X_gold = np.concatenate(X)
+        hmm_gold.fit(X_gold, lengths)
+
+        gold_means = hmm_gold.means_
+        gold_pi = hmm_gold.startprob_
+        gold_n_features = hmm_gold.n_features
+        gold_transmat = hmm_gold.transmat_
+        gold_means = hmm_gold.means_
+        gold_covars = hmm_gold.covars_
+
+        hmm_mine = GaussHMM(hidden_states=hidden_states,
+                               A=gold_transmat,
+                               n_features=gold_n_features,
+                               means=gold_means,
+                               covar=gold_covars,
+                               pi=gold_pi,
+                               tol=tol,
+                               max_iter=max_iter)
+        gold_logprob,gold_state_seq = hmm_gold.decode(X_gold, lengths)
+        mine_logprob_list = []
+        mine_state_seq_list = []
+        for this_x in X:
+            this_logprob, this_state_seq = hmm_mine.decode(this_x)
+            mine_logprob_list.append(this_logprob)
+            mine_state_seq_list.append(this_state_seq)
+        mine_logprob = sum(mine_logprob_list)
+        mine_state_seq = np.concatenate(mine_state_seq_list)
+        assert_almost_equal(mine_logprob, gold_logprob, decimal=N_decimal)
+        assert_almost_equal(mine_state_seq, gold_state_seq, decimal=N_decimal)
+        i+=1
+
+    print('Successfully testing the decode function in Gaussian HMM!')
