@@ -522,14 +522,14 @@ class GaussHMM:
 
     def log_likelihood(self, x: np.ndarray) -> float:
         """
-        Given A, B, pi, and a set of observations, compute the probability of
+        Given A, means, covar, pi, and a set of observations, compute the probability of
         observations.
 
         The likelhood is calculated via the forward algorithm.
 
         Parameters:
         ----------------
-        x: numpy.ndarray of shape (T, ).
+        x: numpy.ndarray of shape (T, n_features).
             A single set of observations. Note that T is not the same for
             different observations.
 
