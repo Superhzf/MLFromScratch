@@ -573,6 +573,62 @@ class GaussHMM:
                 posteriors[this_t, this_s] = np.exp(this_posterior)
         return posteriors
 
+    def decode(self, x: np.ndarray) -> [float, np.ndarray]:
+        """
+        Given A, means and covar, pi and the input x, compute the most probable sequence of
+        latent states via Viterbi algorithm and its log probability.
+
+        viterbi[i,j] gives the log probability of Zj given X1:Xi.
+        path_track[i,j] gives which state Zj returns the viterbi[i,j].
+
+        Parameters:
+        -------------------------
+        x: numpy.ndarray of shape (T, n_features).
+            A single set of observations. Note that T is not the same for
+            different observations.
+
+        Returns:
+        ------------------------
+        best_path_log_prob: float
+            The probability of the latent state sequence in best_path
+        best_path: numpy.ndarray of shape (T,)
+            The most probable sequence of laten states for the observation.
+        """
+        T = len(x)
+        viterbi = np.zeros((T, self.hidden_states))
+        path_track = np.zeros((T, self.hidden_states))
+
+        for this_s in range(self.hidden_states):
+            viterbi[0, this_s] = np.log(self.pi[this_s]) + log_gaussian_pdf(x[0],
+                                                                self.means[this_s],
+                                                                self.covar[this_s])
+
+        work_buffer =np.zeros(self.hidden_states)
+        for this_t in range(1, T):
+            this_x = x[this_t]
+            for this_s_next in range(self.hidden_states):
+                for this_s_prev in range(self.hidden_states):
+                    with np.errstate(divide="ignore"):
+                        work_buffer[this_s_prev] = np.log(self.A[this_s_prev, this_s_next])+\
+                                                   viterbi[this_t-1, this_s_prev]
+                with np.errstate(divide="ignore"):
+                        viterbi[this_t, this_s_next]=np.max(work_buffer) + log_gaussian_pdf(this_x,
+                                                                        self.means[this_s_next],
+                                                                        self.covar[this_s_next])
+                path_track[this_t, this_s_next] = np.argmax(work_buffer)
+
+        best_path_log_prob = np.max(viterbi[T-1,:])
+
+        best_path=[]
+        pointer = viterbi[T-1,:].argmax()
+        best_path.append(pointer)
+        for this_t in reversed(range(1, T)):
+            pointer = path_track[this_t, pointer]
+            pointer = int(pointer)
+            best_path.append(pointer)
+        best_path=np.array(best_path[::-1])
+        return best_path_log_prob, best_path
+
     def _forward(self, x:np.ndarray) -> np.ndarray:
         """
         Parameters:
