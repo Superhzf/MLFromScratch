@@ -423,7 +423,7 @@ class DiscreteHMM:
         return beta
 
 
-class GaussianHMM:
+class GaussHMM:
     def __init__(self,
                  hidden_states:int=1,
                  A:np.ndarray=None,
@@ -447,10 +447,35 @@ class GaussianHMM:
             The transmission matrix between states. A[i,j] gives the probability
             from state i to state j.
         n_features: int
-            
-        means: numpy.ndarray of shape (hidden_states)
+            The number of features each observation has.
+        means: numpy.ndarray of shape (hidden_states,n_features)
+            It is the mean parameter for the distribution that returns the
+            probability of x given the mean and covariance.
+        covar: numpy.ndarray of shape (hidden_states, n_features, n_features)
+            It is the covariance parameter for the distribution that returns
+            the probability of x given the mean and covariance
+        pi: numpy.ndarray of shape (hidden_states,)
+            It is the prior probability of hidden states
+        seed: int
+            It is the seed to initialize parameters if not provided
+        tol: float
+            The minimum required improvement between two iterations when
+            estimating parameters
+        max_iter: int
+            The maximum number of iterations when estimating parameters.
 
-
+        Attributes:
+        -------------------
+        X: list-like of shape (I,)
+            The training set with N observations. Earch observation is a numpy
+            ndarray of shape (I, n_features). Each observation may have a
+            differett I.
+        I: int
+            The number of observations in the training set
+        n_iter:
+            The number of rounds used to estimate parameters
+        is_converged: bool
+            Whether estimating parameters is converged.
         """
         self.hidden_states=hidden_states
         self.A=A
@@ -466,17 +491,29 @@ class GaussianHMM:
         "Initialize parameters and do parameter check"
         if self.seed:
             np.random.seed(self.seed)
-        # Initialize self.A
+        # Initialize A
         if self.A is None:
             self.A = np.full((self.hidden_states, self.hidden_states),1/self.hidden_states)
 
+        # initialize n_features
+        if self.n_features is None:
+            self.n_features = self.X[0].shape[1]
+
+        if self.means is None:
+            # hmmlearn uses kmeans clustering to initialize
+            # https://github.com/hmmlearn/hmmlearn/blob/master/lib/hmmlearn/hmm.py#L207
+            # for simplifity, I will randomly select hidden_states observations
+            self.means = np.zeros((self.hidden_states,self.n_features))
+            random_obs = np.random.choice(self.X, size=self.hidden_states, replace=False)
+            for idx, this_obs in enumerate(random_obs):
+                self.means[idx]=this_obs.mean(axis=0)
+
         # Initialize self.B
-        if self.B is None:
-            self.B = []
-            for _ in range(self.hidden_states):
-                this_B = np.random.dirichlet(np.ones(self.symbols),size=1)[0]
-                self.B.append(this_B)
-            self.B = np.array(self.B)
+        if self.covar is None:
+            self.covar = np.zeros((self.hidden_states, self.n_features, self.n_features))
+            random_obs = np.random.choice(self.X, size=self.hidden_states, replace=False)
+            for idx, this_obs in enumerate(random_obs):
+                self.covar[idx]=np.cov(this_obs.T)
 
         # Initialize self.pi
         if self.pi is None:
@@ -509,7 +546,7 @@ class GaussianHMM:
         """
         Parameters:
         ----------------
-        x: numpy.ndarray of shape (T, ).
+        x: numpy.ndarray of shape (T, n_features).
             A single set of observations. Note that T is not the same for
             different observations.
 
@@ -523,8 +560,8 @@ class GaussianHMM:
         # initialization
         with np.errstate(divide="ignore"):
             for this_s in range(self.hidden_states):
-                alpha_it[this_s,0] = np.log(self.pi) + log_gaussian_pdf(x[0],
-                                                                   self.means[this_s],
+                alpha_it[this_s,0] = np.log(self.pi[this_s]) + log_gaussian_pdf(x[0],
+                                                                   self.means[this_s,:],
                                                                    self.covar[this_s,:,:])
 
         work_buffer = np.zeros(self.hidden_states)
@@ -553,17 +590,14 @@ def logsumexp(log_probs, axis=None):
     exp_sum = np.exp(ds).sum(axis=axis)
     return _max + np.log(exp_sum)
 
-def log_gaussian_pdf(x_i: np.ndarray, mu: np.ndarray, inverse_sigma: np.ndarray) -> float:
+def log_gaussian_pdf(x_i: np.ndarray, mu: np.ndarray, sigma: np.ndarray) -> float:
     """
     Compute log P(x_i | z_j; mu, sigma)
     """
-    n = len(mu)
-    a = np.power(2 * np.pi, n)
-    b = np.linalg.det(inverse_sigma)
-    b = abs(1/b)
-    ab = np.log(a * b)
+    d = len(mu)
+    a = d * np.log(2 * np.pi)
+    _, b = np.linalg.slogdet(sigma)
 
-    # calculate the inverse of sigma
-    y = inverse_sigma @ (x_i - mu)
+    y = np.linalg.solve(sigma, x_i - mu)
     c = np.dot(x_i - mu, y)
-    return -0.5 * (ab + c)
+    return -0.5 * (a + b + c)
