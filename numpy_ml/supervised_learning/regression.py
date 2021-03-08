@@ -1,5 +1,6 @@
 import numpy as np
 from ..utils import normalize,polynomial_features
+from ..utils import batch_generator
 
 class l1_regularization():
     """
@@ -22,7 +23,7 @@ class l2_regularization():
         self.alpha = alpha
 
     def __call__(self,w):
-        return self.alpha * 0.5 *  w.T.dot(w)
+        return self.alpha * 0.5 * w.T.dot(w)
 
     def grad(self,w):
         return self.alpha * w
@@ -48,18 +49,31 @@ class l1_l2_regularization():
 
 class Regression(object):
     """
-    Base regression class. This class should not be called by users
+    Base regression class using stochastic gradient descent.
+    This class should not be called by users.
+
+    The formula is based on this:
+    https://scikit-learn.org/stable/modules/sgd.html#mathematical-formulation
 
     Parameters
     ------------------------------
-    n_iterations: float
-        The number of training iterations the algorithm will tune the wights
+    max_iter: float
+        The maximum number of training iterations
     learning_rate: float
         The step length that will be used when updating the weights
     """
-    def __init__(self,n_iterations,learning_rate):
-        self.n_iterations = n_iterations
+    def __init__(self,
+                 max_iter,
+                 learning_rate,
+                 coef_init=None,
+                 intercept_init=None,
+                 tol=1e-3):
+        self.max_iter = max_iter
         self.learning_rate = learning_rate
+        self.coef_init = coef_init
+        self.intercept_init = intercept_init
+        self.tol = tol
+        self.n_iter=0
 
     def initialize_weights(self,n_features):
         """
@@ -67,23 +81,50 @@ class Regression(object):
         """
         limit=1/np.sqrt(n_features)
         self.w = np.random.uniform(-limit,limit,(n_features,))
+        self.bias = np.zeros((1,))
+        self.dw= np.zeros((n_features,))
+        self.db = np.zeros((1,))
 
-    def fit(self,X,y):
-        # Insert constant ones for bias weights as the first column
-        X = np.insert(X,0,1,axis=1)
-        self.training_errors = []
-        self.initialize_weights(n_features=X.shape[1])
+    def fit(self,X,y,batch_size=-1):
+        # Insert constant ones for bias weights as the last column
+        if self.coef_init is not None and self.intercept_init is not None:
+            self.w = self.coef_init
+            self.bias = self.intercept_init
+            self.dw= np.zeros((X.shape[1],))
+            self.db = np.zeros((1,))
+        else:
+            self.initialize_weights(n_features=X.shape[1])
+
+        # batch_size = -1 means Gradient Descent
+        if batch_size == -1:
+            batch_size=X.shape[0]
+
+        best_loss = np.inf
+        n_samples = X.shape[0]
 
         # Do gradient descent for n_iterations
-        for i in range(self.n_iterations):
-            y_pred = X.dot(self.w)
-            # calculate l2 loss
-            mse = np.mean(0.5*(y-y_pred)**2+self.regularization(self.w))
-            self.training_errors.append(mse)
-            # Gradient of l2 loss w.r.t w
-            grad_w = -(y-y_pred).dot(X) + self.regularization.grad(self.w)
-            # update weights
-            self.w -= self.learning_rate*grad_w
+        for i in range(self.max_iter):
+            this_loss = 0
+            for X_batch,y_batch in batch_generator(X,y,batch_size = batch_size):
+                this_batch_size = X_batch.shape[0]
+                batch_y_pred = X_batch@self.w+self.bias
+                # calculate l2 loss
+                # mse = np.mean(0.5*(y_batch-y_pred)**2+self.regularization(self.w))
+                mse = np.sum(0.5*(y_batch-batch_y_pred)**2)
+                this_loss+=mse
+                # Gradient of l2 loss w.r.t w
+                self.dw = (X_batch.T@(-(y_batch-batch_y_pred))/this_batch_size + \
+                            self.regularization.grad(self.w))
+                self.db = np.sum(-(y_batch-batch_y_pred))
+                # update weights
+                self.w -= self.learning_rate*self.dw
+                self.bias -= self.learning_rate*self.db
+            if best_loss - this_loss<self.tol*n_samples:
+                self.n_iter=i+1
+                break
+            if this_loss<best_loss:
+                best_loss=this_loss
+        self.n_iter=i+1
 
     def predict(self,X):
         X = np.insert(X,0,1,axis=1)
@@ -170,16 +211,26 @@ class RidgeRegression(Regression):
     """
     Parameters
     -----------------------
-    reg_factor: float
+    alpha: float
         The factor that determines the degree of regularization
-    n_iterations: float
-        The number of training iterations
+    max_iter: float
+        The maximum number of training iterations
     learning_rate: float
         The step length that will be used
     """
-    def __init__(self,reg_factor,n_iterations,learning_rate):
-        self.regularization = l2_regularization(alpha=reg_factor)
-        super(RidgeRegression,self).__init__(n_iterations,learning_rate)
+    def __init__(self,
+                 alpha,
+                 max_iter,
+                 learning_rate,
+                 coef_init,
+                 intercept_init,
+                 tol):
+        self.regularization = l2_regularization(alpha=alpha)
+        super(RidgeRegression,self).__init__(max_iter,
+                                             learning_rate,
+                                             coef_init,
+                                             intercept_init,
+                                             tol)
 
 class ElasticNet(Regression):
     """
