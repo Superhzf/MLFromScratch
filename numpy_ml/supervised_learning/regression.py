@@ -97,6 +97,9 @@ class Regression(object):
 
         best_loss = np.inf
         n_samples = X.shape[0]
+        if self.penalty_type == 'l1':
+            q = np.zeros(self.w.shape)
+            u = 0
 
         # Do gradient descent for n_iterations
         for i in range(self.max_iter):
@@ -110,11 +113,20 @@ class Regression(object):
                 # Gradient of l2 loss w.r.t w
                 dloss = X_batch.T@(-(y_batch-batch_y_pred))/this_batch_size
                 if self.penalty_type == 'l2':
-                    dr = self.regularization.grad(self.w)
-                self.dw = dloss + dr
+                    self.dw = (dloss + self.regularization.grad(self.w))
+                    self.w -= self.learning_rate*self.dw
+                elif self.penalty_type == 'l1':
+                    u += self.learning_rate*self.alpha
+                    for idx, this_dloss in enumerate(dloss):
+                        this_regular_w = self.w[idx]-self.learning_rate*this_dloss
+                        if this_regular_w > 0:
+                            self.w[idx]=max(0, this_regular_w-u-q[idx])
+                        elif this_regular_w < 0:
+                            self.w[idx]=min(0, this_regular_w+u-q[idx])
+                        else:
+                            self.w[idx]=0
+                        q[idx] += self.w[idx]-this_regular_w
                 self.db = np.sum(-(y_batch-batch_y_pred))
-                # update weights
-                self.w -= self.learning_rate*self.dw
                 self.bias -= self.learning_rate*self.db
             if best_loss - this_loss<self.tol*n_samples:
                 self.n_iter=i+1
@@ -248,7 +260,9 @@ class LassoRegression(Regression):
                  coef_init,
                  intercept_init,
                  tol):
-        self.regularization = l1_regularization(alpha=alpha)
+        # self.regularization = l1_regularization(alpha=alpha)
+        self.alpha=alpha
+        self.penalty_type = 'l1'
         super(LassoRegression,self).__init__(max_iter,
                                              learning_rate,
                                              coef_init,
