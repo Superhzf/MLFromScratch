@@ -13,7 +13,7 @@ class l1_regularization():
         return self.alpha*np.linalg.norm(w,ord=1)
 
     def grad(self,w):
-        return self.alpha * sign(w)
+        return self.alpha * np.sign(w)
 
 class l2_regularization():
     """
@@ -82,16 +82,12 @@ class Regression(object):
         limit=1/np.sqrt(n_features)
         self.w = np.random.uniform(-limit,limit,(n_features,))
         self.bias = np.zeros((1,))
-        self.dw= np.zeros((n_features,))
-        self.db = np.zeros((1,))
 
     def fit(self,X,y,batch_size=-1):
         # Insert constant ones for bias weights as the last column
         if self.coef_init is not None and self.intercept_init is not None:
             self.w = self.coef_init
             self.bias = self.intercept_init
-            self.dw= np.zeros((X.shape[1],))
-            self.db = np.zeros((1,))
         else:
             self.initialize_weights(n_features=X.shape[1])
 
@@ -109,12 +105,13 @@ class Regression(object):
                 this_batch_size = X_batch.shape[0]
                 batch_y_pred = X_batch@self.w+self.bias
                 # calculate l2 loss
-                # mse = np.mean(0.5*(y_batch-y_pred)**2+self.regularization(self.w))
                 mse = np.sum(0.5*(y_batch-batch_y_pred)**2)
                 this_loss+=mse
                 # Gradient of l2 loss w.r.t w
-                self.dw = (X_batch.T@(-(y_batch-batch_y_pred))/this_batch_size + \
-                            self.regularization.grad(self.w))
+                dloss = X_batch.T@(-(y_batch-batch_y_pred))/this_batch_size
+                if self.penalty_type == 'l2':
+                    dr = self.regularization.grad(self.w)
+                self.dw = dloss + dr
                 self.db = np.sum(-(y_batch-batch_y_pred))
                 # update weights
                 self.w -= self.learning_rate*self.dw
@@ -226,7 +223,33 @@ class RidgeRegression(Regression):
                  intercept_init,
                  tol):
         self.regularization = l2_regularization(alpha=alpha)
+        self.penalty_type='l2'
         super(RidgeRegression,self).__init__(max_iter,
+                                             learning_rate,
+                                             coef_init,
+                                             intercept_init,
+                                             tol)
+
+class LassoRegression(Regression):
+    """
+    Parameters
+    -----------------------
+    alpha: float
+        The factor that determines the degree of regularization
+    max_iter: float
+        The maximum number of training iterations
+    learning_rate: float
+        The step length that will be used
+    """
+    def __init__(self,
+                 alpha,
+                 max_iter,
+                 learning_rate,
+                 coef_init,
+                 intercept_init,
+                 tol):
+        self.regularization = l1_regularization(alpha=alpha)
+        super(LassoRegression,self).__init__(max_iter,
                                              learning_rate,
                                              coef_init,
                                              intercept_init,
