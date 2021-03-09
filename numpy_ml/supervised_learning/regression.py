@@ -52,8 +52,12 @@ class Regression(object):
     Base regression class using stochastic gradient descent.
     This class should not be called by users.
 
-    The formula is based on this:
+    The formula for both l1 and l2 regularization is based on this:
     https://scikit-learn.org/stable/modules/sgd.html#mathematical-formulation
+
+    Please be aware that the optimization method used for l1 regularization is
+    not the vanilla proximal gradient descent method. Instead, it comes from
+    https://www.aclweb.org/anthology/P09-1054.pdf
 
     Parameters
     ------------------------------
@@ -61,6 +65,12 @@ class Regression(object):
         The maximum number of training iterations
     learning_rate: float
         The step length that will be used when updating the weights
+    coef_init: np.array of shape (n_features,)
+        The initialized weights term
+    intercept_init: np.array of shape (1,)
+        The initialized bias term
+    tol: float
+        The minimum required difference of the squared loss between two iterations.
     """
     def __init__(self,
                  max_iter,
