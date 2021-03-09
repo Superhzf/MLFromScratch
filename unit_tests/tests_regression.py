@@ -75,7 +75,6 @@ def test_lasso_regression_PGD(cases: str) -> None:
         n_features = np.random.randint(5,10)
         X = np.random.rand(n_samples,n_features)
 
-#         y = np.random.rand(n_samples,)
         alpha = np.random.uniform(low=0.01)
         learning_rate = np.random.uniform(low=0.01,high=0.2)
 
