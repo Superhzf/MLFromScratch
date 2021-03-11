@@ -2,18 +2,9 @@ import numpy as np
 from ..utils import normalize,polynomial_features
 from ..utils import batch_generator
 
-class l1_regularization():
-    """
-    Regularization for Lasso Regression
-    """
-    def __init__(self,alpha):
-        self.alpha = alpha
-
-    def __call__(self,w):
-        return self.alpha*np.linalg.norm(w,ord=1)
-
-    def grad(self,w):
-        return self.alpha * np.sign(w)
+# the implementation of l1 regularization has been removed because its
+# calculation is tightly associated with the loss, so I think it is better
+# to combine it with the function class
 
 class l2_regularization():
     """
@@ -270,7 +261,7 @@ class LassoRegression(Regression):
                  coef_init,
                  intercept_init,
                  tol):
-        # self.regularization = l1_regularization(alpha=alpha)
+
         self.alpha=alpha
         self.penalty_type = 'l1'
         super(LassoRegression,self).__init__(max_iter,
