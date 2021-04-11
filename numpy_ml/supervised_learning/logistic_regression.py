@@ -2,9 +2,6 @@ import numpy as np
 import math
 from ..deep_learning.activation_functions import Sigmoid
 
-# Q: Why the objective function is logloss?
-# A: We can get the logloss function by using maximum likelihood estimation
-
 # Q: Diagnose logistic regression
 # A: https://stats.idre.ucla.edu/stata/webbooks/logistic/chapter3/lesson-3-logistic-regression-diagnostics/
 # https://www.r-bloggers.com/evaluating-logistic-regression-models/
