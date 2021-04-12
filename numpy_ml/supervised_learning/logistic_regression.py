@@ -39,7 +39,8 @@ class LogisticRegression():
 
 class LogisticRegression_LBFGS:
     """
-    Logistic regression classifier with L-BFGS optimization method.
+    Logistic regression classifier with L-BFGS optimization method. No regularization
+    is applied.
 
     The reference for deriving the loss function:
     https://stats.stackexchange.com/questions/250937/which-loss-function-is-correct-for-logistic-regression/279698#279698?newreg=78c6493a7c9e49e381a74845b7a4ddb0
@@ -70,6 +71,33 @@ class LogisticRegression_LBFGS:
             self.w = np.zeros((n_feat,))
         if init_b:
             self.b = np.zeros((1,))
+
+    def _loss_and_grad(self, y_true, z):
+        """
+        This is the loss function for logistic regression when the label is +1 and
+        -1. The formula is log(1+exp(-y*z)), where z = wx+b. I do not put it into
+        a separate file because it is only used here.
+        """
+        # calculate loss
+        yz = y_true*z
+        result = np.zeros_like(y_true)
+        for i in range(yz):
+            this_yz = yz[i]
+            if this_yz > 0:
+                result[i] = np.log(1+np.exp(-this_yz))
+            else:
+                result[i] = -this_yz + np.log(1+np.exp(this_yz))
+
+        # calculate grad
+        z = 1/(1+np.exp(-yz))
+        dz = (z - 1)*y_true
+        dw = self.X.T@dz
+        # dw[-1] is actually the gradient of the bias term.
+        dw[-1] = dz.sum()
+        return result, dw
+
+    def _l_bfgs(self, X, y, weights):
+
 
     def _param_check(self, X: np.array, y: np.array, w: np.array, b: np.array) -> None:
         n_obs, n_feat = np.shape(X)
@@ -107,6 +135,7 @@ class LogisticRegression_LBFGS:
             self._initialize_parameters(X, init_w=False, init_b=True)
             self.w = w_init
         self._param_check(X, y, self.w, self.b)
+        # I force the label to be -1 and +1 for the learning and unit test purpose
         if np.unique(y) == np.array([0,1]):
             y[y==0] = -1
 
@@ -115,4 +144,3 @@ class LogisticRegression_LBFGS:
         self.wb = np.concatenate([self.w,self.b])
         extra_col = np.ones((n_obs,1))
         self.X = np.append(X, extra_col, axis=1)
-        
