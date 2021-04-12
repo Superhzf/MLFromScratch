@@ -71,13 +71,19 @@ class LogisticRegression_LBFGS:
         if init_b:
             self.b = np.zeros((1,))
 
-    def _param_check(self, X: np.array, y: np.array, w: np.array, b: np.array):
-
-
+    def _param_check(self, X: np.array, y: np.array, w: np.array, b: np.array) -> None:
+        n_obs, n_feat = np.shape(X)
+        assert isinstance(X, np.ndarray), 'The type of X is not understood'
+        assert isinstance(y, np.ndarray), 'The type of y is not understood'
+        assert isinstance(w, np.ndarray), 'The type of w is not understood'
+        assert isinstance(b, np.ndarray), 'The type of b is not understood'
+        assert len(y) == n_obs, "The length of X and y should be equal"
+        assert n_feat == w.shape[0], "The shape of the training set and weights does not match"
+        assert b.shape[0] == 1, "The shape of the bias term is not correct"
 
     def fit(self, X: np.array, y: np.array, w_init: np.array=None, b_init: np.array=None) -> None:
         """
-        Fit the logistic regression with L-BFGS method
+        Fit the logistic regression with L_BFGS method
 
         Parameters:
         -------------------
@@ -99,3 +105,5 @@ class LogisticRegression_LBFGS:
         elif self.b_init is None:
             self._initialize_parameters(X, init_w=False, init_b=True)
             self.w = w_init
+        self._param_check(X, y, self.w, self.b)
+        
