@@ -7,7 +7,7 @@ from ..deep_learning.activation_functions import Sigmoid
 # https://www.r-bloggers.com/evaluating-logistic-regression-models/
 class LogisticRegression():
     """
-    Logistic Regression Classifier
+    Logistic regression Classifier
     -------------------------------------
     learning rate: float
         The step length that will be taken when following the negative gradient
@@ -35,3 +35,67 @@ class LogisticRegression():
     def predict(self,X):
         y_pred = self.sigmoid(X.dot(self.param)) # raw prediction
         return y_pred
+
+
+class LogisticRegression_LBFGS:
+    """
+    Logistic regression classifier with L-BFGS optimization method.
+
+    The reference for deriving the loss function:
+    https://stats.stackexchange.com/questions/250937/which-loss-function-is-correct-for-logistic-regression/279698#279698?newreg=78c6493a7c9e49e381a74845b7a4ddb0
+
+    The reference for the L-BFGS method:
+    Representations of quasi-Newton matrices and their use in limited memory methods
+    https://www.semanticscholar.org/paper/Representations-of-quasi-Newton-matrices-and-their-Byrd-Nocedal/dff7bb898da45b502608c3603b4673315540d4fd
+
+    The reference for the backtracking line search method:
+    On line search algoithmswith guaranteed sufficient decrease
+    https://www.researchgate.net/publication/220493298_On_Line_Search_Algorithms_with_Guaranteed_Sufficient_Decrease
+
+    """
+    def __init__(self, max_iter: int=100, tol: float=1e-3) -> None:
+        """
+        max_iter: int
+            The maximum number of iterations
+        tol: float
+            The tolerance for stopping criteria
+        """
+        self.max_iter = max_iter
+        self.tol = tol
+
+    def _initialize_parameters(self, X: np.array, init_w: bool = True, init_b: bool=True) -> None:
+        _, n_feat = np.shape(X)
+        # formula: x*w+b
+        if init_w:
+            self.w = np.zeros((n_feat,))
+        if init_b:
+            self.b = np.zeros((1,))
+
+    def _param_check(self, X: np.array, y: np.array, w: np.array, b: np.array):
+
+
+
+    def fit(self, X: np.array, y: np.array, w_init: np.array=None, b_init: np.array=None) -> None:
+        """
+        Fit the logistic regression with L-BFGS method
+
+        Parameters:
+        -------------------
+        X: np.array of shape (n_obs, n_feat)
+            The training set, where n_obs is the number of observations and n_feat
+            is the number of variables.
+        y: np.array of shape (n_obs,)
+            The target vector, where n_obs is the number of observations.
+        w_init: np.array of shape (n_feat,)
+            The initialized weights, where n_feat is the number of variables.
+        b_init: np.array of shape (1,)
+            The initialized bias term.
+        """
+        if self.w_init is None and self.b_init is None:
+            self._initialize_parameters(X)
+        elif self.w_init is None:
+            self._initialize_parameters(X, init_w=True, init_b=False)
+            self.b = b_init
+        elif self.b_init is None:
+            self._initialize_parameters(X, init_w=False, init_b=True)
+            self.w = w_init
