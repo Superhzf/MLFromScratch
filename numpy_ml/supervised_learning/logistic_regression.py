@@ -78,6 +78,7 @@ class LogisticRegression_LBFGS:
         assert isinstance(w, np.ndarray), 'The type of w is not understood'
         assert isinstance(b, np.ndarray), 'The type of b is not understood'
         assert len(y) == n_obs, "The length of X and y should be equal"
+        assert len(np.unique(y)) == 2, "The unique length of the target variable should be 2 (binary classification)"
         assert n_feat == w.shape[0], "The shape of the training set and weights does not match"
         assert b.shape[0] == 1, "The shape of the bias term is not correct"
 
@@ -106,4 +107,12 @@ class LogisticRegression_LBFGS:
             self._initialize_parameters(X, init_w=False, init_b=True)
             self.w = w_init
         self._param_check(X, y, self.w, self.b)
+        if np.unique(y) == np.array([0,1]):
+            y[y==0] = -1
+
+        # for the sake of convenience, we combine weights and the bias term
+        n_obs, n_var = np.shape(X)
+        self.wb = np.concatenate([self.w,self.b])
+        extra_col = np.ones((n_obs,1))
+        self.X = np.append(X, extra_col, axis=1)
         
