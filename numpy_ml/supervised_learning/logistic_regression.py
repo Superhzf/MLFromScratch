@@ -42,9 +42,6 @@ class LogisticRegression_LBFGS:
     Logistic regression classifier with L-BFGS optimization method. No regularization
     is applied.
 
-    The reference for deriving the loss function:
-    https://stats.stackexchange.com/questions/250937/which-loss-function-is-correct-for-logistic-regression/279698#279698?newreg=78c6493a7c9e49e381a74845b7a4ddb0
-
     The reference for the L-BFGS method:
     Representations of quasi-Newton matrices and their use in limited memory methods
     https://www.semanticscholar.org/paper/Representations-of-quasi-Newton-matrices-and-their-Byrd-Nocedal/dff7bb898da45b502608c3603b4673315540d4fd
@@ -54,15 +51,35 @@ class LogisticRegression_LBFGS:
     https://www.researchgate.net/publication/220493298_On_Line_Search_Algorithms_with_Guaranteed_Sufficient_Decrease
 
     """
-    def __init__(self, max_iter: int=100, tol: float=1e-3) -> None:
+    def __init__(self,
+                 max_iter: int=100,
+                 tol: float=1e-3,
+                 maxcor: int=10,
+                 ftol: float=2.2204460492503131e-09,
+                 gtol: float=1e-5) -> None:
         """
         max_iter: int
             The maximum number of iterations
         tol: float
             The tolerance for stopping criteria
+        maxcor: int
+            The maximum number of variable metric corrections used to
+            define the limited memory matrix. (The limited memory BFGS
+            method does not store the full hessian but uses this many terms
+            in an approximation to it.)
+        ftol: float
+            mu in the backtracking line search reference paper. It controls the
+            minimum decrease of the function value.
+        gtol: float
+            eta in the backtracking line search reference paper. It controls the
+            minimum decrease of the gradient.
         """
         self.max_iter = max_iter
         self.tol = tol
+        self.maxcor = maxcor
+        self.ftol = ftol
+        self.gtol = gtol
+
 
     def _initialize_parameters(self, X: np.array, init_w: bool = True, init_b: bool=True) -> None:
         _, n_feat = np.shape(X)
@@ -75,8 +92,12 @@ class LogisticRegression_LBFGS:
     def _loss_and_grad(self, y_true, z):
         """
         This is the loss function for logistic regression when the label is +1 and
-        -1. The formula is log(1+exp(-y*z)), where z = wx+b. I do not put it into
+        -1. The formula is log(1+exp(-y*z)), where z = xw+b. I do not put it into
         a separate file because it is only used here.
+
+        Reference:
+        https://stats.stackexchange.com/questions/250937/which-loss-function-is-correct-for-logistic-regression/279698#279698?newreg=78c6493a7c9e49e381a74845b7a4ddb0
+
         """
         # calculate loss
         yz = y_true*z
@@ -97,6 +118,10 @@ class LogisticRegression_LBFGS:
         return result, dw
 
     def _l_bfgs(self, X, y, weights):
+        S = np.array([np.nan]*self.maxcor)
+        Y = np.array([np.nan]*self.maxcor)
+        
+
 
 
     def _param_check(self, X: np.array, y: np.array, w: np.array, b: np.array) -> None:
@@ -126,6 +151,7 @@ class LogisticRegression_LBFGS:
         b_init: np.array of shape (1,)
             The initialized bias term.
         """
+        # initialize parameters
         if self.w_init is None and self.b_init is None:
             self._initialize_parameters(X)
         elif self.w_init is None:
@@ -139,7 +165,7 @@ class LogisticRegression_LBFGS:
         if np.unique(y) == np.array([0,1]):
             y[y==0] = -1
 
-        # for the sake of convenience, we combine weights and the bias term
+        # for the sake of convenience and unit test, we combine weights and the bias term
         n_obs, n_var = np.shape(X)
         self.wb = np.concatenate([self.w,self.b])
         extra_col = np.ones((n_obs,1))
