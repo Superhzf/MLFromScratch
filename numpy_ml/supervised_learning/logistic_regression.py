@@ -92,7 +92,6 @@ class LogisticRegression_LBFGS:
 
         Reference:
         https://stats.stackexchange.com/questions/250937/which-loss-function-is-correct-for-logistic-regression/279698#279698?newreg=78c6493a7c9e49e381a74845b7a4ddb0
-
         """
         # calculate loss
         yz = y_true*z
@@ -112,15 +111,36 @@ class LogisticRegression_LBFGS:
         dw[-1] = dz.sum()
         return result, dw
 
-    def _backtracking_line_search(self, fx, grad) -> np.array:
+    def _backtracking_line_search(self,
+                                  fx: float,
+                                  direction: np.array,
+                                  stpmx: float=1e10) -> np.array:
         """
-        Perform Wolfe line search
+        Perform the Wolfe line search method to get the best step length.
 
         Reference:
         On line search algoithms with guaranteed sufficient decrease
         https://www.researchgate.net/publication/220493298_On_Line_Search_Algorithms_with_Guaranteed_Sufficient_Decrease
+
+        fx: float
+            The evaluation value of the function to minimize
+        direction: np.array
+            The direction of the optimization method. For the first iterate, the
+            direction is the first order gradient. I find the statement not
+            from the paper, but from the page 15 of
+            http://www.seas.ucla.edu/~vandenbe/236C/lectures/qnewton.pdf
+        stpmx: float
+            The upper bound of the step length. The default value comes from
+            sklearn.
+            https://github.com/scipy/scipy/blob/master/scipy/optimize/lbfgsb_src/lbfgsb.f#L2485
         """
-        
+        iter = 0
+        dnorm = np.linalg.norm(direction)
+        if iter = 0:
+            stp = min(1/dnorm, stpmx)
+        else:
+            stp = 1
+
 
 
     def _l_bfgs(self, X, y, weights):
