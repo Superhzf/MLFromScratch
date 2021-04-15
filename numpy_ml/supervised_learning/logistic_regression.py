@@ -45,11 +45,6 @@ class LogisticRegression_LBFGS:
     The reference for the L-BFGS method:
     Representations of quasi-Newton matrices and their use in limited memory methods
     https://www.semanticscholar.org/paper/Representations-of-quasi-Newton-matrices-and-their-Byrd-Nocedal/dff7bb898da45b502608c3603b4673315540d4fd
-
-    The reference for the backtracking line search method:
-    On line search algoithmswith guaranteed sufficient decrease
-    https://www.researchgate.net/publication/220493298_On_Line_Search_Algorithms_with_Guaranteed_Sufficient_Decrease
-
     """
     def __init__(self,
                  max_iter: int=100,
@@ -117,10 +112,29 @@ class LogisticRegression_LBFGS:
         dw[-1] = dz.sum()
         return result, dw
 
+    def _backtracking_line_search(self, fx, grad) -> np.array:
+        """
+        Perform Wolfe line search
+
+        Reference:
+        On line search algoithms with guaranteed sufficient decrease
+        https://www.researchgate.net/publication/220493298_On_Line_Search_Algorithms_with_Guaranteed_Sufficient_Decrease
+        """
+        
+
+
     def _l_bfgs(self, X, y, weights):
         S = np.array([np.nan]*self.maxcor)
         Y = np.array([np.nan]*self.maxcor)
-        
+
+        z = X@weights
+        fx, grad = self._loss_and_grad(y, z)
+        # check whether it is the first iterate
+        if np.isnan(S).all():
+            # if it is the first iterate, we use the gradient as the direction
+            # Reference: http://www.seas.ucla.edu/~vandenbe/236C/lectures/qnewton.pdf
+            # page 15
+            weights_next = self._backtracking_line_search(fx, grad)
 
 
 
