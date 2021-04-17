@@ -118,7 +118,8 @@ class LogisticRegression_LBFGS:
                                   stpmin: float = 0,
                                   stpmax :float=1e10,
                                   mu :float = self.ftol,
-                                  eta: float = self.gtol,) -> np.ndarray:
+                                  eta: float = self.gtol,
+                                  xtol: float = 0.1) -> float:
         """
         Perform the Wolfe line search method to get the best step length.
 
@@ -134,12 +135,19 @@ class LogisticRegression_LBFGS:
         g: np.array
             The gradient of the function w.r.t. the input x. g and direction to
             gether are used to calculate the gradient w.r.t. the step length
+        sptmin: float
+            The lower bound of the step length.
         stpmax: float
             The upper bound of the step length. The default value comes from
             sklearn.
             https://github.com/scipy/scipy/blob/master/scipy/optimize/lbfgsb_src/lbfgsb.f#L2485
-        sptmin: float
-            The lower bound of the step length.
+        mu: float
+            The factor used in line search to spin the line.
+        eta: float
+            The factor used in line search on the gradient at the initial point,
+            the new gradient should be less than the gradient by eta.
+        xtol: float
+            The relative difference between sty and stx should be larger than xtol.
         """
         dnorm = np.linalg.norm(direction)
         # the initial value of the best step length
@@ -162,12 +170,19 @@ class LogisticRegression_LBFGS:
         stmin = 0
         stmax = 5 * stp
         stage = 1
+        width = (stpmax-stpmin)
+        # Per the paper, the bisection setp is used when after two trials, the
+        # length decrease does not meet the factor 0.66. But sklearn just
+        # multiplies 2. I do the same thing for the unit test purpose.
+        width2 = 2*(stpmax-stpmin)
 
         while True:
             ftest = finit + stp * gtest
+            # return if converged
             if f <= ftest and abs(direction) <= eta * (-ginit):
-                return
+                return stp
             if f <= fx and and f >= ftest:
+                # if
                 fm = f - stp * gtest
                 fxm = fx - stx * gtest
                 fym = fy - sty * gtest
@@ -175,16 +190,50 @@ class LogisticRegression_LBFGS:
                 gxm = gx - gtest
                 gym = gy - gtest
 
-                self._linesearch_helper(stx, fxm, gxm, sty, fym, gym,
-                                        stp, fm, gm, bracketed, stmin, stmax)
+                stp, stx, fx, dx, sty, fy, dy = self._linesearch_helper(stx,
+                                                     fxm, gxm, sty, fym, gym,
+                                         stp, fm, gm, bracketed, stmin, stmax)
 
                 fx = fxm + stx * gtest
                 fy = fym + sty * gtest
                 gx = gxm + gtest
                 gy = gym + gtest
             else:
-                self._linesearch_helper(stx, fx, gx, sty, fy, gy, stp, f, g,
-                                        bracketed, stmin, stmax)
+                stp, stx, fx, dx, sty, fy, dy = self._linesearch_helper(stx,
+                                                         fx, gx, sty, fy, gy,
+                                          stp, f, g, bracketed, stmin, stmax)
+            if bracketed:
+                # the length of the interval does not decrease by 0.66 (0.66
+                # comes from the paper without mathematical reasons)
+                if abs(sty-stx) >= 0.66*width2:
+                    stp = stx + 0.5*(sty - stx)
+                    width2 = width
+                    width = abs(sty-stx)
+
+            if bracketed:
+                stmin = min(stx,sty)
+                stmax = max(stx,sty)
+            else:
+                stmin = stp + 1.1*(stp - stx)
+                stmax = stp + 4*(stp - stx)
+
+            stp = max(stp,stpmin)
+            stp = min(stp,stpmax)
+
+            if ((bracketed and (stp <= stmin or stp >= stmax)) or \
+                (bracketed and (stmax-stmin) <= xtol*stmax)):
+                stp = stx
+
+            # if converge, return
+            if f <= ftest and abs(direction) <= eta * (-ginit):
+                return stp
+            else:
+                if stp == 1:
+                    x = x + direction
+                else:
+                    x = x + stp * direction
+
+
 
     def _linesearch_helper(self,
                            stx: float,
@@ -200,9 +249,9 @@ class LogisticRegression_LBFGS:
                            stpmin: float,
                            stpmax: float) -> float:
         """
-        This helper function returns the best step and updates an interval
-        that contains the step that statisfies a sufficient decrease and a
-        curvature condition.
+        This helper function performs one step of line search and returns the
+        best step and updates an interval that contains the step that statisfies
+        a sufficient decrease and a curvature condition.
 
         Parameters:
         --------------------
@@ -327,10 +376,10 @@ class LogisticRegression_LBFGS:
             fx = fp
             dx = dp
 
-        return stpf, stx, dx, fx, sty, gy, dy
+        return stpf, stx, fx, dx, sty, fy, dy
 
 
-    def _l_bfgs(self, X: np.ndarray, y: np.ndarray, weights: np.ndarray) -> :
+    def _l_bfgs(self, X: np.ndarray, y: np.ndarray, weights: np.ndarray) -> None:
         S = np.array([np.nan]*self.maxcor)
         Y = np.array([np.nan]*self.maxcor)
 
