@@ -118,7 +118,7 @@ class LogisticRegression_LBFGS:
                                   stpmin: float = 0,
                                   stpmax :float=1e10,
                                   mu :float = self.ftol,
-                                  eta: float = self.gtol) -> np.ndarray:
+                                  eta: float = self.gtol,) -> np.ndarray:
         """
         Perform the Wolfe line search method to get the best step length.
 
@@ -130,9 +130,10 @@ class LogisticRegression_LBFGS:
             The evaluation of the function to minimize
         direction: np.array
             The direction of the optimization method. For the first iterate, the
-            direction is equal to the first order gradient w.r.t. the input x
+            direction is equal to the first order gradient w.r.t. the input x.
         g: np.array
-            The gradient of the function w.r.t. the input x
+            The gradient of the function w.r.t. the input x. g and direction to
+            gether are used to calculate the gradient w.r.t. the step length
         stpmax: float
             The upper bound of the step length. The default value comes from
             sklearn.
@@ -144,7 +145,7 @@ class LogisticRegression_LBFGS:
         # the initial value of the best step length
         stp = min(1/dnorm, stpmx)
         bracketed = False
-        # gd is the gradient w.r.t. the step length (not the input x)
+        # gd is the gradient of the func w.r.t. the step length (not the input x)
         gd = np.dot(direction, g)
         finit = f
         ginit = gd
@@ -197,7 +198,7 @@ class LogisticRegression_LBFGS:
                            dp: float,
                            bracketed: bool,
                            stpmin: float,
-                           stpmax: float) -> ?:
+                           stpmax: float) -> float:
         """
         This helper function returns the best step and updates an interval
         that contains the step that statisfies a sufficient decrease and a
@@ -233,11 +234,100 @@ class LogisticRegression_LBFGS:
         stpmax: float
             An upper bound for the step.
         """
-        sgnd = dp * (dx/abs(dx))
+        dpx = dp*dx
         if fp > fx:
             theta = 3*(fx-fp)/(stp-stx) + dx + dp
-            s = max(abs(theta), abs(dx), abs*(dp))
+            s = max(abs(theta), abs(dx), abs(dp))
+            gamma = s*np.sqrt((theta/s)**2 - (dx/s)*(dp/s))
+            if (stp < stx):
+                gamma = -gamma
+            p = (gamma - dx) + theta
+            q = ((gamma - dx) + gamma) + dp
+            r = p/q
+            stpc = stx + r*(stp - stx)
+            stpq = stx + ((dx/((fx - fp)/(stp - stx) + dx))/two)*(stp - stx)
+            if (abs(stpc-stx) < abs(stpq-stx)):
+                stpf = stpc
+            else:
+                stpf = stpc + (stpq - stpc)/two
+            bracketed = True
+        elif dpx<0:
+            theta = 3*(fx - fp)/(stp - stx) + dx + dp
+            s = max(abs(theta), abs(dx), abs(dp))
+            gamma = s*np.sqrt((theta/s)**2 - (dx/s)*(dp/s))
+            if (stp > stx):
+                gamma = -gamma
+            p = (gamma - dp) + theta
+            q = ((gamma - dp) + gamma) + dx
+            r = p/q
+            stpc = stp + r*(stx - stp)
+            stpq = stp + (dp/(dp - dx))*(stx - stp)
+            if (abs(stpc-stp) > abs(stpq-stp)):
+                stpf = stpc
+            else:
+                stpf = stpq
+            bracketed = True
+        elif abs(dp) < abs(dx):
+            theta = three*(fx - fp)/(stp - stx) + dx + dp
+            s = max(abs(theta), abs(dx), abs(dp))
+            gamma = s*np.sqrt(max(zero,(theta/s)**2-(dx/s)*(dp/s)))
+            if (stp > stx):
+                gamma = -gamma
+            p = (gamma - dp) + theta
+            q = (gamma + (dx - dp)) + gamma
+            r = p/q
+            if (r < zero and gamma != 0):
+                stpc = stp + r*(stx - stp)
+            else:
+                stpc = stpmax
+            stpq = stp + (dp/(dp - dx))*(stx - stp)
+            if bracketed:
+                if (abs(stpc-stp) < abs(stpq-stp)):
+                    stpf = stpc
+                else
+                    stpf = stpq
+                if (stp > stx):
+                    stpf = min(stp+p66*(sty-stp),stpf)
+                else
+                    stpf = max(stp+p66*(sty-stp),stpf)
+            else:
+                if (abs(stpc-stp) > abs(stpq-stp)):
+                    stpf = stpc
+                else
+                    stpf = stpq
+                stpf = min(stpmax,stpf)
+                stpf = max(stpmin,stpf)
+        else:
+            if bracketed:
+                theta = 3*(fp - fy)/(sty - stp) + dy + dp
+                s = max(abs(theta), abs(dy), abs(dp))
+                gamma = s*np.sqrt((theta/s)**2 - (dy/s)*(dp/s))
+                if (stp > sty):
+                    gamma = -gamma
+                p = (gamma - dp) + theta
+                q = ((gamma - dp) + gamma) + dy
+                r = p/q
+                stpc = stp + r*(sty - stp)
+                stpf = stpc
+            elif stp > stx:
+                stpf = stpmax
+            else:
+                stpf = stpmin
+        # update the interval
+        if fp > fx:
+            sty = stp
+            fy = fp
+            dy = dp
+        else:
+            if dpx < 0:
+                sty = stx
+                fy = fx
+                dy = dx
+            stx = stp
+            fx = fp
+            dx = dp
 
+        return stpf, stx, dx, fx, sty, gy, dy
 
 
     def _l_bfgs(self, X: np.ndarray, y: np.ndarray, weights: np.ndarray) -> :
