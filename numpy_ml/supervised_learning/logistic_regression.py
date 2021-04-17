@@ -76,7 +76,7 @@ class LogisticRegression_LBFGS:
         self.gtol = gtol
 
 
-    def _initialize_parameters(self, X: np.array, init_w: bool = True, init_b: bool=True) -> None:
+    def _initialize_parameters(self, X: np.ndarray, init_w: bool = True, init_b: bool=True) -> None:
         _, n_feat = np.shape(X)
         # formula: x*w+b
         if init_w:
@@ -112,9 +112,13 @@ class LogisticRegression_LBFGS:
         return result, dw
 
     def _backtracking_line_search(self,
-                                  fx: float,
-                                  direction: np.array,
-                                  stpmx: float=1e10) -> np.array:
+                                  f: float,
+                                  direction: np.ndarray,
+                                  g: np.array,
+                                  stpmin: float = 0,
+                                  stpmax :float=1e10,
+                                  mu :float = self.ftol,
+                                  eta: float = self.gtol) -> np.ndarray:
         """
         Perform the Wolfe line search method to get the best step length.
 
@@ -122,28 +126,121 @@ class LogisticRegression_LBFGS:
         On line search algoithms with guaranteed sufficient decrease
         https://www.researchgate.net/publication/220493298_On_Line_Search_Algorithms_with_Guaranteed_Sufficient_Decrease
 
-        fx: float
-            The evaluation value of the function to minimize
+        f: float
+            The evaluation of the function to minimize
         direction: np.array
             The direction of the optimization method. For the first iterate, the
-            direction is the first order gradient. I find the statement not
-            from the paper, but from the page 15 of
-            http://www.seas.ucla.edu/~vandenbe/236C/lectures/qnewton.pdf
-        stpmx: float
+            direction is equal to the first order gradient w.r.t. the input x
+        g: np.array
+            The gradient of the function w.r.t. the input x
+        stpmax: float
             The upper bound of the step length. The default value comes from
             sklearn.
             https://github.com/scipy/scipy/blob/master/scipy/optimize/lbfgsb_src/lbfgsb.f#L2485
+        sptmin: float
+            The lower bound of the step length.
         """
-        iter = 0
         dnorm = np.linalg.norm(direction)
-        if iter = 0:
-            stp = min(1/dnorm, stpmx)
-        else:
-            stp = 1
+        # the initial value of the best step length
+        stp = min(1/dnorm, stpmx)
+        bracketed = False
+        # gd is the gradient w.r.t. the step length (not the input x)
+        gd = np.dot(direction, g)
+        finit = f
+        ginit = gd
+        stage = 1
+        gtest = mu * ginit
+        # lower bound of the step length
+        stx = 0
+        fx = finit
+        gx = ginit
+        # upper bound of the step length
+        sty = 0
+        fy = finit
+        gy = ginit
+        stmin = 0
+        stmax = 5 * stp
+        stage = 1
+
+        while True:
+            ftest = finit + stp * gtest
+            if f <= ftest and abs(direction) <= eta * (-ginit):
+                return
+            if f <= fx and and f >= ftest:
+                fm = f - stp * gtest
+                fxm = fx - stx * gtest
+                fym = fy - sty * gtest
+                gm = g - gtest
+                gxm = gx - gtest
+                gym = gy - gtest
+
+                self._linesearch_helper(stx, fxm, gxm, sty, fym, gym,
+                                        stp, fm, gm, bracketed, stmin, stmax)
+
+                fx = fxm + stx * gtest
+                fy = fym + sty * gtest
+                gx = gxm + gtest
+                gy = gym + gtest
+            else:
+                self._linesearch_helper(stx, fx, gx, sty, fy, gy, stp, f, g,
+                                        bracketed, stmin, stmax)
+
+    def _linesearch_helper(self,
+                           stx: float,
+                           fx: float,
+                           dx: float,
+                           sty: float,
+                           fy: float,
+                           dy: float,
+                           stp: float,
+                           fp: float,
+                           dp: float,
+                           bracketed: bool,
+                           stpmin: float,
+                           stpmax: float) -> ?:
+        """
+        This helper function returns the best step and updates an interval
+        that contains the step that statisfies a sufficient decrease and a
+        curvature condition.
+
+        Parameters:
+        --------------------
+        stx: float
+            stx is the endpoint of the interval that contains the best step.
+        fx: float
+            fx is the function value at stx
+        dx: float
+            dx is the first order gradient w.r.t. the step length stx (please be
+            be aware that dx is not a np.ndarray).
+        sty: float
+            sty is the second endpoint of the interval that contains the best step
+        fy: float
+            fy is the function value at sty
+        dy: float
+            dy is the first order gradient w.r.t. the step length sty (please be
+            be aware that dx is not a np.ndarray).
+        stp: float
+            stp is the current step
+        fp: float
+            fp is the current function value at stp
+        dp: float
+            dp is the first order gradient w.r.t. the step length stp (please be
+            be aware that dx is not a np.ndarray).
+        bracketed: bool
+            It shows whether the interval has been bracketed.
+        stpmin: float
+            A lower bound for the step
+        stpmax: float
+            An upper bound for the step.
+        """
+        sgnd = dp * (dx/abs(dx))
+        if fp > fx:
+            theta = 3*(fx-fp)/(stp-stx) + dx + dp
+            s = max(abs(theta), abs(dx), abs*(dp))
 
 
 
-    def _l_bfgs(self, X, y, weights):
+    def _l_bfgs(self, X: np.ndarray, y: np.ndarray, weights: np.ndarray) -> :
         S = np.array([np.nan]*self.maxcor)
         Y = np.array([np.nan]*self.maxcor)
 
@@ -154,11 +251,11 @@ class LogisticRegression_LBFGS:
             # if it is the first iterate, we use the gradient as the direction
             # Reference: http://www.seas.ucla.edu/~vandenbe/236C/lectures/qnewton.pdf
             # page 15
-            weights_next = self._backtracking_line_search(fx, grad)
+            weights_next = self._backtracking_line_search(fx, -grad, grad)
 
 
 
-    def _param_check(self, X: np.array, y: np.array, w: np.array, b: np.array) -> None:
+    def _param_check(self, X: np.ndarray, y: np.ndarray, w: np.ndarray, b: np.ndarray) -> None:
         n_obs, n_feat = np.shape(X)
         assert isinstance(X, np.ndarray), 'The type of X is not understood'
         assert isinstance(y, np.ndarray), 'The type of y is not understood'
@@ -169,7 +266,7 @@ class LogisticRegression_LBFGS:
         assert n_feat == w.shape[0], "The shape of the training set and weights does not match"
         assert b.shape[0] == 1, "The shape of the bias term is not correct"
 
-    def fit(self, X: np.array, y: np.array, w_init: np.array=None, b_init: np.array=None) -> None:
+    def fit(self, X: np.ndarray, y: np.ndarray, w_init: np.ndarray=None, b_init: np.ndarray=None) -> None:
         """
         Fit the logistic regression with L_BFGS method
 
