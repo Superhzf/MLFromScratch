@@ -185,6 +185,7 @@ class LogisticRegression_LBFGS:
             # return if converged
             if f <= ftest and abs(direction) <= eta * (-ginit):
                 return stp
+            "TODO: https://github.com/scipy/scipy/blob/master/scipy/optimize/lbfgsb_src/lbfgsb.f#L3556"
             if f <= fx and and f >= ftest:
                 # if
                 fm = f - stp * gtest
@@ -194,7 +195,7 @@ class LogisticRegression_LBFGS:
                 gxm = gx - gtest
                 gym = gy - gtest
 
-                stp, stx, fx, dx, sty, fy, dy = self._linesearch_helper(stx,
+                stp, stx, fx, dx, sty, fy, dy, bracketed = self._linesearch_helper(stx,
                                                      fxm, gxm, sty, fym, gym,
                                          stp, fm, gm, bracketed, stmin, stmax)
 
@@ -203,7 +204,7 @@ class LogisticRegression_LBFGS:
                 gx = gxm + gtest
                 gy = gym + gtest
             else:
-                stp, stx, fx, dx, sty, fy, dy = self._linesearch_helper(stx,
+                stp, stx, fx, dx, sty, fy, dy, bracketed = self._linesearch_helper(stx,
                                                          fx, gx, sty, fy, gy,
                                           stp, f, gd, bracketed, stmin, stmax)
             if bracketed:
@@ -251,7 +252,7 @@ class LogisticRegression_LBFGS:
                            stpmin: float,
                            stpmax: float) -> float:
         """
-        This helper function performs one step of line search and returns the
+        This helper function performs one iterate of line search and returns the
         best step and updates an interval that contains the step that statisfies
         a sufficient decrease and a curvature condition.
 
@@ -378,7 +379,7 @@ class LogisticRegression_LBFGS:
             fx = fp
             dx = dp
 
-        return stpf, stx, fx, dx, sty, fy, dy
+        return stpf, stx, fx, dx, sty, fy, dy, bracketed
 
 
     def _l_bfgs(self) -> None:
@@ -394,7 +395,6 @@ class LogisticRegression_LBFGS:
             # page 15
             step_len = self._backtracking_line_search(fx, -grad, grad)
             self.wb = sel.wb - step_len @ grad
-
 
 
 
