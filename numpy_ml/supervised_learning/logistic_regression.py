@@ -70,6 +70,7 @@ class LogisticRegression_LBFGS:
             minimum decrease of the gradient.
         """
         self.max_iter = max_iter
+        self.this_iter = 0
         self.tol = tol
         self.maxcor = maxcor
         self.ftol = ftol
@@ -149,9 +150,12 @@ class LogisticRegression_LBFGS:
         xtol: float
             The relative difference between sty and stx should be larger than xtol.
         """
-        dnorm = np.linalg.norm(direction)
-        # the initial value of the best step length
-        stp = min(1/dnorm, stpmx)
+        if self.this_iter == 0:
+            dnorm = np.linalg.norm(direction)
+            # the initial value of the best step length
+            stp = min(1/dnorm, stpmx)
+        else:
+            stp = 1
         bracketed = False
         # gd is the gradient of the func w.r.t. the step length (not the input x)
         gd = np.dot(direction, g)
@@ -186,7 +190,7 @@ class LogisticRegression_LBFGS:
                 fm = f - stp * gtest
                 fxm = fx - stx * gtest
                 fym = fy - sty * gtest
-                gm = g - gtest
+                gm = gd - gtest
                 gxm = gx - gtest
                 gym = gy - gtest
 
@@ -201,7 +205,7 @@ class LogisticRegression_LBFGS:
             else:
                 stp, stx, fx, dx, sty, fy, dy = self._linesearch_helper(stx,
                                                          fx, gx, sty, fy, gy,
-                                          stp, f, g, bracketed, stmin, stmax)
+                                          stp, f, gd, bracketed, stmin, stmax)
             if bracketed:
                 # the length of the interval does not decrease by 0.66 (0.66
                 # comes from the paper without mathematical reasons)
@@ -228,11 +232,9 @@ class LogisticRegression_LBFGS:
             if f <= ftest and abs(direction) <= eta * (-ginit):
                 return stp
             else:
-                if stp == 1:
-                    x = x + direction
-                else:
-                    x = x + stp * direction
-
+                this_wb = self.wb + stp*direction
+                f, g = self._loss_and_grad(self.y_true, this_wb@self.X)
+                gd = np.dot(direction, g)
 
 
     def _linesearch_helper(self,
@@ -379,18 +381,20 @@ class LogisticRegression_LBFGS:
         return stpf, stx, fx, dx, sty, fy, dy
 
 
-    def _l_bfgs(self, X: np.ndarray, y: np.ndarray, weights: np.ndarray) -> None:
+    def _l_bfgs(self) -> None:
         S = np.array([np.nan]*self.maxcor)
         Y = np.array([np.nan]*self.maxcor)
 
-        z = X@weights
-        fx, grad = self._loss_and_grad(y, z)
+        z = self.X@self.wb
+        fx, grad = self._loss_and_grad(self.y, z)
         # check whether it is the first iterate
         if np.isnan(S).all():
             # if it is the first iterate, we use the gradient as the direction
             # Reference: http://www.seas.ucla.edu/~vandenbe/236C/lectures/qnewton.pdf
             # page 15
-            weights_next = self._backtracking_line_search(fx, -grad, grad)
+            step_len = self._backtracking_line_search(fx, -grad, grad)
+            self.wb = sel.wb - step_len @ grad
+
 
 
 
@@ -421,22 +425,24 @@ class LogisticRegression_LBFGS:
         b_init: np.array of shape (1,)
             The initialized bias term.
         """
+        self.X = X
+        self.y = y
         # initialize parameters
         if self.w_init is None and self.b_init is None:
-            self._initialize_parameters(X)
+            self._initialize_parameters(self.X)
         elif self.w_init is None:
-            self._initialize_parameters(X, init_w=True, init_b=False)
+            self._initialize_parameters(self.X, init_w=True, init_b=False)
             self.b = b_init
         elif self.b_init is None:
-            self._initialize_parameters(X, init_w=False, init_b=True)
+            self._initialize_parameters(self.X, init_w=False, init_b=True)
             self.w = w_init
-        self._param_check(X, y, self.w, self.b)
+        self._param_check(self.X, self.y, self.w, self.b)
         # I force the label to be -1 and +1 for the learning and unit test purpose
-        if np.unique(y) == np.array([0,1]):
-            y[y==0] = -1
+        if np.unique(self.y) == np.array([0,1]):
+            self.y[self.y==0] = -1
 
         # for the sake of convenience and unit test, we combine weights and the bias term
-        n_obs, n_var = np.shape(X)
+        n_obs, n_var = np.shape(self.X)
         self.wb = np.concatenate([self.w,self.b])
         extra_col = np.ones((n_obs,1))
-        self.X = np.append(X, extra_col, axis=1)
+        self.X = np.append(self.X, extra_col, axis=1)
