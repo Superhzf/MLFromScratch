@@ -185,7 +185,20 @@ class LogisticRegression_LBFGS:
             # return if converged
             if f <= ftest and abs(direction) <= eta * (-ginit):
                 return stp
-            "TODO: https://github.com/scipy/scipy/blob/master/scipy/optimize/lbfgsb_src/lbfgsb.f#L3556"
+            # return if stp is out of the range
+            if (bracketed and (stp <= stmin or stp >= stmax)):
+                return stp
+            # return if the length of the interval is too short
+            if (bracketed and stmax - stmin <= xtol*stmax):
+                return stp
+            # return if stp == stpmax
+            if (stp == stpmax and f <= ftest and g <= gtest):
+                return stp
+            # return if stp == stpmin
+            if (stp == stpmin and (f > ftest or g > gtest)):
+                return stp
+
+            if bracketed and
             if f <= fx and and f >= ftest:
                 # if
                 fm = f - stp * gtest
