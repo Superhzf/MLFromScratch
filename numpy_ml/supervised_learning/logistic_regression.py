@@ -396,18 +396,78 @@ class LogisticRegression_LBFGS:
 
 
     def _l_bfgs(self) -> None:
-        S = np.array([np.nan]*self.maxcor)
-        Y = np.array([np.nan]*self.maxcor)
+        # we start from the length of 1 and fill it till the length becomes maxcor
+        S = np.array([np.nan])
+        Y = np.array([np.nan])
+        R = np.zeros((1, 1))
+        D = np.zeros((1, 1))
+        # progress indicates where the new sk and gk should be stored in S and Y
+        progress = 0
 
         z = self.X@self.wb
         fx, grad = self._loss_and_grad(self.y, z)
+
         # check whether it is the first iterate
         if np.isnan(S).all():
             # if it is the first iterate, we use the gradient as the direction
             # Reference: http://www.seas.ucla.edu/~vandenbe/236C/lectures/qnewton.pdf
             # page 15
             step_len = self._backtracking_line_search(fx, -grad, grad)
-            self.wb = sel.wb - step_len @ grad
+            wb_next = sel.wb - step_len @ grad
+            sk = wb_next - self.wb
+            _, grad_next = self._loss_and_grad(self.y, self.X@wb_next)
+            yk = grad_next - grad
+            self.wb = wb_next
+
+        else:
+            # update
+            S[progress] = sk
+            Y[progress] = yk
+            sg = sk.T@yk
+            if R.shape == (1,1):
+                R[progress, progress] = sg
+            elif R.shape[0] < self.maxcor:
+                R = np.pad(R,
+                           pad_width=((0, 1), (0, 1)),
+                           mode='constant',
+                           constant_values=0)
+                _, size_R = R.shape
+                for idx in range(size_R):
+                    R[size_R, idx] = S[idx].T@yk
+            elif R.shape[0] == self.maxcor:
+                # delete the first  row
+                R = np.delete(R, 0, 0)
+                # delete the first column
+                R = np.delete(R, 0, 1)
+                # add a row and a column at the end
+                R = np.pad(R,
+                           pad_width=((0, 1), (0, 1)),
+                           mode='constant',
+                           constant_values=0)
+                for idx in range(size_R):
+                    R[size_R, idx] = S[idx].T@yk
+            else:
+                assert R.shape[0] <= self.maxcor,
+                       "The length of R should be less than m"
+            R_inv = np.linalg.inv(R)
+
+            D[progress] = sg
+            gg = grad_next.T@grad_next
+            Sg = S.T@grad_next
+            Yg = Y.T@grad_next
+            yy = Y.T@Y
+            grad = grad_next
+
+            gamma = yk.T@sk/yk.T@yk
+            p1 = R_inv.T@(D+gamma*yy)@R_inv@Sg-gamma*R_inv.T@Yg
+            p2 = -R_inv@Sg
+            p = np.concatenate([p1,p2])
+            direction = gamma*grad+np.concatenate([S[:,None], gamma*Y[:,None]],axis=1)@p
+            if progress+1 < self.maxcor:
+                progress += 1
+            else:
+                progress = (progress+1)%self.maxcor
+
 
 
 
