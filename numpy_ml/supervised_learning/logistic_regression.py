@@ -64,13 +64,13 @@ class LogisticRegression_LBFGS:
             in an approximation to it.)
         ftol: float
             mu in the backtracking line search reference paper. It controls the
-            minimum decrease of the function value.
+            minimum decrease of the function value. The value comes from sklearn.
         gtol: float
             eta in the backtracking line search reference paper. It controls the
             minimum decrease of the gradient.
         """
         self.max_iter = max_iter
-        self.this_iter = 0
+        self.this_iter = 1
         self.tol = tol
         self.maxcor = maxcor
         self.ftol = ftol
@@ -115,10 +115,10 @@ class LogisticRegression_LBFGS:
                                   f: float,
                                   direction: np.ndarray,
                                   g: np.array,
+                                  mu: float,
+                                  eta: float,
                                   stpmin: float = 0,
-                                  stpmax :float=1e10,
-                                  mu :float = self.ftol,
-                                  eta: float = self.gtol,
+                                  stpmax: float = 1e10,
                                   xtol: float = 0.1) -> float:
         """
         Perform the Wolfe line search method to get the best step length.
@@ -149,7 +149,8 @@ class LogisticRegression_LBFGS:
         xtol: float
             The relative difference between sty and stx should be larger than xtol.
         """
-        if self.this_iter == 0:
+        # if it is the first iterate
+        if self.this_iter == 1:
             dnorm = np.linalg.norm(direction)
             # the initial value of the best step length
             stp = min(1/dnorm, stpmx)
@@ -197,8 +198,7 @@ class LogisticRegression_LBFGS:
             if (stp == stpmin and (f > ftest or g > gtest)):
                 return stp
 
-            if bracketed and
-            if f <= fx and and f >= ftest:
+            if f <= fx and f >= ftest:
                 # if
                 fm = f - stp * gtest
                 fxm = fx - stx * gtest
@@ -347,16 +347,16 @@ class LogisticRegression_LBFGS:
             if bracketed:
                 if (abs(stpc-stp) < abs(stpq-stp)):
                     stpf = stpc
-                else
+                else:
                     stpf = stpq
                 if (stp > stx):
                     stpf = min(stp+p66*(sty-stp),stpf)
-                else
+                else:
                     stpf = max(stp+p66*(sty-stp),stpf)
             else:
                 if (abs(stpc-stp) > abs(stpq-stp)):
                     stpf = stpc
-                else
+                else:
                     stpf = stpq
                 stpf = min(stpmax,stpf)
                 stpf = max(stpmin,stpf)
@@ -405,13 +405,13 @@ class LogisticRegression_LBFGS:
         fx, grad = self._loss_and_grad(self.y, z)
 
         for _ in range(self.max_iter):
-
             # check whether it is the first iterate
             if np.isnan(S).all():
                 # if it is the first iterate, we use the gradient as the direction
                 # Reference: http://www.seas.ucla.edu/~vandenbe/236C/lectures/qnewton.pdf
                 # page 15
-                step_len = self._backtracking_line_search(fx, -grad, grad)
+                step_len = self._backtracking_line_search(fx, -grad, grad,
+                                                    mu=self.ftol, eta=self.gtol)
                 wb_next = sel.wb - step_len @ grad
                 sk = wb_next - self.wb
                 _, grad_next = self._loss_and_grad(self.y, self.X@wb_next)
@@ -446,7 +446,7 @@ class LogisticRegression_LBFGS:
                     for idx in range(size_R):
                         R[size_R, idx] = S[idx].T@yk
                 else:
-                    assert R.shape[0] <= self.maxcor,
+                    assert R.shape[0] <= self.maxcor,\
                            "The length of R should be less than m"
                 R_inv = np.linalg.inv(R)
 
@@ -467,7 +467,8 @@ class LogisticRegression_LBFGS:
                 else:
                     progress = (progress+1)%self.maxcor
 
-                step_len = self._backtracking_line_search(fx, -direction, grad)
+                step_len = self._backtracking_line_search(fx, -direction, grad,
+                                                    mu=self.ftol, eta=self.gtol)
                 wb_next = sel.wb - step_len @ direction
                 sk = wb_next - self.wb
                 _, grad_next = self._loss_and_grad(self.y, self.X@wb_next)
@@ -525,3 +526,4 @@ class LogisticRegression_LBFGS:
         self.wb = np.concatenate([self.w,self.b])
         extra_col = np.ones((n_obs,1))
         self.X = np.append(self.X, extra_col, axis=1)
+        self._l_bfgs()
