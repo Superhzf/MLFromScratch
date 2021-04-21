@@ -48,15 +48,12 @@ class LogisticRegression_LBFGS:
     """
     def __init__(self,
                  max_iter: int=100,
-                 tol: float=1e-3,
                  maxcor: int=10,
                  ftol: float=2.2204460492503131e-09,
                  gtol: float=1e-5) -> None:
         """
         max_iter: int
             The maximum number of iterations
-        tol: float
-            The tolerance for stopping criteria
         maxcor: int
             The maximum number of variable metric corrections used to
             define the limited memory matrix. (The limited memory BFGS
@@ -71,7 +68,6 @@ class LogisticRegression_LBFGS:
         """
         self.max_iter = max_iter
         self.this_iter = 1
-        self.tol = tol
         self.maxcor = maxcor
         self.ftol = ftol
         self.gtol = gtol
@@ -95,13 +91,13 @@ class LogisticRegression_LBFGS:
         """
         # calculate loss
         yz = y_true*z
-        result = np.zeros_like(y_true)
-        for i in range(yz):
+        result = 0
+        for i in range(len(yz)):
             this_yz = yz[i]
             if this_yz > 0:
-                result[i] = np.log(1+np.exp(-this_yz))
+                result += np.log(1+np.exp(-this_yz))
             else:
-                result[i] = -this_yz + np.log(1+np.exp(this_yz))
+                result += -this_yz + np.log(1+np.exp(this_yz))
 
         # calculate grad
         z = 1/(1+np.exp(-yz))
@@ -153,7 +149,7 @@ class LogisticRegression_LBFGS:
         if self.this_iter == 1:
             dnorm = np.linalg.norm(direction)
             # the initial value of the best step length
-            stp = min(1/dnorm, stpmx)
+            stp = min(1/dnorm, stpmax)
         else:
             stp = 1
         bracketed = False
@@ -183,7 +179,7 @@ class LogisticRegression_LBFGS:
         while True:
             ftest = finit + stp * gtest
             # return if converged
-            if f <= ftest and abs(direction) <= eta * (-ginit):
+            if f <= ftest and abs(gd) <= eta * (-ginit):
                 return stp
             # return if stp is out of the range
             if (bracketed and (stp <= stmin or stp >= stmax)):
@@ -242,11 +238,11 @@ class LogisticRegression_LBFGS:
                 stp = stx
 
             # if converge, return
-            if f <= ftest and abs(direction) <= eta * (-ginit):
+            if f <= ftest and abs(gd) <= eta * (-ginit):
                 return stp
             else:
                 this_wb = self.wb + stp*direction
-                f, g = self._loss_and_grad(self.y_true, this_wb@self.X)
+                f, g = self._loss_and_grad(self.y, self.X@this_wb)
                 gd = np.dot(direction, g)
 
     def _linesearch_helper(self,
@@ -308,7 +304,7 @@ class LogisticRegression_LBFGS:
             q = ((gamma - dx) + gamma) + dp
             r = p/q
             stpc = stx + r*(stp - stx)
-            stpq = stx + ((dx/((fx - fp)/(stp - stx) + dx))/two)*(stp - stx)
+            stpq = stx + ((dx/((fx - fp)/(stp - stx) + dx))/2)*(stp - stx)
             if (abs(stpc-stx) < abs(stpq-stx)):
                 stpf = stpc
             else:
@@ -331,15 +327,15 @@ class LogisticRegression_LBFGS:
                 stpf = stpq
             bracketed = True
         elif abs(dp) < abs(dx):
-            theta = three*(fx - fp)/(stp - stx) + dx + dp
+            theta = 3*(fx - fp)/(stp - stx) + dx + dp
             s = max(abs(theta), abs(dx), abs(dp))
-            gamma = s*np.sqrt(max(zero,(theta/s)**2-(dx/s)*(dp/s)))
+            gamma = s*np.sqrt(max(0,(theta/s)**2-(dx/s)*(dp/s)))
             if (stp > stx):
                 gamma = -gamma
             p = (gamma - dp) + theta
             q = (gamma + (dx - dp)) + gamma
             r = p/q
-            if (r < zero and gamma != 0):
+            if (r < 0 and gamma != 0):
                 stpc = stp + r*(stx - stp)
             else:
                 stpc = stpmax
@@ -350,9 +346,9 @@ class LogisticRegression_LBFGS:
                 else:
                     stpf = stpq
                 if (stp > stx):
-                    stpf = min(stp+p66*(sty-stp),stpf)
+                    stpf = min(stp+0.66*(sty-stp),stpf)
                 else:
-                    stpf = max(stp+p66*(sty-stp),stpf)
+                    stpf = max(stp+0.66*(sty-stp),stpf)
             else:
                 if (abs(stpc-stp) > abs(stpq-stp)):
                     stpf = stpc
@@ -412,7 +408,7 @@ class LogisticRegression_LBFGS:
                 # page 15
                 step_len = self._backtracking_line_search(fx, -grad, grad,
                                                     mu=self.ftol, eta=self.gtol)
-                wb_next = sel.wb - step_len @ grad
+                wb_next = self.wb - step_len * grad
                 sk = wb_next - self.wb
                 _, grad_next = self._loss_and_grad(self.y, self.X@wb_next)
                 yk = grad_next - grad
@@ -508,17 +504,17 @@ class LogisticRegression_LBFGS:
         self.X = X
         self.y = y
         # initialize parameters
-        if self.w_init is None and self.b_init is None:
+        if w_init is None and b_init is None:
             self._initialize_parameters(self.X)
-        elif self.w_init is None:
+        elif w_init is None:
             self._initialize_parameters(self.X, init_w=True, init_b=False)
             self.b = b_init
-        elif self.b_init is None:
+        elif b_init is None:
             self._initialize_parameters(self.X, init_w=False, init_b=True)
             self.w = w_init
         self._param_check(self.X, self.y, self.w, self.b)
         # I force the label to be -1 and +1 for the learning and unit test purpose
-        if np.unique(self.y) == np.array([0,1]):
+        if (np.unique(self.y) == np.array([0,1])).all():
             self.y[self.y==0] = -1
 
         # for the sake of convenience and unit test, we combine weights and the bias term
@@ -527,3 +523,5 @@ class LogisticRegression_LBFGS:
         extra_col = np.ones((n_obs,1))
         self.X = np.append(self.X, extra_col, axis=1)
         self._l_bfgs()
+        self.w = self.wb[:-1]
+        self.b = np.array([self.wb[-1]])
