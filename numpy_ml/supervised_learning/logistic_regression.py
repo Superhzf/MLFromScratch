@@ -308,7 +308,7 @@ class LogisticRegression_LBFGS:
             if (abs(stpc-stx) < abs(stpq-stx)):
                 stpf = stpc
             else:
-                stpf = stpc + (stpq - stpc)/two
+                stpf = stpc + (stpq - stpc)/2
             bracketed = True
         elif dpx<0:
             theta = 3*(fx - fp)/(stp - stx) + dx + dp
@@ -396,9 +396,14 @@ class LogisticRegression_LBFGS:
         D = np.zeros((1, 1))
         # progress indicates where the new sk and gk should be stored in S and Y
         progress = 0
+        epsmch=1.110223024625157e-016
+        tol = (self.ftol/np.finfo(float).eps)*epsmch
 
         z = self.X@self.wb
         fx, grad = self._loss_and_grad(self.y, z)
+        # termimate the algorithm
+        if abs(np.max(grad)) < self.gtol:
+            return
 
         for _ in range(self.max_iter):
             # check whether it is the first iterate
@@ -410,9 +415,12 @@ class LogisticRegression_LBFGS:
                                                     mu=self.ftol, eta=self.gtol)
                 wb_next = self.wb - step_len * grad
                 sk = wb_next - self.wb
-                _, grad_next = self._loss_and_grad(self.y, self.X@wb_next)
+                fx_next, grad_next = self._loss_and_grad(self.y, self.X@wb_next)
+                if fx - fx_next <= tol*max(abs(fx), abs(fx_next), 1):
+                    return
                 yk = grad_next - grad
                 self.wb = wb_next
+                fx = fx_next
 
             else:
                 # update
@@ -467,12 +475,17 @@ class LogisticRegression_LBFGS:
                                                     mu=self.ftol, eta=self.gtol)
                 wb_next = sel.wb - step_len @ direction
                 sk = wb_next - self.wb
-                _, grad_next = self._loss_and_grad(self.y, self.X@wb_next)
+                fx_next, grad_next = self._loss_and_grad(self.y, self.X@wb_next)
+                if fx - fx_next <= tol*max(abs(fx), abs(fx_next), 1):
+                    return
                 yk = grad_next - grad
                 self.wb = wb_next
+                fx = fx_next
+                # termimate the algorithm
+                if abs(np.max(grad_next)) < self.gtol:
+                    return
 
             self.this_iter+=1
-
 
     def _param_check(self, X: np.ndarray, y: np.ndarray, w: np.ndarray, b: np.ndarray) -> None:
         n_obs, n_feat = np.shape(X)
