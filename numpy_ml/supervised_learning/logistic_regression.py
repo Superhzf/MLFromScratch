@@ -188,10 +188,10 @@ class LogisticRegression_LBFGS:
             if (bracketed and stmax - stmin <= xtol*stmax):
                 return stp
             # return if stp == stpmax
-            if (stp == stpmax and f <= ftest and g <= gtest):
+            if (stp == stpmax and f <= ftest and gd <= gtest):
                 return stp
             # return if stp == stpmin
-            if (stp == stpmin and (f > ftest or g > gtest)):
+            if (stp == stpmin and (f > ftest or gd > gtest)):
                 return stp
 
             if f <= fx and f >= ftest:
