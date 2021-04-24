@@ -67,7 +67,7 @@ class LogisticRegression_LBFGS:
             minimum decrease of the gradient.
         """
         self.max_iter = max_iter
-        self.this_iter = 1
+        self.this_iter = 0
         self.maxcor = maxcor
         self.ftol = ftol
         self.gtol = gtol
@@ -169,15 +169,20 @@ class LogisticRegression_LBFGS:
         gy = ginit
         stmin = 0
         stmax = 5 * stp
-        stage = 1
         width = (stpmax-stpmin)
         # Per the paper, the bisection setp is used when after two trials, the
         # length decrease does not meet the factor 0.66. But sklearn just
         # multiplies 2. I do the same thing for the unit test purpose.
         width2 = 2*(stpmax-stpmin)
 
+        this_wb = self.wb + stp*direction
+        f, g = self._loss_and_grad(self.y, self.X@this_wb)
+        gd = np.dot(direction, g)
+
         while True:
             ftest = finit + stp * gtest
+            if (stage == 1 and f <= ftest and gd >= 0):
+                stage = 2
             # return if converged
             if f <= ftest and abs(gd) <= eta * (-ginit):
                 return stp
@@ -191,10 +196,10 @@ class LogisticRegression_LBFGS:
             if (stp == stpmax and f <= ftest and gd <= gtest):
                 return stp
             # return if stp == stpmin
-            if (stp == stpmin and (f > ftest or gd > gtest)):
+            if (stp == stpmin and (f > ftest or gd >= gtest)):
                 return stp
 
-            if f <= fx and f >= ftest:
+            if stage == 1 and f <= fx and f > ftest:
                 # if
                 fm = f - stp * gtest
                 fxm = fx - stx * gtest
@@ -337,8 +342,10 @@ class LogisticRegression_LBFGS:
             r = p/q
             if (r < 0 and gamma != 0):
                 stpc = stp + r*(stx - stp)
-            else:
+            elif stp>stx:
                 stpc = stpmax
+            else:
+                stpc = stpmin
             stpq = stp + (dp/(dp - dx))*(stx - stp)
             if bracketed:
                 if (abs(stpc-stp) < abs(stpq-stp)):
@@ -396,16 +403,18 @@ class LogisticRegression_LBFGS:
         D = np.zeros((1, 1))
         # progress indicates where the new sk and gk should be stored in S and Y
         progress = 0
+        # http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=2&t=349
         epsmch=1.110223024625157e-016
         tol = (self.ftol/np.finfo(float).eps)*epsmch
 
         z = self.X@self.wb
         fx, grad = self._loss_and_grad(self.y, z)
-        # termimate the algorithm
+        # termimate the algorithm if the gradient is too small
         if abs(np.max(grad)) < self.gtol:
             return
 
         for _ in range(self.max_iter):
+            self.this_iter+=1
             # check whether it is the first iterate
             if np.isnan(S).all():
                 # if it is the first iterate, we use the gradient as the direction
@@ -481,11 +490,9 @@ class LogisticRegression_LBFGS:
                 yk = grad_next - grad
                 self.wb = wb_next
                 fx = fx_next
-                # termimate the algorithm
+                # termimate the algorithm if the gradient is too small
                 if abs(np.max(grad_next)) < self.gtol:
                     return
-
-            self.this_iter+=1
 
     def _param_check(self, X: np.ndarray, y: np.ndarray, w: np.ndarray, b: np.ndarray) -> None:
         n_obs, n_feat = np.shape(X)
