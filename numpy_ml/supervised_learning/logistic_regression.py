@@ -49,8 +49,8 @@ class LogisticRegression_LBFGS:
     def __init__(self,
                  max_iter: int=100,
                  maxcor: int=10,
-                 ftol: float=2.2204460492503131e-09,
-                 gtol: float=1e-5) -> None:
+                 ftol: float=1e-3,
+                 gtol: float=0.9) -> None:
         """
         max_iter: int
             The maximum number of iterations
@@ -187,18 +187,23 @@ class LogisticRegression_LBFGS:
                 stage = 2
             # return if converged
             if f <= ftest and abs(gd) <= eta * (-ginit):
+                print ('1111')
                 return stp
             # return if stp is out of the range
             if (bracketed and (stp <= stmin or stp >= stmax)):
+                print ('2222')
                 return stp
             # return if the length of the interval is too short
             if (bracketed and stmax - stmin <= xtol*stmax):
+                print ('3333')
                 return stp
             # return if stp == stpmax
             if (stp == stpmax and f <= ftest and gd <= gtest):
+                print ('4444')
                 return stp
             # return if stp == stpmin
             if (stp == stpmin and (f > ftest or gd >= gtest)):
+                print ('5555')
                 return stp
 
             if stage == 1 and f <= fx and f > ftest:
@@ -401,13 +406,13 @@ class LogisticRegression_LBFGS:
         # progress indicates where the new sk and gk should be stored in S and Y
         progress = 0
         # http://icl.cs.utk.edu/lapack-forum/viewtopic.php?f=2&t=349
-        epsmch=1.110223024625157e-016
-        tol = (self.ftol/np.finfo(float).eps)*epsmch
+        epsmch=2*1.110223024625157e-016
+        tol = (1e7*np.finfo(float).eps)*epsmch
 
         z = self.X@self.wb
         fx, grad = self._loss_and_grad(self.y, z)
         # termimate the algorithm if the gradient is too small
-        if abs(np.max(grad)) < self.gtol:
+        if abs(np.max(grad)) < 1e-5:
             return
 
         for _ in range(self.max_iter):
@@ -487,7 +492,7 @@ class LogisticRegression_LBFGS:
                 self.wb = wb_next
                 fx = fx_next
                 # termimate the algorithm if the gradient is too small
-                if abs(np.max(grad_next)) < self.gtol:
+                if abs(np.max(grad_next)) < 1e-5:
                     return
 
     def _param_check(self, X: np.ndarray, y: np.ndarray, w: np.ndarray, b: np.ndarray) -> None:
