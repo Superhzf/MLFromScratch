@@ -123,6 +123,8 @@ class LogisticRegression_LBFGS:
         On line search algoithms with guaranteed sufficient decrease
         https://www.researchgate.net/publication/220493298_On_Line_Search_Algorithms_with_Guaranteed_Sufficient_Decrease
 
+        Parameters:
+        ---------------------
         f: float
             The evaluation of the function to minimize
         direction: np.array
@@ -159,6 +161,11 @@ class LogisticRegression_LBFGS:
         ginit = gd
         stage = 1
         gtest = mu * ginit
+        width = (stpmax-stpmin)
+        # Per the paper, the bisection setp is used when after two trials, the
+        # length decrease does not meet the factor 0.66. But sklearn just
+        # multiplies 2. I do the same thing for the unit test purpose.
+        width2 = 2*(stpmax-stpmin)
         # lower bound of the step length
         stx = 0
         fx = finit
@@ -169,11 +176,6 @@ class LogisticRegression_LBFGS:
         gy = ginit
         stmin = 0
         stmax = 5 * stp
-        width = (stpmax-stpmin)
-        # Per the paper, the bisection setp is used when after two trials, the
-        # length decrease does not meet the factor 0.66. But sklearn just
-        # multiplies 2. I do the same thing for the unit test purpose.
-        width2 = 2*(stpmax-stpmin)
 
         this_wb = self.wb + stp*direction
         f, g = self._loss_and_grad(self.y, self.X@this_wb)
@@ -200,7 +202,6 @@ class LogisticRegression_LBFGS:
                 return stp
 
             if stage == 1 and f <= fx and f > ftest:
-                # if
                 fm = f - stp * gtest
                 fxm = fx - stx * gtest
                 fym = fy - sty * gtest
@@ -242,13 +243,9 @@ class LogisticRegression_LBFGS:
                 (bracketed and (stmax-stmin) <= xtol*stmax)):
                 stp = stx
 
-            # if converge, return
-            if f <= ftest and abs(gd) <= eta * (-ginit):
-                return stp
-            else:
-                this_wb = self.wb + stp*direction
-                f, g = self._loss_and_grad(self.y, self.X@this_wb)
-                gd = np.dot(direction, g)
+            this_wb = self.wb + stp*direction
+            f, g = self._loss_and_grad(self.y, self.X@this_wb)
+            gd = np.dot(direction, g)
 
     def _linesearch_helper(self,
                            stx: float,
@@ -435,9 +432,9 @@ class LogisticRegression_LBFGS:
                 # update
                 S[progress] = sk
                 Y[progress] = yk
-                sg = sk.T@yk
+                sy = sk.T@yk
                 if R.shape == (1,1):
-                    R[progress, progress] = sg
+                    R[progress, progress] = sy
                 elif R.shape[0] < self.maxcor:
                     R = np.pad(R,
                                pad_width=((0, 1), (0, 1)),
@@ -463,8 +460,7 @@ class LogisticRegression_LBFGS:
                            "The length of R should be less than m"
                 R_inv = np.linalg.inv(R)
 
-                D[progress] = sg
-                gg = grad_next.T@grad_next
+                D[progress] = sy
                 Sg = S.T@grad_next
                 Yg = Y.T@grad_next
                 yy = Y.T@Y
@@ -480,9 +476,9 @@ class LogisticRegression_LBFGS:
                 else:
                     progress = (progress+1)%self.maxcor
 
-                step_len = self._backtracking_line_search(fx, -direction, grad,
+                wb_next = self._backtracking_line_search(fx, -direction, grad,
                                                     mu=self.ftol, eta=self.gtol)
-                wb_next = sel.wb - step_len @ direction
+                # wb_next = sel.wb - step_len @ direction
                 sk = wb_next - self.wb
                 fx_next, grad_next = self._loss_and_grad(self.y, self.X@wb_next)
                 if fx - fx_next <= tol*max(abs(fx), abs(fx_next), 1):
