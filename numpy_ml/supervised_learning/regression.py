@@ -286,32 +286,60 @@ class LassoRegression(Regression):
                                              intercept_init,
                                              tol)
 
-# class LassoRegressionCD(Regression):
-#     """
-#     Perform lasso linear regression with coordinate descent method
-#
-#     Parameters
-#     -----------------
-#     alpha: float
-#         The factor that determines the degree of regularization
-#     max_iter: int
-#         The maximum number of training iterations
-#     coef_init: np.ndarray of shape (n_features,1)
-#         The initial weights
-#     intercept_init: np.ndarray of shape (1,)
-#         The initial bias term
-#     tol: float
-#         The tolerance for the optimization
-#     """
-#     def __init__(self,
-#                  alpha: float,
-#                  max_iter: int=100,
-#                  coef_init: np.ndarray,
-#                  intercept_init: np.ndarray,
-#                  tol: float=1e-3):
-#         self.alpha = alpha
-#         self.penalty_type = 'l1'
-#         self.method='cd'
+class LassoRegressionCD:
+    """
+    Perform lasso linear regression with coordinate descent method. I decided not
+    to inherit from the regression class because both the optimization and the
+    stop criterion are totally from that of the regression class.
+
+    Parameters
+    -----------------
+    alpha: float
+        The factor that determines the degree of regularization
+    max_iter: int
+        The maximum number of training iterations
+    coef_init: np.ndarray of shape (n_features,1)
+        The initial weights
+    intercept_init: np.ndarray of shape (1,)
+        The initial bias term
+    tol: float
+        The tolerance for the optimization
+    """
+    def __init__(self,
+                 alpha: float,
+                 max_iter: int=100,
+                 coef_init: np.ndarray=None,
+                 intercept_init: np.ndarray=None,
+                 tol: float=1e-3) -> None:
+        self.alpha = alpha
+        self.max_iter = max_iter
+        self.coef_init = coef_init
+        self.intercept_init = intercept_init
+        self.tol = tol
+        self.this_iter = 0
+        self.dual_gap = 0
+        # coordinate descent method has no learning rate
+
+    def _param_initialization(self) -> None:
+        if self.coef_init is not None and self.intercept_init is not None:
+            self.w  = self.coef_init
+            self.b = self.intercept_init
+        elif self.coef_init is not None:
+            self.w  = self.coef_init
+            self.b = np.zeros((1,))
+        elif self.intercept_init is not None:
+            self.w = np.zeros((self.n_features,))
+            self.b = self.intercept_
+        else:
+            self.w = np.zeros((self.n_features,))
+            self.b = np.zeros((1,))
+
+    def fit(self, X, y) -> None:
+        self._param_initialization()
+        _,self.n_features = X.shape
+        residual = y - X@
+        for _ in range(self.max_iter):
+
 
 
 class ElasticNet(Regression):
