@@ -292,6 +292,10 @@ class LassoRegressionCD:
     to inherit from the regression class because both the optimization and the
     stop criterion are totally from that of the regression class.
 
+    Reference:
+    Page 13 of
+    http://www.stat.cmu.edu/~ryantibs/convexopt-F18/lectures/coord-desc.pdf
+
     Parameters
     -----------------
     alpha: float
@@ -337,9 +341,29 @@ class LassoRegressionCD:
     def fit(self, X, y) -> None:
         self._param_initialization()
         _,self.n_features = X.shape
-        residual = y - X@
+        wb = np.concatenate([self.w,self.b])
+        extra_col = np.ones((n_obs,1))
+        X = np.append(X, extra_col, axis=1)
+        residual = y - X@wb
         for _ in range(self.max_iter):
-
+            max_w = 0
+            max_diff = 0
+            for i in range(self.n_features):
+                w_i = wb[i]
+            if w_i != 0:
+                # Current residual is the residule except the current feature
+                residual += X[:,i]*w_i
+            numerator = X[:,i].T@residual[:,None][0,0]
+            denominator = X[:,i].T@X[:,i]
+            wb[i] = np.sign(numerator) * max(abs(numerator) - self.alpha, 0)
+                             / (denominator)
+            if w_i != 0:
+                # Current residual includes all the features
+                residual -= X[:,i]*wb[i]
+            this_diff = abs(wb[i]-w_i)
+            max_diff = max(max_diff, this_diff)
+            max_w = max(max_w, abs(wb[i]))
+            
 
 
 class ElasticNet(Regression):
