@@ -117,16 +117,17 @@ class Regression(object):
                     self.dw = (dloss + self.regularization.grad(self.w))
                     self.w -= self.learning_rate*self.dw
                 elif self.penalty_type == 'l1':
-                    u += self.learning_rate*self.alpha
-                    for idx, this_dloss in enumerate(dloss):
-                        this_regular_w = self.w[idx]-self.learning_rate*this_dloss
-                        if this_regular_w > 0:
-                            self.w[idx]=max(0, this_regular_w-u-q[idx])
-                        elif this_regular_w < 0:
-                            self.w[idx]=min(0, this_regular_w+u-q[idx])
-                        else:
-                            self.w[idx]=0
-                        q[idx] += self.w[idx]-this_regular_w
+                    if self.method == 'pgd':
+                        u += self.learning_rate*self.alpha
+                        for idx, this_dloss in enumerate(dloss):
+                            this_regular_w = self.w[idx]-self.learning_rate*this_dloss
+                            if this_regular_w > 0:
+                                self.w[idx]=max(0, this_regular_w-u-q[idx])
+                            elif this_regular_w < 0:
+                                self.w[idx]=min(0, this_regular_w+u-q[idx])
+                            else:
+                                self.w[idx]=0
+                            q[idx] += self.w[idx]-this_regular_w
                 self.db = np.sum(-(y_batch-batch_y_pred))
                 self.bias -= self.learning_rate*self.db
             if best_loss - this_loss<self.tol*n_samples:
@@ -227,6 +228,12 @@ class RidgeRegression(Regression):
         The maximum number of training iterations
     learning_rate: float
         The step length that will be used
+    coef_init: np.ndarray of shape (n_features,1)
+        The initial weights
+    intercept_init: np.ndarray of shape (1,)
+        The initial bias term
+    tol: float
+        The tolerance for the optimization
     """
     def __init__(self,
                  alpha,
@@ -245,14 +252,22 @@ class RidgeRegression(Regression):
 
 class LassoRegression(Regression):
     """
+    Perform lasso linear regression with proximal gradient descent
+
     Parameters
     -----------------------
     alpha: float
         The factor that determines the degree of regularization
-    max_iter: float
+    max_iter: int
         The maximum number of training iterations
     learning_rate: float
         The step length that will be used
+    coef_init: np.ndarray of shape (n_features,1)
+        The initial weights
+    intercept_init: np.ndarray of shape (1,)
+        The initial bias term
+    tol: float
+        The tolerance for the optimization
     """
     def __init__(self,
                  alpha,
@@ -264,11 +279,40 @@ class LassoRegression(Regression):
 
         self.alpha=alpha
         self.penalty_type = 'l1'
+        self.method = "pgd"
         super(LassoRegression,self).__init__(max_iter,
                                              learning_rate,
                                              coef_init,
                                              intercept_init,
                                              tol)
+
+# class LassoRegressionCD(Regression):
+#     """
+#     Perform lasso linear regression with coordinate descent method
+#
+#     Parameters
+#     -----------------
+#     alpha: float
+#         The factor that determines the degree of regularization
+#     max_iter: int
+#         The maximum number of training iterations
+#     coef_init: np.ndarray of shape (n_features,1)
+#         The initial weights
+#     intercept_init: np.ndarray of shape (1,)
+#         The initial bias term
+#     tol: float
+#         The tolerance for the optimization
+#     """
+#     def __init__(self,
+#                  alpha: float,
+#                  max_iter: int=100,
+#                  coef_init: np.ndarray,
+#                  intercept_init: np.ndarray,
+#                  tol: float=1e-3):
+#         self.alpha = alpha
+#         self.penalty_type = 'l1'
+#         self.method='cd'
+
 
 class ElasticNet(Regression):
     """
