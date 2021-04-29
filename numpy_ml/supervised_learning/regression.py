@@ -339,8 +339,8 @@ class LassoRegressionCD:
             self.b = np.zeros((1,))
 
     def fit(self, X, y) -> None:
+        n_obs, self.n_features = X.shape
         self._param_initialization()
-        _,self.n_features = X.shape
         wb = np.concatenate([self.w,self.b])
         extra_col = np.ones((n_obs,1))
         X = np.append(X, extra_col, axis=1)
@@ -348,22 +348,47 @@ class LassoRegressionCD:
         for _ in range(self.max_iter):
             max_w = 0
             max_diff = 0
+            self.this_iter+=1
             for i in range(self.n_features):
                 w_i = wb[i]
-            if w_i != 0:
-                # Current residual is the residule except the current feature
-                residual += X[:,i]*w_i
-            numerator = X[:,i].T@residual[:,None][0,0]
-            denominator = X[:,i].T@X[:,i]
-            wb[i] = np.sign(numerator) * max(abs(numerator) - self.alpha, 0)
-                             / (denominator)
-            if w_i != 0:
-                # Current residual includes all the features
-                residual -= X[:,i]*wb[i]
-            this_diff = abs(wb[i]-w_i)
-            max_diff = max(max_diff, this_diff)
-            max_w = max(max_w, abs(wb[i]))
-            
+
+                denominator = X[:,i].T@X[:,i]
+                if denominator== 0:
+                    continue
+
+                if w_i != 0:
+                    # Current residual is the residual except the current feature
+                    residual += X[:,i]*w_i
+                numerator = X[:,i].T@residual
+
+                wb[i] = np.sign(numerator) * max(abs(numerator) - self.alpha, 0)\
+                                 / (denominator)
+                if w_i != 0:
+                    # Current residual includes all the features
+                    residual -= X[:,i]*wb[i]
+                this_diff = abs(wb[i]-w_i)
+                max_diff = max(max_diff, this_diff)
+                max_w = max(max_w, abs(wb[i]))
+
+            # if the update is small or reaches the max iter, calculate the
+            # duality gap
+            if max_w == 0 or max_diff/max_w < self.tol or self.this_iter == self.max_iter:
+                Xu = X.T@residual
+                Xu_inf_norm = np.linalg.norm(Xu,np.inf)
+                residual_2norm = residual.T@residual
+                if Xu_inf_norm > self.alpha:
+                    const = self.alpha/Xu_inf_norm
+                    self.dual_gap = 0.5*(residual_2norm+residual_2norm*(const**2))
+                else:
+                    const = 1
+                    self.dual_gap = residual_2norm
+                self.dual_gap += (self.alpha*np.linalg.norm(wb,1)-const*residual.T@y)
+
+                if self.dual_gap < self.tol*np.dot(y,y):
+                    break
+        self.w = wb[:-1]
+        self.b = np.array([wb[-1]])
+
 
 
 class ElasticNet(Regression):
