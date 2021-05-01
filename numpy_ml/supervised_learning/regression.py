@@ -341,34 +341,37 @@ class LassoRegressionCD:
     def fit(self, X, y) -> None:
         n_obs, self.n_features = X.shape
         self._param_initialization()
-        wb = np.concatenate([self.w,self.b])
-        extra_col = np.ones((n_obs,1))
-        X = np.append(X, extra_col, axis=1)
-        residual = y - X@wb
+        y_offset = np.average(y, axis=0)
+        X_offset = np.average(X, axis=0)
+        X -= X_offset
+        y -= y_offset
+        # TODO
+        self.alpha *= n_obs
+        # wb = np.concatenate([self.w,self.b])
+        # extra_col = np.ones((n_obs,1))
+        # X = np.append(X, extra_col, axis=1)
+        residual = y - X@self.w
         for _ in range(self.max_iter):
             max_w = 0
             max_diff = 0
             self.this_iter+=1
             for i in range(self.n_features):
-                w_i = wb[i]
-
                 denominator = X[:,i].T@X[:,i]
-                if denominator== 0:
+                if denominator == 0:
                     continue
-
+                w_i = self.w[i]
                 if w_i != 0:
                     # Current residual is the residual except the current feature
                     residual += X[:,i]*w_i
                 numerator = X[:,i].T@residual
-
-                wb[i] = np.sign(numerator) * max(abs(numerator) - self.alpha, 0)\
+                self.w[i] = np.sign(numerator) * max(abs(numerator) - self.alpha, 0)\
                                  / (denominator)
-                if w_i != 0:
+                if self.w[i] != 0:
                     # Current residual includes all the features
-                    residual -= X[:,i]*wb[i]
-                this_diff = abs(wb[i]-w_i)
+                    residual -= X[:,i]*self.w[i]
+                this_diff = abs(self.w[i]-w_i)
                 max_diff = max(max_diff, this_diff)
-                max_w = max(max_w, abs(wb[i]))
+                max_w = max(max_w, abs(self.w[i]))
 
             # if the update is small or reaches the max iter, calculate the
             # duality gap
@@ -382,12 +385,13 @@ class LassoRegressionCD:
                 else:
                     const = 1
                     self.dual_gap = residual_2norm
-                self.dual_gap += (self.alpha*np.linalg.norm(wb,1)-const*residual.T@y)
+                self.dual_gap += (self.alpha*np.linalg.norm(self.w,1)-const*residual.T@y)
 
                 if self.dual_gap < self.tol*np.dot(y,y):
                     break
-        self.w = wb[:-1]
-        self.b = np.array([wb[-1]])
+
+        # self.w = wb[:-1]
+        self.b = y_offset - X_offset@self.w
 
 
 
