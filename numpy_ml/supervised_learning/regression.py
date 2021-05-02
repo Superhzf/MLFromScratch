@@ -345,11 +345,7 @@ class LassoRegressionCD:
         X_offset = np.average(X, axis=0)
         X -= X_offset
         y -= y_offset
-        # TODO
         self.alpha *= n_obs
-        # wb = np.concatenate([self.w,self.b])
-        # extra_col = np.ones((n_obs,1))
-        # X = np.append(X, extra_col, axis=1)
         residual = y - X@self.w
         for _ in range(self.max_iter):
             max_w = 0
