@@ -143,7 +143,6 @@ def test_lasso_regression_CD(cases: str) -> None:
         coef = np.random.uniform(-coef_limit,coef_limit,(n_features,))
         bias = np.random.uniform(-coef_limit,coef_limit,(1,))
         y = X@coef+bias
-#         print ('coef',coef,'bias',bias,'y',y)
 
         gold = Lasso(alpha=alpha,
                      fit_intercept=True,
