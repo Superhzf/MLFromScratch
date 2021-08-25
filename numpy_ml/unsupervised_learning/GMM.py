@@ -155,20 +155,22 @@ class GMM:
         for i in range(self.N):
             x_i = self.X[i, :]
 
-            denom = []
+            nuerators = []
             for this_c in range(self.C):
                 pi_c = self.pi[this_c]
                 mu_c = self.mu[this_c, :]
                 inverse_sigma_c = self.inverse_sigma[this_c, :, :]
 
+                # log prior
                 log_pi_c = np.log(pi_c+self.eps)
+                # log Gaussian density
                 log_p_x_i = log_gaussian_pdf(x_i, mu_c, inverse_sigma_c)
-                denom.append(log_pi_c+log_p_x_i)
+                nuerators.append(log_pi_c+log_p_x_i)
 
             # logsumexp: lnF1, lnF2, lnF3, ... -> ln(F1 + F2 + F3 + ...)
-            log_denom = logsumexp(denom)
+            log_denom = logsumexp(nuerators)
             log_denom_list.append(log_denom)
-            q_i = np.exp([num - log_denom for num in denom])
+            q_i = np.exp([num - log_denom for num in nuerators])
             assert_allclose(np.sum(q_i), 1)
 
             self.Q[i, :] = q_i
