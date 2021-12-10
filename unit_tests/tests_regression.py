@@ -27,7 +27,7 @@ def test_ridge_regression_SGD(cases: str) -> None:
         coef_init = np.random.uniform(-coef_limit,coef_limit,(n_features,))
         bias_init = np.zeros((1,))
 
-        gold = SGDRegressor(loss='squared_loss',
+        gold = SGDRegressor(loss='squared_error',
                             penalty='l2',
                             l1_ratio=0,
                             alpha=alpha,
@@ -88,7 +88,7 @@ def test_lasso_regression_PGD(cases: str) -> None:
         bias = np.random.uniform(-coef_limit,coef_limit,(1,))
         y = X@coef+bias
 
-        gold = SGDRegressor(loss='squared_loss',
+        gold = SGDRegressor(loss='squared_error',
                             penalty='l1',
                             l1_ratio=1,
                             alpha=alpha,
