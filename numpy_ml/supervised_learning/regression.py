@@ -290,7 +290,7 @@ class LassoRegressionCD:
     """
     Perform lasso linear regression with coordinate descent method. I decided not
     to inherit from the regression class because both the optimization and the
-    stop criterion are totally from that of the regression class.
+    stop criterion are totally different from that of the regression class.
 
     Reference:
     Page 13 of

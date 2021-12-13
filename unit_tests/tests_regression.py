@@ -130,7 +130,7 @@ def test_lasso_regression_CD(cases: str) -> None:
     np.random.seed(123)
     cases = int(cases)
     i = 1
-    N_decimal = 4
+    N_decimal = 3
     max_iter = 100
     tol=1e-3
     while i < cases:
