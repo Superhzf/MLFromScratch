@@ -982,6 +982,8 @@ class DotProductAttention(Layer):
             The number of features for the value vectors
         trainable: bool
             Whether to update the weights in the backpropagation process
+        ref:
+            Attention Is All You Need https://arxiv.org/pdf/1706.03762.pdf
         ---------------
         """
         self.emb_dim = emb_dim
@@ -1036,6 +1038,7 @@ class DotProductAttention(Layer):
         https://towardsdatascience.com/illustrated-self-attention-2d627e33b20a
         http://jalammar.github.io/illustrated-transformer/
         https://lilianweng.github.io/lil-log/2018/06/24/attention-attention.html
+        https://www.youtube.com/watch?v=KmAISyVvE1Y&t=1090s
 
         Parameters:
         ---------------

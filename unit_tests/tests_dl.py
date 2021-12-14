@@ -1406,7 +1406,7 @@ def test_LSTM_many2many(cases):
 # In decoder, they cannot be the same. Is it for the sake of simplicity?
 # add_zero_attn: https://github.com/pytorch/pytorch/issues/27461#issuecomment-656991245
 def test_single_head_attention(cases):
-
+    # ref: https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/activation.py#L862
     np.random.seed(12345)
     N = int(cases)
     DECIMAL = 5
