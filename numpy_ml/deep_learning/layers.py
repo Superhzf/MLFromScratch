@@ -1099,9 +1099,11 @@ class DotProductAttention(Layer):
             # swaped k:batch_szie x feature_size x source_seq
             self.k = np.swapaxes(self.k, 1, 2)
             # scores: batch_szie x target_seq x source_seq
+            print("self.q",self.q.shape,"self.k",self.k.shape)
             self.scores = self.q @ self.k
-            target_len = self.scores.shape[1]
-            for this_target_len in range(target_len):
+            print("self.scores.shape",self.scores.shape)
+            # target_len = self.scores.shape[1]
+            for this_target_len in range(tgt_len):
                 this_weights = self.softmax(self.scores[:, this_target_len, :])
                 self.weights.append(this_weights)
             # target_seq x batch_size x source_seq
@@ -1109,7 +1111,12 @@ class DotProductAttention(Layer):
             # swaped: batch_size x target_seq x source_seq
             self.weights = np.swapaxes(self.weights, 0, 1)
             self.outputs = self.weights @ self.v
+
+            self.weights = self.weights.reshape(bsz, self.num_heads, tgt_len, src_len)
+            self.weights = self.weights.sum(axis=1)/self.num_heads
             self.outputs = np.swapaxes(self.outputs, 0, 1)
+            # In case num_heads>1
+            self.outputs = self.outputs.reshape((tgt_len,bsz,embed_dim))
             return self.outputs @ self.out_weight, self.weights, self.scores
 
 
