@@ -970,7 +970,7 @@ class BidirectionalLSTM(Layer):
 
 
 class DotProductAttention(Layer):
-    def __init__(self, emb_dim, d_k=None, d_v=None, trainable=True):
+    def __init__(self, emb_dim, d_k=None, d_v=None, trainable=True,num_heads=1):
         """
         Parameters:
 
@@ -982,11 +982,19 @@ class DotProductAttention(Layer):
             The number of features for the value vectors
         trainable: bool
             Whether to update the weights in the backpropagation process
+        num_heads: int
+            Number of parallel attention heads. Note that emb_dim will be
+            split across num_heads (i.e. each head will have dimension embed_dim // num_heads).
         ref:
             Attention Is All You Need https://arxiv.org/pdf/1706.03762.pdf
+            https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/activation.py#L862
+            https://www.youtube.com/watch?v=KmAISyVvE1Y&t=1090s
         ---------------
         """
         self.emb_dim = emb_dim
+        self.num_heads = num_heads
+        self.head_dim = embed_dim // num_heads
+        assert self.head_dim * num_heads == self.embed_dim, "emb_dim must be divisible by num_heads"
         if d_k is None:
             self.d_k = emb_dim
         else:
@@ -1038,22 +1046,24 @@ class DotProductAttention(Layer):
         https://towardsdatascience.com/illustrated-self-attention-2d627e33b20a
         http://jalammar.github.io/illustrated-transformer/
         https://lilianweng.github.io/lil-log/2018/06/24/attention-attention.html
-        https://www.youtube.com/watch?v=KmAISyVvE1Y&t=1090s
 
         Parameters:
         ---------------
         Q: numpy.array of shape (target_seq, n_ex, emb_dim)
             A set of n_ex query vectors packed into a single matrix. Each query
             has target_seq words. Each word has emb_dim features from the
-            embedding matrix.
+            embedding matrix. Please be aware that if num_heads>1, then emb_dim
+            should be divisible by num_heads.
         K: numpy.array of shape (source_seq, n_ex, emb_dim)
             A set of n_ex key vectors packed into a single matrix. Each key has
             source_seq words. Each word has emb_dim features from the embedding
-            matrix.
+            matrix.Please be aware that if num_heads>1, then emb_dim
+            should be divisible by num_heads.
         V: numpy.array of shape (source_seq, n_ex, emb_dim)
             A set of n_ex value vectors packed into a single matrix. Each key
             has source_seq words. Each word has emb_dim features from the
-            embedding matrix.
+            embedding matrix.Please be aware that if num_heads>1, then emb_dim
+            should be divisible by num_heads.
 
         Returns:
         ----------------
