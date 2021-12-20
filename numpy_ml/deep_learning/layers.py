@@ -1077,7 +1077,9 @@ class DotProductAttention(Layer):
             assert Q.shape == K.shape and Q.shape == V.shape
             assert Q.shape[-1] == self.emb_dim
             tgt_len, bsz, embed_dim = Q.shape
+            src_len, _, _ = V.shape
             self.weights = []
+            # Generate q,k,v
             if Q is K and Q is V:
                 self.X = Q
                 qkv = self.X @ self.in_weight
@@ -1086,6 +1088,9 @@ class DotProductAttention(Layer):
                 self.k = qkv[:, :, self.emb_dim: 2*self.emb_dim]
                 self.v = qkv[:, :, 2*self.emb_dim:]
             # reshaope q,k,v for multi-head attention
+            self.q = self.q.reshape((tgt_len,bsz*self.num_heads,self.head_dim))
+            self.k = self.k.reshape((src_len,bsz*self.num_heads,self.head_dim))
+            self.v = self.v.reshape((src_len,bsz*self.num_heads,self.head_dim))
             # swaped: batch_szie x target_seq/source_seq x feature_size
             self.q = np.swapaxes(self.q, 0, 1)
             self.k = np.swapaxes(self.k, 0, 1)
