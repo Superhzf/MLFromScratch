@@ -993,14 +993,14 @@ class DotProductAttention(Layer):
         """
         self.emb_dim = emb_dim
         self.num_heads = num_heads
-        self.head_dim = embed_dim // num_heads
-        assert self.head_dim * num_heads == self.embed_dim, "emb_dim must be divisible by num_heads"
+        self.head_dim = self.emb_dim // num_heads
+        assert self.head_dim * num_heads == self.emb_dim, "emb_dim must be divisible by num_heads"
         if d_k is None:
-            self.d_k = emb_dim
+            self.d_k = self.emb_dim
         else:
             self.d_k = d_k
         if d_v is None:
-            self.d_v = emb_dim
+            self.d_v = self.emb_dim
         else:
             self.d_v = d_v
         self.trainable=trainable
@@ -1083,6 +1083,7 @@ class DotProductAttention(Layer):
             self.q = qkv[:, :, : self.emb_dim]*self.scale
             self.k = qkv[:, :, self.emb_dim: 2*self.emb_dim]
             self.v = qkv[:, :, 2*self.emb_dim:]
+            # reshaope q,k,v for multi-head attention
             # swaped: batch_szie x target_seq/source_seq x feature_size
             self.q = np.swapaxes(self.q, 0, 1)
             self.k = np.swapaxes(self.k, 0, 1)
