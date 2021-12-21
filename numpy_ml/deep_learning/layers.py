@@ -1013,7 +1013,7 @@ class DotProductAttention(Layer):
             self.in_weight = np.random.uniform(-limit,limit,(self.emb_dim, 3 * self.emb_dim))
             self.out_weight = np.random.uniform(-limit,limit,(self.emb_dim, self.emb_dim))
             self.qkv_same = True
-            self.scale = 1/np.sqrt(self.emb_dim)
+            self.scale = 1/np.sqrt(self.head_dim)
 
             self.dLdout_weight = np.zeros_like(self.out_weight)
             self.dLdin_weight = np.zeros_like(self.in_weight)
@@ -1099,9 +1099,7 @@ class DotProductAttention(Layer):
             # swaped k:batch_szie x feature_size x source_seq
             self.k = np.swapaxes(self.k, 1, 2)
             # scores: batch_szie x target_seq x source_seq
-            print("self.q",self.q.shape,"self.k",self.k.shape)
             self.scores = self.q @ self.k
-            print("self.scores.shape",self.scores.shape)
             # target_len = self.scores.shape[1]
             for this_target_len in range(tgt_len):
                 this_weights = self.softmax(self.scores[:, this_target_len, :])
