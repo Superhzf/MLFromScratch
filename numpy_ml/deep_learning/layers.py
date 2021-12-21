@@ -1110,6 +1110,7 @@ class DotProductAttention(Layer):
             self.weights = np.stack(self.weights)
             # swaped: batch_size x target_seq x source_seq
             self.weights = np.swapaxes(self.weights, 0, 1)
+            # batch_size x target_seq x feature_size
             self.outputs = self.weights @ self.v
 
             self.weights = self.weights.reshape(bsz, self.num_heads, tgt_len, src_len)
