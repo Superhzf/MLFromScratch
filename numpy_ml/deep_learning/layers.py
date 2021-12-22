@@ -1110,8 +1110,8 @@ class DotProductAttention(Layer):
             self.weights = np.swapaxes(self.weights, 0, 1)
             # batch_size x target_seq x feature_size
             self.outputs = self.weights @ self.v
-            # self.weights_bck is saved for calculating gradients
-            self.weights_bck = self.weights
+            # self.weights_gd is saved for calculating gradients
+            self.weights_gd = self.weights
 
             self.weights = self.weights.reshape(bsz, self.num_heads, tgt_len, src_len)
             self.weights = self.weights.sum(axis=1)/self.num_heads
@@ -1137,14 +1137,15 @@ class DotProductAttention(Layer):
             dLdoutputs = dLdOutput @ self.out_weight.transpose()
             # swaped dLdoutputs: n_ex x target_seq x emb_dim
             swaped_dLdoutputs = np.swapaxes(dLdoutputs, 0, 1)
-            # weights_bck: batch_size x target_seq x source_seq
-            weights_bck = np.swapaxes(self.weights_bck,1,2)
+            # weights_gd: batch_size x target_seq x source_seq
+            weights_gd = np.swapaxes(self.weights_gd,1,2)
             tgt_seq, bsz, emd_dim = dLdoutputs.shape
             dLdoutputs = dLdoutputs.reshape((tgt_seq, bsz*self.num_heads, self.head_dim))
-            dLdv =  weights_bck @ np.swapaxes(dLdoutputs,0,1)
+            dLdv =  weights_gd @ np.swapaxes(dLdoutputs,0,1)
             dLdv = np.swapaxes(dLdv, 1,2)
             bszTheads, head_dim, src_len = dLdv.shape
-            bsz = bszTheads//self.num_heads
+            bsz = int(bszTheads/self.num_heads)
+            assert bsz == bszTheads/self.num_heads
             embed_dim = head_dim*self.num_heads
             dLdv = dLdv.reshape((bsz, embed_dim, src_len))
             # swaped dLdv: n_ex x source_seq x emb_dim
@@ -1153,11 +1154,13 @@ class DotProductAttention(Layer):
             # swaped_v: n_ex x emb_dim x source_seq
             swaped_v = np.swapaxes(self.v, 1, 2)
             bszTheads, head_dim, src_len = swaped_v.shape
-            bsz = bszTheads//self.num_heads
+            bsz = int(bszTheads/self.num_heads)
+            assert bsz == bszTheads/self.num_heads
             embed_dim = head_dim*self.num_heads
             swaped_v = swaped_v.reshape((bsz, embed_dim, src_len))
             # dLdweights: n_ex x target_seq x source_seq
             dLdweights = swaped_dLdoutputs @ swaped_v
+            print("my dLdweights",dLdweights.shape)
             # dLdscore
             target_seq = self.scores.shape[1]
             dweightdscore = []
@@ -1171,18 +1174,34 @@ class DotProductAttention(Layer):
             dLdscores = np.swapaxes(dweightdscore, 0, 1)
             # dLdq: n_ex x target_seq x emb_dim
             bszTheads, head_dim, src_len = self.k.shape
-            bsz = bszTheads//self.num_heads
+            bsz = int(bszTheads/self.num_heads)
+            assert bsz == bszTheads/self.num_heads
             embed_dim = head_dim*self.num_heads
             k = self.k.reshape((bsz, embed_dim, src_len))
             dLdq = dLdscores@np.swapaxes(k, 1, 2)
             dLdq = dLdq * self.scale
+
+            # dLdq_test = np.swapaxes(dLdq, 1, 2)
+            # bsz, emb_dim, tgt_len = dLdq_test.shape
+            # dLdq_test = dLdq_test.reshape((bsz*self.num_heads, self.head_dim, tgt_len))
+            # dLdq_test = np.swapaxes(dLdq_test, 1, 2)
+            # print("my dLdq_test",dLdq_test)
+
             # dLdk: n_ex x source_seq x emb_dim
             q = np.swapaxes(self.q,1,2)
             bszTheads, head_dim, tgt_len = q.shape
-            bsz = bszTheads//self.num_heads
+            bsz = int(bszTheads/self.num_heads)
+            assert bsz == bszTheads/self.num_heads
             embed_dim = head_dim*self.num_heads
             q = q.reshape((bsz, embed_dim, tgt_len))
             dLdk = np.swapaxes(dLdscores, 1, 2)@np.swapaxes(q,1,2)
+
+            dLdk_test = np.swapaxes(dLdk, 1, 2)
+            bsz, emb_dim, src_len = dLdk_test.shape
+            dLdk_test = dLdk_test.reshape((bsz*self.num_heads, self.head_dim, src_len))
+            dLdk_test = np.swapaxes(dLdk_test, 1, 2)
+            # print("my dLdk_test",dLdk_test.shape)
+
             # n_ex x target_seq/source_seq x 3emb_dim
             dLdqkv = np.concatenate((dLdq, dLdk, dLdv), axis=2)
             # swaped: n_ex x target_seq x emb_dim
