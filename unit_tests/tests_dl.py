@@ -1490,6 +1490,95 @@ def test_single_head_attention(cases):
         i += 1
     print ("Successfully testing single head self-attention layer!")
 
+def test_multi_head_attention(cases):
+    # ref: https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/activation.py#L862
+    np.random.seed(12345)
+    N = int(cases)
+    DECIMAL = 5
+
+    i = 1
+    gold_criterion=nn.MSELoss(reduction='sum')
+    mine_criterion = SquaredLoss()
+    while i < N + 1:
+        n_ex = np.random.randint(1, 100)
+        n_seq = np.random.randint(2, 100)
+        # I will fix the length of embedding to be 6 for multi head attention unit tests
+        d_q = 6
+        X_emb = random_tensor((n_seq, n_ex, d_q), standardize=True)
+        X_emb_tensor = torch.tensor(X_emb, dtype=torch.float64, requires_grad=True)
+        # I will fix the number of heads to be 3
+        number_heads = 3
+
+        target = random_tensor((n_seq, n_ex, d_q), standardize=True)
+        target_tensor = torch.tensor(target, dtype=torch.float64, requires_grad=True)
+
+        # initialize the single head attention layer
+        gold = nn.MultiheadAttention(embed_dim=d_q,
+                                     num_heads=number_heads,
+                                     dropout=0,
+                                     bias=False,
+                                     add_bias_kv=False,
+                                     add_zero_attn=False,
+                                     kdim=None,
+                                     vdim=None).double()
+        mine = DotProductAttention(emb_dim=d_q,
+                                   d_k=None,
+                                   d_v=None,
+                                   trainable=False,
+                                   num_heads = number_heads)
+        mine.initialize(None)
+
+        # make sure that they share the same weights
+        mine.in_weight = gold.in_proj_weight.detach().numpy().transpose()
+        mine.out_weight = gold.out_proj.weight.detach().numpy().transpose()
+
+        # forward process
+        gold_attn_output, gold_attn_output_weights = gold(query=X_emb_tensor,
+                                                          key=X_emb_tensor,
+                                                          value=X_emb_tensor,
+                                                          need_weights=True)
+        gold_attn_output.retain_grad()
+        mine_output, mine_weights, mine_scores = mine.forward_pass(X_emb, X_emb, X_emb)
+
+        # calculate loss
+        gold_loss = gold_criterion(gold_attn_output, target_tensor)
+        mine_loss = np.sum(mine_criterion.loss(target, mine_output))
+
+        # calculate gradients
+        gold_loss.backward()
+        gold_dLdout_weight = gold.out_proj.weight.grad.detach().numpy()
+        gold_dLdin_weight = gold.in_proj_weight.grad.detach().numpy()
+        gold_dLdX = X_emb_tensor.grad.detach().numpy()
+#         print("gold.q.grad",gold.q.grad.detach().numpy())
+
+        mine_dLdX = mine.backward_pass(-2*(target - mine_output))
+        mine_dLdout_weight = mine.dLdout_weight
+        mine_dLdin_weight = mine.dLdin_weight
+
+        # compare forward process
+        assert_almost_equal(mine_weights,
+                            gold_attn_output_weights.detach().numpy(),
+                            decimal=DECIMAL)
+        assert_almost_equal(mine_output,
+                            gold_attn_output.detach().numpy(),
+                            decimal=DECIMAL)
+        assert_almost_equal(mine_loss,
+                            gold_loss.detach().numpy(),
+                            decimal=DECIMAL)
+        # compare backward process
+        assert_almost_equal(mine_dLdout_weight,
+                            gold_dLdout_weight.transpose(),
+                            decimal=DECIMAL)
+        assert_almost_equal(mine_dLdX,
+                            gold_dLdX,
+                            decimal=DECIMAL)
+        assert_almost_equal(mine_dLdin_weight,
+                            gold_dLdin_weight.transpose(),
+                            decimal=DECIMAL)
+
+        i += 1
+    print ("Successfully testing multi head self-attention layer!")
+
 def test_cosine_annealing_scheduler(cases):
     """
     The idea is to do one epoch training and then compare the weights and bias. This test depends on
