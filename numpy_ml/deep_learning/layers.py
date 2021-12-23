@@ -1167,23 +1167,27 @@ class DotProductAttention(Layer):
             dLdk = np.swapaxes(dLdscores, 1, 2)@self.q
             self.dLdk = dLdk
 
+            # reshape q,k,v
+            dLdq = np.swapaxes(dLdq, 1, 2)
+            dLdk = np.swapaxes(dLdk, 1, 2)
+            dLdv = np.swapaxes(dLdv, 1, 2)
+            bszTheads, head_dim, tgt_len  = dLdq.shape
+            _, _, src_len= dLdk.shape
+            bsz = int(bszTheads/self.num_heads)
+            assert bsz == bszTheads//self.num_heads
+            emb_dim = head_dim * self.num_heads
+            dLdq = dLdq.reshape((bsz, emb_dim, tgt_len))
+            dLdk = dLdk.reshape((bsz, emb_dim, src_len))
+            dLdv = dLdv.reshape((bsz, emb_dim, src_len))
+            dLdq = np.swapaxes(dLdq, 1, 2)
+            dLdk = np.swapaxes(dLdk, 1, 2)
+            dLdv = np.swapaxes(dLdv, 1, 2)
             # n_ex x target_seq/source_seq x 3emb_dim (3:q,k,v)
             dLdqkv = np.concatenate((dLdq, dLdk, dLdv), axis=2)
-            # swaped: n_ex x 3emb_dim x target_seq/source_seq
-            dLdqkv = np.swapaxes(dLdqkv,1,2)
-            bszTheads, head_dim3, seq_len = dLdqkv.shape
-            print("bszTheads",bszTheads,"head_dim3",head_dim3,"seq_len",seq_len)
-            bsz = int(bszTheads/self.num_heads)
-            assert bsz == bszTheads/self.num_heads
-            emb_dim = head_dim3 * self.num_heads
-            dLdqkv = dLdqkv.reshape((bsz, emb_dim, seq_len))
-            # swap back: n_ex x target_seq/source_seq x 3emb_dim
-            dLdqkv = np.swapaxes(dLdqkv,1,2)
             # swaped: n_ex x target_seq x emb_dim
             X = np.swapaxes(self.X, 0, 1)
             # swaped: n_ex x emb_dim x target_seq
             X = np.swapaxes(X, 1, 2)
-            print("X.shape",X.shape,"dLdqkv2",dLdqkv.shape)
             # before sum: n_ex x emb_dim x 3emb_dim
             self.dLdin_weight += np.sum(X @ dLdqkv, axis=0)
             dLdX = dLdqkv @ self.in_weight.transpose()
