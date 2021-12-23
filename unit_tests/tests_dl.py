@@ -1549,7 +1549,6 @@ def test_multi_head_attention(cases):
         gold_dLdout_weight = gold.out_proj.weight.grad.detach().numpy()
         gold_dLdin_weight = gold.in_proj_weight.grad.detach().numpy()
         gold_dLdX = X_emb_tensor.grad.detach().numpy()
-#         print("gold.q.grad",gold.q.grad.detach().numpy())
 
         mine_dLdX = mine.backward_pass(-2*(target - mine_output))
         mine_dLdout_weight = mine.dLdout_weight
