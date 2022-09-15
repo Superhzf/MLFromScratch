@@ -1244,7 +1244,9 @@ class Conv2d(Layer):
     def initialization(self,optimizer):
         """
         Initialize the weights.
-        Ref: ref: https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html
+
+        Weights initialization method:
+        Ref: https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html
         """
         #initialize weights
         limit = 1 / math.sqrt(self.in_channels*self.kernel_size[0]*self.kernel_size[1])
