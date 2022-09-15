@@ -1204,9 +1204,31 @@ class DotProductAttention(Layer):
             self.dLdout_weight = np.zeros_like(self.out_weight)
 
 
-class Conv1d(Layer):
-    def __init__(self,in_channels,out_channels,kernel_size,stride=1,padding=0,dilation=1,groups=1,bias=True,padding_mode="zeros"):
+class Conv2d(Layer):
+    def __init__(self,in_channels,out_channels,kernel_size,stride=1,padding=0,dilation=1,groups=1):
         """
-        The one-dimensional convolutional layer. One of the scenarios to use
-        one-dimensional convolutional layer is time-series data.
+        The two-dimensional convolutional layer. This is the most frequently used
+        convolutional layer.
+
+        Parameters:
+        --------------------------------------
+        in_channels: int
+            The number of channels in the input.
+        out_channels: out
+            The number of channels in the output.
+        kernel_size: tuple
+            A tuple of two ints, the first int is the height, and the second
+            int is the width.
+        stride: int
+            Stride for the cross-correlation. For simplicity, I make it a single
+            number, though it can be a tuple like kernel_size.
+        padding: int
+            Padding added to all four sides of the input. For simplicity, I make
+            it a single number, though it can be a tuple like kernel_size.
+        dilation: int
+            Spacing between kernel elements. For simplicity, I make
+            it a single number, though it can be a tuple like kernel_size.
+        groups: int
+            Number of blocked connections from input channels to output channels.
         """
+        
