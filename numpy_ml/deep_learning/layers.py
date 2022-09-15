@@ -1231,4 +1231,30 @@ class Conv2d(Layer):
         groups: int
             Number of blocked connections from input channels to output channels.
         """
-        
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.dilation = dilation
+        self.groups = groups
+        self.W = None
+        self.b = None
+
+    def initialization(self,optimizer):
+        """
+        Initialize the weights.
+        Ref: ref: https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html
+        """
+        #initialize weights
+        limit = 1 / math.sqrt(self.in_channels*self.kernel_size[0]*self.kernel_size[1])
+        self.W = np.random.uniform(-limit,limit,(self.out_channels,self.in_channels,self.kernel_size[0],self.kernel_size[1]))
+        self.b = np.random.uniform(-limit,limit,(self.out_channels))
+
+        #weight optimizer
+        self.W_opt = copy.deepcopy(optimizer)
+        self.b_opt = copy.deepcopy(optimizer)
+
+        #initialize gradients
+        self.dw = np.zeros_like(self.W)
+        self.db = np.zeros_like(self.b)
