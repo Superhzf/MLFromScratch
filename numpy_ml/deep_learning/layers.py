@@ -1260,3 +1260,27 @@ class Conv2d(Layer):
         #initialize gradients
         self.dw = np.zeros_like(self.W)
         self.db = np.zeros_like(self.b)
+
+    def forward(self,X,training=True):
+        """
+        Compute the layer output given the input X
+
+        Parameters:
+        ----------------------------
+        X: an numpy.array of shape (N, C_in, H_in, W_in)
+            N is the number of observations,
+            C_in is the number of input channels (which equals self.in_channels),
+            H_in is the height of the input,
+            W_in is the width of the input.
+        training: bool
+            Indicates whether the parameters will be updated or not.
+
+        Returns:
+        ---------------------------
+        Y: an numpy.array of shape (N,C_out,H_out,W_out)
+            N is the number of observations,
+            C_out is the number of output channels (which equals self.out_channels),
+            H_out is the height of the output,
+            W_out is the width of the output.
+        """
+        
