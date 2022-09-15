@@ -1202,3 +1202,11 @@ class DotProductAttention(Layer):
                                                          self.dLdout_weight)
             self.dLdin_weight = np.zeros_like(self.in_weight)
             self.dLdout_weight = np.zeros_like(self.out_weight)
+
+
+class Conv1d(Layer):
+    def __init__(self,in_channels,out_channels,kernel_size,stride=1,padding=0,dilation=1,groups=1,bias=True,padding_mode="zeros"):
+        """
+        The one-dimensional convolutional layer. One of the scenarios to use
+        one-dimensional convolutional layer is time-series data.
+        """
