@@ -1204,7 +1204,7 @@ class DotProductAttention(Layer):
             self.dLdout_weight = np.zeros_like(self.out_weight)
 
 
-class Conv2d(Layer):
+class Conv2D(Layer):
     def __init__(self,in_channels,out_channels,kernel_size,stride=1,padding=0,dilation=1,groups=1):
         """
         The two-dimensional convolutional layer. This is the most frequently used
@@ -1222,12 +1222,17 @@ class Conv2d(Layer):
         stride: int
             Stride for the cross-correlation. For simplicity, I make it a single
             number, though it can be a tuple like kernel_size.
-        padding: int
-            Padding added to all four sides of the input. For simplicity, I make
-            it a single number, though it can be a tuple like kernel_size.
+        padding: int, tuple, or "same"
+            Padding added to all four sides of the input.
+            int means the four sides will have the same padding.
+            A tuple of two ints, the first int is used for the height dimension,
+            the second int will be used in the width dimension.
+            "same" pads the input so that the output has the same shape as the input
         dilation: int
             Spacing between kernel elements. For simplicity, I make
             it a single number, though it can be a tuple like kernel_size.
+            1 means a regular kernel without any dilation (0 pixel is inserted).
+            2 means one zero is inserted between the two neighborhood values in filters.
         groups: int
             Number of blocked connections from input channels to output channels.
         """
@@ -1277,10 +1282,115 @@ class Conv2d(Layer):
 
         Returns:
         ---------------------------
-        Y: an numpy.array of shape (N,C_out,H_out,W_out)
+        Y: an numpy.array of shape (N, C_out,H_out,W_out)
             N is the number of observations,
             C_out is the number of output channels (which equals self.out_channels),
             H_out is the height of the output,
             W_out is the width of the output.
         """
-        
+
+    def conv2D(self, X, W, b, stride = 1, padding = 0, dilation = 1, groups=1):
+        """
+        The function to actually implement the 2D convolution step.
+
+        Returns:
+        ---------------------------
+        Z: an numpy.array of shape (N, C_out,H_out,W_out)
+        """
+
+
+    def pad2D(self,X, padding, kernel_size,stride=1,dilation=1):
+        """
+        Zero-pad a 4D input X along the 2nd and 3rd dimensions.
+
+        Parameters:
+        ----------------------------
+        X: an numpy.array of shape (N, C_in, H_in, W_in)
+            N is the number of observations,
+            C_in is the number of input channels (which equals self.in_channels),
+            H_in is the height of the input,
+            W_in is the width of the input.
+        padding: int or tuple or "same"
+            Padding added to all four sides of the input. "same" pads the input
+            so that the output has the same shape as the input.
+        """
+        if instance(pad,int):
+            # only pads the 3rd and the 4th dimension.
+            X_pad = np.pad(X,
+                           pad_width=((0, 0), (0, 0),(pad, pad), (pad, pad)),
+                           mode="constant",
+                           constant_values=0)
+            p = (pad,pad)
+        elif instance(pad,tuple):
+            X_pad = np.pad(X,
+                           pad_width=((0, 0), (0, 0),(pad[0], pad[0]), (pad[1], pad[1])),
+                           mode="constant",
+                           constant_values=0)
+            p = (pad[0],pad[1])
+        elif pad == 'same':
+            p = self.calc_pad_dim((X.shape[2],X.shape[3]),
+                                  (X.shape[2],X.shape[3]),
+                                  kernel_size,stride,
+                                  dilation)
+            X_pad, p = self.pad2D(X,p)
+        return X_pad,p
+
+
+    def calc_pad_dim(self,in_dim, out_dim,kernel_size,stride,dilation):
+        """
+        Compute the padding size necessary to ensure that convolving X with
+        kernel_size, stride, and dilation leads to the output with shape out_dim
+
+        Parameters:
+        -------------------------
+        in_dim: a tuple of (H_in, W_in)
+            The height and width of the input array X.
+        out_dim: a tuple of (H_out,W_out)
+            The desired height and width of the output array. H_out == H_in and
+            W_out == W_in if the dimension of input and output are the same.
+        kernel_size: tuple
+            A tuple of two ints, the first int is the height, and the second
+            int is the width.
+        stride: int
+            The stride for the convolution kernel.
+        dilation: int
+            1 means a regular kernel without any dilation (0 pixel is inserted).
+            2 means one zero is inserted between the two neighborhood values in filters.
+
+        Returns:
+        -------------------------
+        padding_dims: 2-tuple
+            The computed padding dimensions such that the padded output has the
+            same size as the input.
+        """
+        in_height, in_width = in_dim
+        out_height, out_width = out_dim
+        kernel_height, kernel_width = kernel_size
+
+        # A nice visualization:
+        # https://www.researchgate.net/figure/Comparison-of-different-kernel-sizes-and-dilation-rates-Increasing-the-dilation-rate-in_fig1_335714619
+        # https://stackoverflow.com/questions/55007114/why-dilated-convolution-layer-doesnt-reduce-the-resolution-of-the-receptive-fie
+        kernel_height = (kernel_height-1) * (dilation-1) + kernel_height
+        kernel_width = (kernel_width-1) * (dilation-1) + kernel_width
+
+        p_height = ((out_height-1)*stride-in_height + kernel_height)//2
+        p_width = ((out_width-1)*stride-in_width + kernel_width)//2
+
+        out_height2 = (in_height - kernel_height + 2*p_height)//stride + 1
+        out_width2 = (in_width - kernel_width + 2*p_width)//stride + 1
+
+        if out_height2 == out_height - 1:
+            p_height += 1
+        elif out_height2 != out_height:
+            raise AssertionError
+
+        if out_width2 == out_width2 - 1:
+            p_width += 1
+        elif out_width2 != out_width:
+            raise AssertionError
+
+        if any(np.array([p_height, p_width]) < 0):
+        raise ValueError(
+            "Padding cannot be less than 0. Got: {}".format((pr1, pr2, pc1, pc2))
+        )
+        return (p_height,p_width)
