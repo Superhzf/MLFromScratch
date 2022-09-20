@@ -1302,7 +1302,7 @@ class Conv2D(Layer):
         ---------------------------
         Z: an numpy.array of shape (N, C_out,H_out,W_out)
         """
-        N, C_in H_in, W_in = X.shape
+        N, C_i, H_in, W_in = X.shape
         C_out, _, kernel_height, kernel_width = W.shape
         X_pad, p = self.pad2D(X, padding, (kernel_height, kernel_width), stride, dilation)
 
@@ -1429,7 +1429,7 @@ class Conv2D(Layer):
             raise AssertionError
 
         if any(np.array([p_height, p_width]) < 0):
-        raise ValueError(
-            "Padding cannot be less than 0. Got: {}".format((pr1, pr2, pc1, pc2))
-        )
+            raise ValueError(
+                "Padding cannot be less than 0. Got: {}".format((pr1, pr2, pc1, pc2))
+            )
         return (p_height,p_width)
