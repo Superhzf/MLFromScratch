@@ -1323,7 +1323,7 @@ class Conv2D(Layer):
                         j0 = j*stride
                         j1 = j*stride + kernel_width
 
-                        window = X_pad[this_obs,this_c, :, i0:i1:dilation, j0:j1:dilation]
+                        window = X_pad[this_obs, :, :, i0:i1:dilation, j0:j1:dilation]
                         Z[this_obs,this_c,i,j] = np.sum(window*W[this_c,:,:,:])
         return Z
 
