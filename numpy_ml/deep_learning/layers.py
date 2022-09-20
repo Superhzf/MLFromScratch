@@ -1216,9 +1216,10 @@ class Conv2D(Layer):
             The number of channels in the input.
         out_channels: out
             The number of channels in the output.
-        kernel_size: tuple
+        kernel_size: int or tuple
             A tuple of two ints, the first int is the height, and the second
-            int is the width.
+            int is the width. If integer, then it applies to both height and
+            width
         stride: int
             Stride for the cross-correlation. For simplicity, I make it a single
             number, though it can be a tuple like kernel_size.
@@ -1238,7 +1239,10 @@ class Conv2D(Layer):
         """
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.kernel_size = kernel_size
+        if isinstance(kernel_size,tuple):
+            self.kernel_size = kernel_size
+        elif isinstance(kernel_size,int):
+            self.kernel_size = (kernel_size,kernel_size)
         self.stride = stride
         self.padding = padding
         self.dilation = dilation
@@ -1312,7 +1316,7 @@ class Conv2D(Layer):
         H_out = (H_in - kernel_height + 2*p[0])//stride + 1
         W_out = (W_in - kernel_width + 2*p[1])//stride + 1
 
-        Z = np.zeros(N, C_out, H_out, W_out)
+        Z = np.zeros((N, C_out, H_out, W_out))
         for this_obs in range(N):
             for this_c in range(C_out):
                 for i in range(H_out):
@@ -1323,7 +1327,7 @@ class Conv2D(Layer):
                         j0 = j*stride
                         j1 = j*stride + kernel_width
 
-                        window = X_pad[this_obs, :, :, i0:i1:dilation, j0:j1:dilation]
+                        window = X_pad[this_obs, :, i0:i1:dilation, j0:j1:dilation]
                         Z[this_obs,this_c,i,j] = np.sum(window*W[this_c,:,:,:])
         return Z
 
@@ -1353,23 +1357,24 @@ class Conv2D(Layer):
             The first integer is the padding size added to the height, the second
             integer is the padding size added to the width.
         """
-        if instance(pad,int):
+        if isinstance(padding,int):
             # only pads the 3rd and the 4th dimension.
             X_pad = np.pad(X,
-                           pad_width=((0, 0), (0, 0),(pad, pad), (pad, pad)),
+                           pad_width=((0, 0), (0, 0),(padding, padding), (padding, padding)),
                            mode="constant",
                            constant_values=0)
-            p = (pad,pad)
-        elif instance(pad,tuple):
+            p = (padding,padding)
+        elif isinstance(padding,tuple):
             X_pad = np.pad(X,
-                           pad_width=((0, 0), (0, 0),(pad[0], pad[0]), (pad[1], pad[1])),
+                           pad_width=((0, 0), (0, 0),(padding[0], padding[0]), (padding[1], padding[1])),
                            mode="constant",
                            constant_values=0)
-            p = (pad[0],pad[1])
-        elif pad == 'same':
+            p = (padding[0],padding[1])
+        elif padding == 'same':
             p = self.calc_pad_dim((X.shape[2],X.shape[3]),
                                   (X.shape[2],X.shape[3]),
-                                  kernel_size,stride,
+                                  kernel_size,
+                                  stride,
                                   dilation)
             X_pad, p = self.pad2D(X,p)
         return X_pad,p
