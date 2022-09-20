@@ -1256,7 +1256,7 @@ class Conv2D(Layer):
         #initialize weights
         limit = 1 / math.sqrt(self.in_channels*self.kernel_size[0]*self.kernel_size[1])
         self.W = np.random.uniform(-limit,limit,(self.out_channels,self.in_channels,self.kernel_size[0],self.kernel_size[1]))
-        self.b = np.random.uniform(-limit,limit,(self.out_channels))
+        self.b = np.random.uniform(-limit,limit,(1,self.out_channels,1,1))
 
         #weight optimizer
         self.W_opt = copy.deepcopy(optimizer)
@@ -1282,21 +1282,50 @@ class Conv2D(Layer):
 
         Returns:
         ---------------------------
-        Y: an numpy.array of shape (N, C_out,H_out,W_out)
+        Z: an numpy.array of shape (N, C_out,H_out,W_out)
             N is the number of observations,
             C_out is the number of output channels (which equals self.out_channels),
             H_out is the height of the output,
             W_out is the width of the output.
         """
+        C_out = self.out_channels
+        Z = self.conv2D_naive(X,self.W,self.stride,self.padding,self.dilation,self.groups) + self.b
+        return Z
 
-    def conv2D(self, X, W, b, stride = 1, padding = 0, dilation = 1, groups=1):
+
+    def conv2D_naive(self, X, W, stride = 1, padding = 0, dilation = 1, groups=1):
         """
-        The function to actually implement the 2D convolution step.
+        The function to actually implement the 2D convolution step. A slow but
+        straightfoward implementationof a 2D convolution layer.
 
         Returns:
         ---------------------------
         Z: an numpy.array of shape (N, C_out,H_out,W_out)
         """
+        N, C_in H_in, W_in = X.shape
+        C_out, _, kernel_height, kernel_width = W.shape
+        X_pad, p = self.pad2D(X, padding, (kernel_height, kernel_width), stride, dilation)
+
+        kernel_height = (kernel_height-1) * (dilation-1) + kernel_height
+        kernel_width = (kernel_width-1) * (dilation-1) + kernel_width
+
+        H_out = (H_in - kernel_height + 2*p[0])//stride + 1
+        W_out = (W_in - kernel_width + 2*p[1])//stride + 1
+
+        Z = np.zeros(N, C_out, H_out, W_out)
+        for this_obs in range(N):
+            for this_c in range(C_out):
+                for i in range(H_out):
+                    for j in range(W_out):
+                        i0 = i*stride
+                        i1 = i*stride + kernel_height
+
+                        j0 = j*stride
+                        j1 = j*stride + kernel_width
+
+                        window = X_pad[this_obs,this_c, :, i0:i1:dilation, j0:j1:dilation]
+                        Z[this_obs,this_c,i,j] = np.sum(window*W[this_c,:,:,:])
+        return Z
 
 
     def pad2D(self,X, padding, kernel_size,stride=1,dilation=1):
@@ -1313,6 +1342,16 @@ class Conv2D(Layer):
         padding: int or tuple or "same"
             Padding added to all four sides of the input. "same" pads the input
             so that the output has the same shape as the input.
+
+        Returns:
+        ----------------------------
+        X_pad: an numpy array of shape (N, C_in, H_in+2padding, H_out+2padding)
+        or the size such that the size of the output after the convolution layer
+        equals the size of the input.
+            The padded input X.
+        p: a tuple that includes two integers.
+            The first integer is the padding size added to the height, the second
+            integer is the padding size added to the width.
         """
         if instance(pad,int):
             # only pads the 3rd and the 4th dimension.
