@@ -1357,7 +1357,7 @@ class Conv2D(Layer):
             The first integer is the padding size added to the height, the second
             integer is the padding size added to the width.
         """
-        if isinstance(padding,int):
+        if isinstance(padding,int) or isinstance(padding,np.int64):
             # only pads the 3rd and the 4th dimension.
             X_pad = np.pad(X,
                            pad_width=((0, 0), (0, 0),(padding, padding), (padding, padding)),
@@ -1377,6 +1377,8 @@ class Conv2D(Layer):
                                   stride,
                                   dilation)
             X_pad, p = self.pad2D(X,p)
+        else:
+            raise TypeError("Padding type is not understood {}".format(type(padding)))
         return X_pad,p
 
 
