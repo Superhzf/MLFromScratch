@@ -1440,3 +1440,29 @@ class Conv2D(Layer):
                 "Padding cannot be less than 0. Got: {}".format((pr1, pr2, pc1, pc2))
             )
         return (p_height,p_width)
+
+    def backward(self,dLdOutput,trainable=False):
+        """
+        Compute the gradient of the loss w.r.t. the layer parameters.
+
+        Note:
+        In the intermediate steps, dLdW and dLdb are also generated besides the
+        output dLdX:
+
+        dLdW: an numpy.array of shape (C_in,C_out,kernel_height,kernel_width)
+            The gradient of the loss function w.r.t. the layer weights
+        dLdb: an numpy.array of shape (1,C_out,1,1)
+            The gradient of the loss function w.r.t. the layer bias
+
+        Parameters:
+        --------------------------------------
+        dLdOutput: an numpy.array of shape (N, C_out,H_out,W_out).
+            The gradient of the loss function w.r.t. the layer ouput.
+        trainable: bool
+            Whether to update the parameters or not.
+
+        Returns:
+        --------------------------------------
+        dLdX: an numpy.array of shape (N, C_in, H_in, W_in)
+            The gradient of the loss function w.r.t. the layer input.
+        """
