@@ -1376,7 +1376,7 @@ class Conv2D(Layer):
                                   kernel_size,
                                   stride,
                                   dilation)
-            X_pad, p = self.pad2D(X,p)
+            X_pad, p = self.pad2D(X,p,kernel_size,stride,dilation)
         else:
             raise TypeError("Padding type is not understood {}".format(type(padding)))
         return X_pad,p
@@ -1430,7 +1430,7 @@ class Conv2D(Layer):
         elif out_height2 != out_height:
             raise AssertionError
 
-        if out_width2 == out_width2 - 1:
+        if out_width2 == out_width - 1:
             p_width += 1
         elif out_width2 != out_width:
             raise AssertionError
