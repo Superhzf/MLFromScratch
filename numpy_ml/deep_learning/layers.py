@@ -1346,6 +1346,15 @@ class Conv2D(Layer):
         padding: int or tuple or "same"
             Padding added to all four sides of the input. "same" pads the input
             so that the output has the same shape as the input.
+        kernel_size: a tuple of integers
+            kernel_size is used when padding = 'same'. It is the kernel that will
+            be used to convolve the padded X.
+        stride: int
+            stride is used when padding = 'same'. It is the stride value that will
+            be used to convole the padded X.
+        dilation: int
+            dilation is used when padding = 'same'. It is the dilation value that
+            will be used to convole the padded X.
 
         Returns:
         ----------------------------
@@ -1466,5 +1475,4 @@ class Conv2D(Layer):
         dLdX: an numpy.array of shape (N, C_in, H_in, W_in)
             The gradient of the loss function w.r.t. the layer input.
         """
-
-        print("This is a test")
+        
